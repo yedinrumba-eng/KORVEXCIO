@@ -17,8 +17,9 @@
 Vas de EDITOR en KORVEXCIO (C:\PROYECTOS\KORVEXCIO).
 
 QUÉ ES: ERP + POS multi-tenant sobre ERPNext/Frappe v16 para retail y food en
-República Dominicana. Producto de la casa KORVEX. Primer cliente: VAPELAND
-(vape shop + cafetería, dos negocios del mismo dueño).
+República Dominicana. Producto de la casa KORVEX. Primer cliente: dos
+negocios del mismo dueño — VAPERIA LA J Y EL JALAPEÑO (vapería) y EL SABOR
+DE LAS 5 ESQUINAS (cafetería), un solo site, dos Company (D19).
 Repo: https://github.com/yedinrumba-eng/KORVEXCIO.git
 
 LEE EN ESTE ORDEN, completo, antes de proponer nada:
