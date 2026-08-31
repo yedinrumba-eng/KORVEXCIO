@@ -1,7 +1,8 @@
 # Prompt para arrancar una sesión nueva
 
 > Copiar y pegar tal cual al abrir **Claude Code** o **Codex** en esta carpeta.
-> Actualizado el 2026-08-31 al cerrar **S0.5** (bench v16 de pie, D2 cerrada).
+> Actualizado el 2026-08-31 al cerrar **S0.6** (site `korvexcio.korvexdev.cc`
+> con ERPNext instalado).
 >
 > **Este archivo se actualiza al cerrar cada slice.** Si el prompt de abajo
 > todavía dice S0.6 y `PROGRESO.md` dice que S0.6 está cerrada, gana
@@ -33,16 +34,24 @@ LEE EN ESTE ORDEN, completo, antes de proponer nada:
 EL RELOJ: 15/11/2026, e-CF obligatorio para pequeños/micro/no clasificados
 (Ley 32-23). Multa 5-50 salarios mínimos. Todo lo demás se difiere; esto no.
 
-TU SLICE: S0.6 — crear el site `korvexcio.korvexdev.cc` en el bench que ya
-está de pie en korvex-node1, con ERPNext instalado. NADA MÁS. S0.7 (las dos
-Companies) no se adelanta.
+TU SLICE: S0.7 — crear las dos `Company` de ERPNext en el site que ya existe
+(`korvexcio.korvexdev.cc`): **VAPELAND** y **Cafetería**, cada una con su
+`tax_id` (RNC, de prueba hasta que Yedin confirme el real), su almacén, su
+cost center y su naming series. NADA MÁS. S0.7b (site `demo.korvexdev.cc`) no
+se adelanta salvo que Yedin lo pida en el mismo turno.
 
 Verificación con la que se cierra:
-  curl -H "Host: korvexcio.korvexdev.cc" http://127.0.0.1:8080/api/method/ping
-    -> {"message":"pong"}
-  bench --site korvexcio.korvexdev.cc list-apps   -> frappe, erpnext
+  frappe.get_all("Company", fields=["name","tax_id","default_currency"])
+    -> devuelve VAPELAND y Cafetería
+  Un ítem/almacén creado en una Company NO aparece en el almacén de la otra
   systemctl status korvex-api && curl -s http://127.0.0.1:4000/health
   df -h /
+
+OJO CON D19: esto NO es aislamiento físico (eso ya lo da el site). Es lógico
+— dos Companies en la misma base. La barrera real de verdad
+(permission_query_conditions + has_permission + company congelada) es S1.8,
+más adelante. Por ahora S0.7 solo crea los registros; no inventes controles de
+acceso que no pediste todavía.
 
 EL NODO NO ESTÁ VACÍO. korvex-node1 corre KORVIS en producción: un banco (ADAP)
 y dos bots de WhatsApp EN VIVO. Lo que rompas ahí le cuesta credibilidad a Yedin
@@ -97,10 +106,11 @@ entrada de PROGRESO.md y docs/08-BLUEPRINT.md antes de proponer nada.
 ERP+POS multi-tenant sobre ERPNext/Frappe v16 para retail y food en RD.
 Deadline duro: e-CF de la DGII obligatorio el 15/11/2026.
 
-El bench v16 ya está de pie en korvex-node1 (ssh korvex-host). No lo reconstruyas.
-Tu slice es S0.6: crear el site korvexcio.korvexdev.cc con ERPNext instalado, y
-nada más. Se cierra con:
-  curl -H "Host: korvexcio.korvexdev.cc" http://127.0.0.1:8080/api/method/ping
+El bench v16 y el site korvexcio.korvexdev.cc ya están de pie en korvex-node1
+(ssh korvex-host). No los reconstruyas.
+Tu slice es S0.7: crear las dos Company (VAPELAND, Cafetería) con su tax_id,
+almacén, cost center y naming series, y nada más. Se cierra con:
+  frappe.get_all("Company", fields=["name","tax_id"]) -> las dos
 
 Un slice a la vez. Sin la salida real del comando, no se declara nada cerrado.
 En ese nodo corre KORVIS en producción con un banco en vivo: no se toca su

@@ -1,11 +1,11 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
 > **Lo primero que se lee al retomar.** Escrito el 2026-08-31 en sesión de
-> descubrimiento (Cowork), actualizado al cerrar S0.5 con revisión de
-> seguimiento. Estado: **🔵 Fase 0 en curso** — bench v16 levantado, D2 cerrada,
-> S0.5 **COMPLETADO**. Sin sites todavía.
+> descubrimiento (Cowork), actualizado al cerrar S0.6. Estado: **🔵 Fase 0 en
+> curso** — bench v16 levantado, D2 cerrada, site `korvexcio.korvexdev.cc` de
+> pie con ERPNext instalado. Ninguna `Company` creada todavía.
 >
-> Próximo paso: **S0.6**, crear `korvexcio.korvexdev.cc` e instalar ERPNext.
+> Próximo paso: **S0.7**, las dos `Company` (VAPELAND y Cafetería).
 > Evidencia de versión y operación: `docs/13-VERSION-FRAPPE.md`.
 >
 > ### Los tres documentos que se leen, en este orden
@@ -22,7 +22,7 @@
 
 ---
 
-## Estado técnico al retomar — después de S0.5
+## Estado técnico al retomar — después de S0.6
 
 - Imagen en `korvex-node1`: `korvexcio:16`, digest
   `sha256:6ed8f523d2795fdc4c7a808b7cfe8cb50c572d2cabc8f2e6b2485d5e1f4b2ee2`.
@@ -31,26 +31,24 @@
 - Versiones: Frappe `16.32.0`, ERPNext `16.33.0`, POSNext `1.12.0`, URY
   `v3.0.0-beta.1`.
 - Red: solo frontend en `127.0.0.1:8080`; DB y Redis sin puertos host.
-- Recursos: límites sumados 5,504 MiB; 75 GB libres antes del build, 60 GB
-  después (~15 GB consumidos entre imagen y caché).
-- KORVIS: servicio activo y `/health` con Postgres/Redis `ok` después del
-  arranque de KORVEXCIO.
-- Commits locales: `e119e00` (implementación S0.5), `2411f94` (plan maestro y
-  estado documental), más el commit de cierre de este mismo cambio (ver
-  `git log --oneline -3`). `origin/main` sigue en `e19389f`: **no hubo
-  push**.
-- Pendiente inmediato: **S0.6** crea el site. **No existe ningún site
-  todavía.**
+- Recursos: límites sumados 5,504 MiB; 60 GB libres, sin cambio tras crear el
+  site (el site no engordó el disco de forma medible).
+- KORVIS: servicio activo y `/health` con Postgres/Redis `ok` después de
+  crear el site.
+- Site: **`korvexcio.korvexdev.cc`**, creado por Yedin vía SSH con `bench
+  new-site` — el clasificador de auto-mode bloqueó que Claude lo corriera
+  directo (crea DB nueva en un nodo con un banco en producción; bloqueo
+  correcto). Tiene `frappe 16.32.0` y `erpnext 16.33.0` instalados,
+  `UNVERSIONED`. Ninguna `Company` creada — eso es **S0.7**.
+- Password de Administrator: generado random en el nodo
+  (`/home/korvex/frappe_docker-korvexcio-s05/.korvexcio-admin-pw`, 600).
+  **Nunca pasó por el chat ni por este repo.**
+- Commits locales: `e119e00`, `2411f94`, `e611edc` (cierre de S0.5), más el
+  commit de este cambio (ver `git log --oneline -4`). `origin/main` sigue en
+  `e19389f`: **no hubo push**.
+- Pendiente inmediato: **S0.7**, las dos `Company`.
 - Deuda: POSNext/URY están en branches `develop`; fijar referencias inmutables
   antes de S1.2. Build cache reclamable: 7.154 GB.
-
-**Revisión de seguimiento (31/08):** confirmadas las dos correcciones
-pedidas por el primer auditor en `docs/13-VERSION-FRAPPE.md` (docker stats de
-los nueve servicios runtime + `df -h /` previo al build con 75 GB). Sin
-hallazgos críticos ni altos. Verificado: `python -m json.tool apps.json` OK ·
-`git diff --check` y `git diff --cached --check` limpios · `pre-commit
-run --all-files` 7/7 Passed · `git status --short` solo `HANDOFF.md` y
-`PROGRESO.md` modificados.
 
 ---
 
@@ -280,17 +278,17 @@ solo pide 1–3 GB. Un bench con 2–3 sites cabe; **10 tenants no caben.** El
 | **S0.2** ✅ | Acceso al nodo por Tailscale arreglado |
 | **S0.4** ✅ | Checklist previo del nodo, todo verde |
 | **S0.5** ✅ | **Bench v16 de pie en `korvex-node1`. D2 cerrada.** Implementado, probado, revisado en seguimiento (dos correcciones documentales aplicadas) y commiteado |
+| **S0.6** ✅ | **Site `korvexcio.korvexdev.cc` con ERPNext instalado.** `bench new-site` lo corrió Yedin (el clasificador bloqueó a Claude); `ping` responde `pong`, `list-apps` lista `frappe`+`erpnext`, KORVIS intacto |
 
 ### Lo que sigue, en este orden
 
 | # | Slice | Qué | Verificación |
 |---|---|---|---|
-| 1 | **S0.6** ⭐ | **Crear el site `korvexcio.korvexdev.cc`** e instalar ERPNext. Nada más — S0.7 no se adelanta | `curl -H "Host: korvexcio.korvexdev.cc" http://127.0.0.1:8080/api/method/ping` → `{"message":"pong"}` · `bench --site ... list-apps` |
-| 2 | **S0.7** | Las dos `Company` — **VAPELAND** y **Cafetería** — cada una con su `tax_id`, almacén, cost center y naming series | Las dos aparecen en `Company`; un ítem creado en una **no** aparece en el almacén de la otra |
-| 3 | **S0.7b** | Site `demo.korvexdev.cc` — el modelo por cliente se prueba el día 1, no al final | Dos DBs distintas en `SHOW DATABASES`; un cambio en uno no aparece en el otro |
-| 4 | **S0.8** | Spike POS *(timebox 2 días)*: POS nativo vs POSNext, matriz de 8 criterios llena **antes** de instalar | `docs/10-SPIKE-POS.md` con evidencia por criterio y veredicto de una línea |
-| 5 | **S0.9** 🔴 | **Spike fiscal — EL GATE.** E32 + RFCE contra TesteCF | **TrackID real** pegado en `docs/11-SPIKE-FISCAL.md`. Sin TrackID no se declara nada |
-| 6 | **S0.10 → S0.12** | Cuota de disco, catálogo, cierre de Fase 0 en los documentos | `PROGRESO.md`, `TECH_STACK.md`, `data/korvex.json` ⚪ → 🔵 |
+| 1 | **S0.7** ⭐ | Las dos `Company` — **VAPELAND** y **Cafetería** — cada una con su `tax_id`, almacén, cost center y naming series | Las dos aparecen en `Company`; un ítem creado en una **no** aparece en el almacén de la otra |
+| 2 | **S0.7b** | Site `demo.korvexdev.cc` — el modelo por cliente se prueba el día 1, no al final | Dos DBs distintas en `SHOW DATABASES`; un cambio en uno no aparece en el otro |
+| 3 | **S0.8** | Spike POS *(timebox 2 días)*: POS nativo vs POSNext, matriz de 8 criterios llena **antes** de instalar | `docs/10-SPIKE-POS.md` con evidencia por criterio y veredicto de una línea |
+| 4 | **S0.9** 🔴 | **Spike fiscal — EL GATE.** E32 + RFCE contra TesteCF | **TrackID real** pegado en `docs/11-SPIKE-FISCAL.md`. Sin TrackID no se declara nada |
+| 5 | **S0.10 → S0.12** | Cuota de disco, catálogo, cierre de Fase 0 en los documentos | `PROGRESO.md`, `TECH_STACK.md`, `data/korvex.json` ⚪ → 🔵 |
 
 ### Reglas del nodo que aplican a cada uno de esos slices
 

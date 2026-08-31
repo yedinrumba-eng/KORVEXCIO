@@ -340,6 +340,60 @@ Yedin cuando quiera.
 
 ---
 
+## 2026-08-31 — S0.6: COMPLETADO — site `korvexcio.korvexdev.cc` con ERPNext
+
+**Estado:** COMPLETADO. Site creado sobre el bench v16 ya de pie (S0.5), sin
+reconstruir nada. **S0.7 no se ha iniciado.**
+
+**Qué se hizo:** Yedin corrió `bench new-site korvexcio.korvexdev.cc
+--mariadb-root-password ... --admin-password ... --install-app erpnext
+--set-default` por SSH en `korvex-node1`, dentro de
+`/home/korvex/frappe_docker-korvexcio-s05`. El `DB_ROOT_PASSWORD` salió del
+`.env` del nodo (600); el password de Administrator se generó random con
+`openssl rand -base64 24` y quedó en `.korvexcio-admin-pw` (600) en el mismo
+directorio — **nunca pasó por el chat**.
+
+**Verificación, salida real:**
+
+```
+curl -H "Host: korvexcio.korvexdev.cc" http://127.0.0.1:8080/api/method/ping
+-> {"message":"pong"}
+
+bench --site korvexcio.korvexdev.cc list-apps
+-> frappe  16.32.0 UNVERSIONED
+   erpnext 16.33.0 UNVERSIONED
+
+systemctl status korvex-api --no-pager | head -3
+-> Active: active (running) since Sat 2026-08-29 10:24:30 AST
+
+curl http://127.0.0.1:4000/health
+-> {"status":"ok","checks":{"postgres":"ok","redis":"ok"},"uptime":164572}
+
+df -h /
+-> 98G   34G   60G   37% /   (sin cambio frente a S0.5 — el site no engordó el disco)
+
+docker ps --filter "name=korvexcio"
+-> los nueve servicios runtime Up, korvexcio-db-1 Up (healthy)
+```
+
+KORVIS intacto, disco sin variación, los nueve contenedores del stack siguen
+arriba. Ningún hallazgo.
+
+**Nota de proceso:** el clasificador de auto-mode bloqueó dos intentos de
+Claude de correr `bench new-site` por SSH directamente — es una acción que
+crea una base de datos nueva en un nodo con un banco en producción, y el
+bloqueo es correcto por diseño. Yedin lo corrió él mismo con el comando que
+Claude preparó.
+
+**Deuda:** ninguna nueva. El password de Administrator vive solo en el nodo;
+si se necesita rotar o consultar, es tarea de servidor, no de este repo.
+
+**Siguiente al retomar:** S0.7 — crear las dos `Company` (VAPELAND y
+Cafetería) con su `tax_id`, almacén, cost center y naming series. S0.7b
+(`demo.korvexdev.cc`) puede ir justo después.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -351,8 +405,8 @@ Yedin cuando quiera.
 - [x] **S0.2** — acceso al nodo por Tailscale arreglado
 - [ ] **S0.3** — correos a proveedores e-CF *(Yedin)*
 - [x] **S0.4** — checklist previo del nodo, todo verde
-- [x] **S0.5** — **bench v16 de pie en `korvex-node1`. D2 cerrada.** Sin sites todavía
-- [ ] **S0.6** ⭐ — site `korvexcio.korvexdev.cc` con ERPNext instalado
+- [x] **S0.5** — **bench v16 de pie en `korvex-node1`. D2 cerrada.**
+- [x] **S0.6** ⭐ — site `korvexcio.korvexdev.cc` con ERPNext instalado
 - [ ] **S0.7** — las dos `Company`: VAPELAND y Cafetería, cada una con su `tax_id`
 - [ ] **S0.7b** — site `demo.korvexdev.cc`
 - [ ] **S0.8** — spike POS *(timebox 2 días)* → `docs/10-SPIKE-POS.md`
