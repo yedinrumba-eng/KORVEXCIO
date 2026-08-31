@@ -26,6 +26,7 @@ COMPANY_B = "_Test Company KORVEXCIO B"
 
 USER_A = "_test.isolation.a@korvexdev.cc"
 USER_B = "_test.isolation.b@korvexdev.cc"
+ACCOUNTANT_A = "_test.isolation.accountant.a@korvexdev.cc"
 
 
 class TestIsolation(IntegrationTestCase):
@@ -43,11 +44,15 @@ class TestIsolation(IntegrationTestCase):
 
         cls.user_a = cls._ensure_scoped_user(USER_A, COMPANY_A)
         cls.user_b = cls._ensure_scoped_user(USER_B, COMPANY_B)
+        cls.accountant_a = cls._ensure_accountant(ACCOUNTANT_A)
         assign_company_user_permission(cls.user_a, COMPANY_A)
         assign_company_user_permission(cls.user_b, COMPANY_B)
+        assign_company_user_permission(cls.accountant_a, COMPANY_A)
 
         cls.warehouse_a = cls._ensure_warehouse("_Test WH Isolation A", COMPANY_A)
         cls.warehouse_b = cls._ensure_warehouse("_Test WH Isolation B", COMPANY_B)
+        cls.dgii_settings_a = cls._ensure_dgii_settings(COMPANY_A, "TesteCF", "Alanube")
+        cls.dgii_settings_b = cls._ensure_dgii_settings(COMPANY_B, "CerteCF", "ECF SSD")
 
     @staticmethod
     def _ensure_scoped_user(email: str, company: str) -> str:
@@ -67,6 +72,22 @@ class TestIsolation(IntegrationTestCase):
         return email
 
     @staticmethod
+    def _ensure_accountant(email: str) -> str:
+        if frappe.db.exists("User", email):
+            return email
+        frappe.get_doc(
+            {
+                "doctype": "User",
+                "email": email,
+                "first_name": "Accountant Isolation Test",
+                "user_type": "System User",
+                "send_welcome_email": 0,
+                "roles": [{"role": "Contador"}],
+            }
+        ).insert()
+        return email
+
+    @staticmethod
     def _ensure_warehouse(name: str, company: str):
         wh_name = f"{name} - {'_TCKA' if company == COMPANY_A else '_TCKB'}"
         if frappe.db.exists("Warehouse", wh_name):
@@ -79,6 +100,23 @@ class TestIsolation(IntegrationTestCase):
             }
         ).insert()
         return wh_name
+
+    @staticmethod
+    def _ensure_dgii_settings(company: str, ambiente: str, provider: str) -> str:
+        if frappe.db.exists("DGII Settings", company):
+            return company
+        frappe.get_doc(
+            {
+                "doctype": "DGII Settings",
+                "company": company,
+                "ambiente": ambiente,
+                "provider": provider,
+                "connect_timeout_seconds": 10,
+                "read_timeout_seconds": 30,
+                "live_sync": 0,
+            }
+        ).insert()
+        return company
 
     def setUp(self):
         frappe.set_user("Administrator")
@@ -188,13 +226,31 @@ class TestIsolation(IntegrationTestCase):
         self.assertIn(COMPANY_A, companies)
         self.assertIn(COMPANY_B, companies)
 
-    # --- 9-12: dependen de infraestructura que no existe todavia -------
-    def test_scenario_9_to_12_deferred_to_fase2(self):
-        """Escenarios del blueprint que necesitan el modulo ecf (Fase 2):
+    # --- 9. DGII Settings queda acotado y su Company congelada ----------
+    def test_scenario_9_dgii_settings_scoped_and_company_frozen(self):
+        frappe.set_user(self.accountant_a)
+        visible_settings = frappe.get_list("DGII Settings", pluck="name")
+        self.assertIn(self.dgii_settings_a, visible_settings)
+        self.assertNotIn(self.dgii_settings_b, visible_settings)
+        self.assertEqual(
+            frappe.client.get("DGII Settings", self.dgii_settings_a)["company"], COMPANY_A
+        )
+        with self.assertRaises(frappe.PermissionError):
+            frappe.client.get("DGII Settings", self.dgii_settings_b)
+
+        frappe.set_user("Administrator")
+        settings = frappe.get_doc("DGII Settings", self.dgii_settings_a)
+        settings.company = COMPANY_B
+        with self.assertRaises(frappe.PermissionError):
+            settings.save()
+
+    # --- 10-12: dependen de infraestructura que no existe todavia ------
+    def test_scenario_10_to_12_deferred_to_s2_2_and_s2_7(self):
+        """Escenarios que necesitan certificado, provider y endpoints futuros:
         - descargar el .p12 de la otra Company (no hay certificados aun, S0.9/S2.2)
         - emitir e-CF y confirmar que credencial se uso (no hay providers, S2.7)
-        - metodos @frappe.whitelist propios de korvexcio (no existen, ecf/ y retail/ vacios)
+        - metodos @frappe.whitelist propios de korvexcio (no existen aun)
         Se marcan como skip explicito, no como pasados de mentira."""
         self.skipTest(
-            "Requiere el modulo ecf (certificados, providers, endpoints propios) - Fase 2, S2.2/S2.7"
+            "Requiere certificado, provider y endpoints futuros - S2.2/S2.7"
         )

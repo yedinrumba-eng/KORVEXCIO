@@ -1,0 +1,1 @@
+"""DocTypes del modulo ECF."""
