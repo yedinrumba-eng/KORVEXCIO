@@ -1,9 +1,9 @@
 # Prompt para arrancar una sesión nueva
 
 > Copiar y pegar tal cual al abrir **Claude Code** o **Codex** en esta carpeta.
-> Actualizado el 2026-08-31 al cerrar **S1.1** (esqueleto de la app
-> `korvexcio`). **Fase 0 cerrada por D20** — S0.9/S0.3 son deuda técnica,
-> ya no gate. Fase 1 en curso.
+> Actualizado el 2026-08-31 al cerrar **Fase 1 completa** (S1.1→S1.8, S1.9
+> N/A). **Fase 2 (módulo `ecf`) es lo que sigue**, sabiendo que S2.7 es
+> donde S0.9/S0.3 paran de verdad si siguen sin resolver.
 >
 > **Este archivo se actualiza al cerrar cada slice.** Si el prompt de abajo
 > ya no coincide con `PROGRESO.md`, gana `PROGRESO.md` — y hay que corregir
@@ -35,24 +35,43 @@ LEE EN ESTE ORDEN, completo, antes de proponer nada:
 EL RELOJ: 15/11/2026, e-CF obligatorio para pequeños/micro/no clasificados
 (Ley 32-23). Multa 5-50 salarios mínimos. Todo lo demás se difiere; esto no.
 
-TU SLICE: S1.2 — actualizar `apps.json` con el repo propio de `korvexcio`
-(ya existe en el bench, instalado, GPLv3, módulos ECF/Retail vacíos) y
-**fijar SHA o mirrors de Korvex** para POSNext y URY — hoy están en
-`develop`, que es mutable, y eso es deuda desde S0.5. NADA MÁS.
+TU SLICE: S2.1 — DocType `DGII Settings`. ⚠️ **NO Single** (cambio por
+D19): lleva `company` (Link, único) — un registro por Company, cada una
+con su ambiente/proveedor/timeouts propios. NADA MÁS — no adelantes S2.2
+(el certificado) todavía.
+
+ANTES DE ESCRIBIR CÓDIGO FISCAL: revisa si S0.9/S0.3 se resolvieron
+(¿respondió algún proveedor? ¿hay RNC+certificado?). Si NO, sigue de todos
+modos con S2.1-S2.6 (estructura, sin necesitar el proveedor real) — pero
+**S2.7 (el proveedor real) para de verdad si sigue sin resolver.** No se
+inventa un proveedor de prueba para simular que está cerrado.
+
+🔴 REGLA NUEVA DE S1.8, aplica a TODO lo que escribas en `korvexcio/ecf/`:
+`frappe.get_doc(doctype, name)` **NO chequea permisos de lectura**. Todo
+método `@frappe.whitelist()` que lea un documento necesita
+`doc.check_permission("read")` explícito, o pasar por
+`frappe.client.get()`/`frappe.get_list()`. Verificado con un test real que
+falló hasta que se corrigió — no es una suposición, está en "Lecciones ya
+pagadas" de HANDOFF.md.
+
+Cuando crees el DocType `DGII Settings`: agrégalo a
+`COMPANY_SCOPED_DOCTYPES` en `korvexcio/isolation.py` para que
+`freeze_company()` lo proteja, y écriele su escenario en
+`korvexcio/tests/test_isolation.py` (los 4 que quedaron con `skipTest` en
+S1.8 son justo para esto).
 
 DESPUÉS de instalar o reinstalar cualquier app: `docker compose restart
-backend queue-short queue-long scheduler websocket` — si no, el site tira
-500 `ModuleNotFoundError` aunque `install-app` haya dicho que todo salió
-bien. Pasó en S1.1, está en "Lecciones ya pagadas" de HANDOFF.md.
+backend queue-short queue-long scheduler websocket`. Pasó en S1.1, está en
+"Lecciones ya pagadas" de HANDOFF.md.
 
-Deuda abierta que NO bloquea este slice pero sigue viva: S0.9/S0.3
-(fiscal, para de verdad en S2.7) · LICENSE de la raíz en MIT en vez de
-GPLv3 (el `hooks.py` de la app ya está en GPLv3, el archivo del repo no) ·
-D16/POS pendiente de OK explícito de Yedin.
+Deuda abierta que NO bloquea este slice pero sigue viva: LICENSE de la
+raíz en MIT en vez de GPLv3 · D16/POS pendiente de OK explícito de Yedin ·
+SHA-pin de POSNext/URY imposible sin mirror (necesita OK de Yedin para
+crear el repo).
 
 Verificación con la que se cierra:
-  bench --site korvexcio.korvexdev.cc list-apps -> incluye korvexcio
-  git -C apps/korvexcio rev-parse HEAD -> coincide con lo pusheado
+  frappe.get_all("DGII Settings", fields=["company","ambiente"]) -> un registro por Company
+  bench --site korvexcio.korvexdev.cc run-tests --app korvexcio -> sigue verde
   systemctl status korvex-api && curl -s http://127.0.0.1:4000/health
   df -h /
 
@@ -111,13 +130,15 @@ Deadline duro: e-CF de la DGII obligatorio el 15/11/2026.
 
 El bench v16, el site korvexcio.korvexdev.cc, sus dos Company reales
 (VAPERIA LA J Y EL JALAPEÑO, EL SABOR DE LAS 5 ESQUINAS), el catálogo, el
-backup y la app korvexcio (GPLv3, módulos ECF/Retail) ya están de pie en
-korvex-node1 (ssh korvex-host). No los reconstruyas.
+backup, la app korvexcio (GPLv3, roles, custom fields) y la barrera de
+aislamiento (freeze_company + 8 tests verdes) ya están de pie. No los
+reconstruyas.
 
-Fase 0 cerrada (D20): S0.9/S0.3 bajan a deuda técnica, ya no bloquean.
-Tu slice es S1.2: apps.json con el repo korvexcio + fijar SHA de POSNext y
-URY (están en develop, mutable). Después de instalar cualquier app,
-reinicia backend+colas+scheduler+websocket o el site tira 500.
+Fase 0 y Fase 1 cerradas. Tu slice es S2.1: DocType DGII Settings, NO
+Single, un registro por Company. frappe.get_doc() no chequea permisos de
+lectura -- usa doc.check_permission("read") o frappe.client.get() en
+cualquier metodo whitelisted. Despues de instalar cualquier app, reinicia
+backend+colas+scheduler+websocket o el site tira 500.
 
 Un slice a la vez. Sin la salida real del comando, no se declara nada cerrado.
 En ese nodo corre KORVIS en producción con un banco en vivo: no se toca su

@@ -821,6 +821,447 @@ mutable).
 
 ---
 
+## 2026-08-31 — S1.2: PARCIAL — `apps.json` actualizado, SHA fijo confirmado imposible sin mirror
+
+**Estado:** 🟡 PARCIAL, con la razón técnica confirmada, no supuesta.
+
+**Qué se hizo:** `apps.json` lleva ahora la entrada de `korvexcio`
+(`https://github.com/yedinrumba-eng/KORVEXCIO.git`, rama `main`).
+
+**Por qué NO se pudo "fijar SHA" de POSNext/URY — verificado en el código
+real de `bench`, no supuesto:** el `get()` de `bench/app.py` construye el
+clone así:
+
+```python
+branch = f"--branch {self.tag}" if self.tag else ""
+shallow = "--depth 1" if self.bench.shallow_clone else ""
+cmd = "git clone"
+args = f"{self.url} {branch} {shallow} --origin upstream"
+```
+
+`git clone --branch <X> --depth 1` **solo acepta una rama o un tag que el
+remoto publique** — no un SHA arbitrario. `apps.json` no tiene forma de
+pedir un commit exacto tal como está diseñado. No es una limitación de
+este proyecto, es cómo funciona el shallow clone de git.
+
+**Las únicas dos curas reales, ninguna ejecutable hoy sin Yedin:**
+1. Esperar a que POSNext/URY publiquen un tag `version-16` (no está en
+   nuestro control).
+2. **Mirror propio en un repo de Korvex**, pinneado al SHA exacto que ya
+   está probado (`docs/13-VERSION-FRAPPE.md`). Esto es crear un repo nuevo
+   y pushear código ahí — **acción externa visible, no se hace sin OK
+   explícito.**
+
+**Lo que NO se hizo, y por qué:** no se rebuildeó la imagen. La entrada de
+`korvexcio` en `apps.json` no se puede probar todavía porque el repo no
+está pusheado a GitHub (regla: push solo cuando Yedin lo pida) — sin push,
+`git clone` de esa entrada fallaría. El bench de `korvex-node1` ya tiene
+`korvexcio` instalado por `bench new-app` directo (S1.1), así que nada deja
+de funcionar por esto; lo que queda pendiente es la **reproducibilidad**
+desde cero, no el funcionamiento actual.
+
+**Verificación:**
+```
+python -m json.tool apps.json -> válido, 4 entradas
+```
+
+**Deuda:** SHA de POSNext/URY sigue sin fijar — misma deuda de S0.5, ahora
+con la causa técnica exacta documentada. Rebuild de imagen con
+`korvexcio` real, pendiente de que Yedin autorice el push.
+
+**Siguiente al retomar:** S1.3 — CI en GitHub Actions.
+
+---
+
+## 2026-08-31 — S1.3: COMPLETADO — CI escrito, la regla crítica probada de verdad
+
+**Estado:** COMPLETADO en lo que se puede probar sin push. **La verificación
+completa (workflow verde en GitHub) queda pendiente del push — no
+existía antes de esta sesión y sigue sin existir.**
+
+**También se corrigió, sobre la marcha:** el app package `korvexcio/` (creado
+en S1.1 vía `bench new-app` directo en el nodo) **no existía todavía en este
+repo DEV** — vivía solo en `korvex-node1`. Eso rompía la regla 7 del
+`CLAUDE.md` ("nunca se edita código en el servidor") sin que nadie lo hubiera
+notado. Se corrigió: `docker compose cp` sacó `apps/korvexcio` del
+contenedor al host, `scp` lo bajó a `C:\PROYECTOS\KORVEXCIO\korvexcio\` +
+`pyproject.toml`. **De aquí en adelante el repo es la fuente de verdad, como
+manda la regla — el nodo consume, no genera.**
+
+**Qué se escribió:**
+- `.github/workflows/server-tests.yml` — el template oficial que `bench
+  new-app` genera (se leyó del código fuente de
+  `frappe/utils/boilerplate.py`, no se inventó), adaptado para instalar
+  `erpnext` antes que `korvexcio` (nuestra app depende de sus doctypes).
+- `.github/workflows/lint.yml` — ruff, config real en `pyproject.toml`
+  (line-length 110, la que trae el boilerplate de Frappe — no el 100 de
+  Carril C, porque esto es una app de Frappe, no una herramienta standalone).
+- `.github/workflows/gitleaks.yml`, `semgrep.yml`, `osv-scanner.yml`,
+  `trivy.yml` — los 4 automatizados de Secure-Vibe (modo C).
+- **`.semgrep/korvexcio-isolation.yml`** — regla propia para la línea 10 del
+  `CLAUDE.md` del repo: `ignore_permissions=True` y `frappe.db.sql()` crudo
+  prohibidos en `korvexcio/`.
+
+**🔴 Bug real en la regla de Semgrep, encontrado probándola de verdad, no
+asumiendo que estaba bien:** el primer intento dio **0 hallazgos** contra un
+archivo de prueba con las dos violaciones a propósito. La causa: el patrón
+de paths (`korvexcio/**/*.py`) duplicaba el prefijo del directorio que ya se
+pasaba como target del scan (`.../korvexcio`), así que nunca matcheaba nada
+fuera de un solo archivo. Se corrigió a `**/*.py`. **Sin copiar el código
+real a `korvexcio/` (arriba) esto nunca se hubiera descubierto** — la regla
+llevaba escrita "bien" desde el punto de vista de YAML válido, pero rota en
+la práctica.
+
+**Verificación, salida real** (corrida en `korvex-node1` vía Docker, contra
+un archivo de prueba temporal — borrado al terminar, nunca tocó el bench ni
+el repo real):
+
+```
+python -c "import yaml, glob; ..." -> las 7 piezas (6 workflows + regla semgrep) YAML válido
+
+docker run --rm -v /tmp/semgrep-test:/src semgrep/semgrep semgrep scan \
+  --config /src/.semgrep/korvexcio-isolation.yml /src/korvexcio --json
+-> ANTES del fix: 0 findings (bug)
+-> DESPUÉS del fix: 2 findings exactos —
+     korvexcio-no-ignore-permissions  isolation_check.py:5  (doc.insert(ignore_permissions=True))
+     korvexcio-no-raw-sql             isolation_check.py:8  (frappe.db.sql(...))
+   Las dos funciones "buenas" (sin ignore_permissions, con frappe.get_all) NO dispararon nada.
+```
+
+**Sin verificar todavía:** ningún workflow ha corrido en GitHub Actions de
+verdad — eso necesita push, y push sigue siendo decisión de Yedin. La
+prueba del semgrep fue standalone contra un fixture, no dentro del pipeline
+real de CI.
+
+**Deuda:** el test de aislamiento (S1.8, todavía sin escribir) no está
+referenciado explícitamente en `server-tests.yml` — no hace falta, correrá
+automático en cuanto exista un archivo de test bajo `korvexcio/`, pero
+conviene revisarlo cuando S1.8 cierre.
+
+**Siguiente al retomar:** S1.4 — `before_tests` que crea la company de
+prueba.
+
+---
+
+## 2026-08-31 — S1.4: COMPLETADO — `before_tests` con DOS Companies, idempotente
+
+**Estado:** COMPLETADO y verificado en vivo, no solo escrito.
+
+**Qué se hizo:** `korvexcio/install.py` con `before_tests()`, enganchado en
+`hooks.py`. Un detalle real que casi se pasa por alto: `frappe.utils.
+install.before_tests()` (el de frappe core) **se sale sin hacer nada si hay
+más de una app instalada** (`len(frappe.get_installed_apps()) > 1: return`)
+— con frappe+erpnext+korvexcio son 3, así que korvexcio necesita su propio
+fixture, no puede apoyarse en el de frappe.
+
+**Por qué DOS Companies y no una (patrón India, adaptado):** `_Test Company
+KORVEXCIO A` / `B`, prefijo `_Test` para no chocar nunca con datos reales
+(VLJ/ESE quedan intactas). S1.8 va a probar aislamiento **entre** Companies
+— con una sola no hay nada que aislar.
+
+**🔴 El mismo bug de `frappe.local.lang` de S0.7, esta vez disparado por
+otra vía:** crear el `Fiscal Year` de prueba dispara la Notification
+estándar "Notification for new fiscal year", que evalúa una condición Jinja,
+que pega con el mismo `UnboundLocalError` de `frappe/locale.py`. **Ya no se
+trata caso por caso** — se blindó en el propio `before_tests()`: `if not
+frappe.local.lang: frappe.local.lang = "en"` al principio de la función. No
+es un parche a Frappe, es setear el dato de contexto que un proceso fuera de
+un request HTTP no tiene solo.
+
+**Verificación, salida real:**
+
+```
+frappe.get_hooks("before_tests")
+-> ['frappe.utils.install.before_tests', 'korvexcio.install.before_tests']
+
+before_tests()  # primera corrida
+Companies _Test: [
+  {'name': '_Test Company KORVEXCIO A', 'abbr': '_TCKA', 'tax_id': '000-0000001-1'},
+  {'name': '_Test Company KORVEXCIO B', 'abbr': '_TCKB', 'tax_id': '000-0000002-2'}
+]
+
+before_tests()  # segunda corrida, prueba de idempotencia
+-> Segunda corrida OK, count: 2   (no duplicó nada)
+
+KORVIS: {"status":"ok","checks":{"postgres":"ok","redis":"ok"}}
+df -h /: 58G libres (37->38%, ~2GB consumidos por las imágenes docker de
+  semgrep/gitleaks descargadas en S1.3 — no por esto)
+```
+
+**Sin verificar todavía:** no se corrió `bench run-tests` completo (no hay
+tests que corran todavía — eso empieza a llenarse en S1.5+ y sobre todo en
+S1.8). Este slice solo prueba que el fixture en sí funciona.
+
+**Siguiente al retomar:** S1.5 — `custom/*.json` con `Customer.rnc` y
+`Customer.tipo_identificacion`.
+
+---
+
+## 2026-08-31 — S1.5: COMPLETADO — custom fields, patrón KSA, verificado con `bench migrate` real
+
+**Estado:** COMPLETADO. Primer custom field del proyecto, con el mecanismo
+correcto desde el día uno (no algo para migrar después).
+
+**Qué se hizo:**
+- `korvexcio/korvexcio/custom/customer.json` — el par de campos en formato
+  dict-por-doctype: `tipo_identificacion` (Select: RNC/Cedula/Pasaporte,
+  default RNC) y `rnc` (Data, después de `tipo_identificacion`).
+- `korvexcio/korvexcio/custom_fields.py` — `sync_custom_fields()` que lee
+  todos los `.json` bajo `custom/` y llama a
+  `frappe.custom.doctype.custom_field.custom_field.create_custom_fields()`
+  (la función real de Frappe para esto — **no `bench export-fixtures`**,
+  que es monolítico y genera conflictos de merge).
+- Enganchado en `hooks.py` vía `after_migrate` — corre en cada `bench
+  migrate`, no solo al instalar. `create_custom_fields()` ya es idempotente
+  por diseño (actualiza si el campo existe).
+
+**Verificación, salida real — se corrió `bench migrate` completo, no un
+atajo:**
+
+```
+bench --site korvexcio.korvexdev.cc migrate
+-> ... Executing `after_migrate` hooks... -> sin errores, terminó limpio
+
+frappe.get_meta("Customer").get_field("rnc")
+-> DocField (Customer-rnc)                    # no es None
+frappe.get_meta("Customer").get_field("tipo_identificacion")
+-> DocField (Customer-tipo_identificacion)    # no es None
+
+frappe.get_all("Custom Field", filters={"dt":"Customer","fieldname":["in",["rnc","tipo_identificacion"]]}, fields=["fieldname","fieldtype","insert_after"])
+-> rnc (Data, después de tipo_identificacion)
+-> tipo_identificacion (Select, después de tax_id)
+
+KORVIS: {"status":"ok",...}
+site ping: {"message":"pong"}
+df -h /: 58G libres, sin cambio
+```
+
+**Sin verificar todavía:** que el campo se vea bien en la UI del formulario
+de Customer (no se abrió navegador esta sesión, mismo motivo que S0.11 —
+frontend en loopback puro del nodo). Verificado por API/meta, no visualmente.
+
+**Siguiente al retomar:** S1.6 — `.env.example` + secretos a mano en el
+nodo.
+
+---
+
+## 2026-08-31 — S1.6: PARCIAL — lo que no depende de un proveedor fiscal, cerrado
+
+**Estado:** 🟡 PARCIAL, honesto sobre por qué. `.env.example` ya estaba
+bien escrito desde S0.1 (no hacía falta tocarlo). Lo que faltaba y sí se
+hizo: generar el único secreto que **no depende de nada externo**.
+
+**Qué se hizo:**
+- **`MASTER_ENCRYPTION_KEY`** generado en el nodo con
+  `secrets.token_hex(32)` y agregado al `.env` de `korvex-node1` (600,
+  nunca pasó por el chat). Hace falta para S3.3 (cifrado de cédula/fecha de
+  nacimiento) — generarlo ahora evita tener que acordarse después.
+- Confirmado que `DB_ROOT_PASSWORD` ya estaba (desde S0.5) y que no hay
+  `.env` trackeado nunca en `git log --all -- .env`.
+- Corrido **`/security-review`** contra el diff completo de los 11 commits
+  sin pushear (S1.1→S1.6): **cero hallazgos por encima del 80% de
+  confianza.** El scaffold no tiene endpoints (`@frappe.whitelist()`), no
+  hay `ignore_permissions=True`, no hay `frappe.db.sql()` crudo, los 6
+  workflows de CI no interpolan contexto no confiable (`github.event.*`) en
+  bloques `run:` de shell.
+- 🟡 Nota del propio `/security-review`, no bloqueante: los workflows de
+  CI usan tags de versión mayor (`@v6`, `@v2`) en vez de SHA fijo — el
+  propio `docs/SEGURIDAD-SECURE-VIBE.md` lo marca como señal de alerta.
+  Va a deuda técnica, no es un hallazgo de seguridad real hoy (nada corre
+  todavía, sin push).
+
+**Lo que NO se hizo, y por qué:** "secretos a mano en el nodo" para el
+`.p12` y los tokens del proveedor de e-CF — **no existen todavía**. Es la
+misma deuda de S0.9: sin proveedor elegido no hay nada que cargar. No se
+inventó un secreto de prueba para simular que esto está cerrado.
+
+**Verificación, salida real:**
+
+```
+ls -la .env (en el nodo) -> -rw------- (600)
+grep -oE "^[A-Z_]+=" .env -> incluye MASTER_ENCRYPTION_KEY= (valor nunca visto)
+git log -p --all | grep -iE "password=.+|MASTER_ENCRYPTION_KEY=[0-9a-f]" -> vacío
+git log --all --oneline -- .env -> vacío, nunca trackeado
+
+/security-review sobre 11 commits sin pushear -> 0 hallazgos >80% confianza
+```
+
+**Deuda:** SHA-pin de las GitHub Actions (menor). El `.p12`/tokens de e-CF
+siguen bloqueados en S0.9/S2.7.
+
+**Siguiente al retomar:** S1.7 — roles y User Permissions por Company.
+
+---
+
+## 2026-08-31 — S1.7: COMPLETADO — aislamiento por Role+User Permission, probado como el usuario real, no como Administrator
+
+**Estado:** COMPLETADO, con la prueba más honesta que se le puede pedir a
+este slice: **cambiar de sesión (`frappe.set_user`) y consultar como el
+cajero de verdad ve**, no inferir desde los permisos de Administrator.
+
+**Qué se hizo — `korvexcio/roles.py`:**
+- 4 Roles: `Cajero VLJ`, `Cajero ESE`, `Dueño`, `Contador`.
+- `Dueño` con `Custom DocPerm` en `User` (read/write/create, sin delete) +
+  `Role` (read) + **`User Permission`** (read/write/create) — sin esto
+  último el dueño podía crear el usuario pero no restringirlo a su
+  Company, y el flujo se quedaba a medias.
+- Los 4 roles con `Custom DocPerm` de solo-lectura en `Company` —
+  **hallazgo real, no anticipado:** un Role recién creado no tiene NINGÚN
+  permiso por default en Frappe (ni siquiera leer). El primer intento de
+  probar el aislamiento reventó con `PermissionError: Insufficient
+  Permission for Company` **antes** de llegar a evaluar el `User
+  Permission` — el DocPerm base se chequea primero.
+- `assign_company_user_permission(user, company)` — llamable varias veces
+  para el mismo usuario con distintas Companies (caso Dueño: una fila por
+  Company).
+- Enganchado en `hooks.py` vía `after_migrate` (lista, junto al de custom
+  fields): `["korvexcio.custom_fields.sync_custom_fields",
+  "korvexcio.roles.sync_roles"]`.
+
+**🔴 Auto-corrección antes de subir nada: usé `ignore_permissions=True`
+dos veces al escribir el archivo.** Exactamente lo que prohíbe la regla
+12b del `CLAUDE.md` y lo que caza mi propia regla de Semgrep de S1.3. Las
+dos sobraban — `bench console`/`bench migrate` corren como Administrator,
+que ya salta todos los checks de permisos sin necesitar el flag. Se
+quitaron las dos antes de desplegar nada. Ninguna llegó a un commit.
+
+**Verificación, salida real — usuarios de prueba creados, sesión
+cambiada de verdad:**
+
+```
+bench --site korvexcio.korvexdev.cc migrate
+-> Executing `after_migrate` hooks... -> limpio, sin errores
+
+# cajero.vlj.test@korvexdev.cc, rol "Cajero VLJ", User Permission -> VLJ
+frappe.set_user("cajero.vlj.test@korvexdev.cc")
+frappe.get_list("Company", pluck="name")
+-> ['VAPERIA LA J Y EL JALAPEÑO']          # SOLO la suya
+
+# dueno.test@korvexdev.cc, rol "Dueño", User Permission -> VLJ Y ESE
+frappe.set_user("dueno.test@korvexdev.cc")
+frappe.get_list("Company", pluck="name")
+-> ['EL SABOR DE LAS 5 ESQUINAS', 'VAPERIA LA J Y EL JALAPEÑO']   # las dos
+
+frappe.has_permission("User", "create")   # como cajero VLJ -> False
+frappe.has_permission("User", "create")   # como Dueño      -> True
+"System Manager" in frappe.get_roles(dueño)                  -> False
+
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, sin cambio
+```
+
+**Sin verificar todavía:** esto es aislamiento de **datos maestros vía el
+mecanismo nativo de Frappe** (Role + User Permission) — funciona, y es real.
+Pero **no es todavía la barrera de S1.8** (`permission_query_conditions` +
+`has_permission` + `company` congelada). User Permission por sí solo tiene
+huecos conocidos — el PR frappe/erpnext#44695 (estados financieros
+ignorando User Permission) es la evidencia de por qué S1.8 hace falta
+igual, con su propia suite de 12 escenarios contra la API.
+
+**Deuda:** el permiso completo de cada Role (Sales Invoice, Item,
+Customer, etc.) no se armó todavía — eso es Fase 4 (S4.1, POS Profile por
+Company). Hoy solo se probó que el mecanismo de dos capas (Role DocPerm +
+User Permission) funciona de verdad.
+
+**Siguiente al retomar:** S1.8 — la barrera de aislamiento real
+(`permission_query_conditions` + `has_permission` + `company` congelada) y
+su suite de 12 escenarios. El slice más importante de seguridad del
+proyecto hasta ahora.
+
+---
+
+## 2026-08-31 — S1.8: COMPLETADO — la barrera de aislamiento, con 8 de 12 escenarios reales y 4 diferidos a Fase 2
+
+**Estado:** COMPLETADO para lo que existe hoy. **No se fingió cobertura de
+lo que no existe** — 4 de los 12 escenarios del blueprint necesitan el
+módulo `ecf` (certificados, providers, endpoints propios), que es Fase 2 y
+todavía son carpetas vacías. Se marcaron `skipTest` con el motivo exacto,
+no se inventó infraestructura para poder marcarlos en verde.
+
+**Qué se escribió:**
+- **`korvexcio/isolation.py`** — `freeze_company()`, el equivalente al
+  `WITH CHECK` de una política RLS: si un documento ya existía y alguien le
+  cambia el campo `company`, se rechaza. Aplica hoy a `Warehouse`, `Cost
+  Center`, `Sales Invoice`, `Sales Order`, `Delivery Note`, `Payment
+  Entry`, `Item Price` — los doctypes de ERPNext con `company` que ya
+  tienen datos reales. Los propios de `korvexcio` (ECF, etc.) se agregan a
+  la lista cuando existan.
+- Enganchado en `hooks.py` vía `doc_events = {"*": {"validate":
+  "korvexcio.isolation.freeze_company"}}` — seguro porque la función
+  filtra por doctype adentro; en cualquier doctype sin `company` no hace
+  nada.
+- **`korvexcio/tests/test_isolation.py`** — 8 escenarios reales + 1
+  `skipTest` documentado que cubre los 4 restantes.
+
+**🔴 El hallazgo más importante del slice, y por qué casi se reporta mal:**
+la primera corrida de la suite dio **3 fallos** en los escenarios de
+lectura (2, 6, 7). La causa no era un bug de la barrera — era que el test
+estaba mal escrito: usaba `frappe.get_doc(doctype, name)` para simular una
+lectura, y **`frappe.get_doc()` NO chequea permisos de lectura por
+diseño** — es una llamada de ORM de bajo nivel para código de servidor que
+ya decidió que tiene derecho a leer. Lo que sí los chequea, porque es lo
+que responde de verdad `/api/resource/<doctype>/<name>`, es
+`frappe.client.get()`. Se verificó la diferencia a mano contra la consola
+antes de "arreglar" nada — confirmar el hallazgo antes de tocar el test,
+no al revés. **Implicación real para Fase 2:** cualquier método
+`@frappe.whitelist()` propio de `korvexcio/ecf` que use `frappe.get_doc()`
+para leer un documento sin llamar `doc.check_permission("read")` primero
+**se salta el aislamiento sin darse cuenta.** Esto se anota como regla
+para S2.x, no solo como nota de test.
+
+**🟡 Segundo hallazgo real, documentado como deuda, no ocultado:** el
+escenario 6 (enumeración) muestra que Frappe **sí distingue** "existe pero
+no es tuyo" (`PermissionError`) de "no existe" (`DoesNotExistError`) — una
+fuga de información menor (confirma qué `name`s existen en la otra
+Company). Es comportamiento nativo de la plataforma, no algo que este
+proyecto introdujo, y arreglarlo a nivel global es un cambio de mayor
+alcance que este slice. Queda anotado, el test lo confirma explícitamente
+en vez de esconderlo detrás de un assert flojo.
+
+**Verificación, salida real — corrida DOS veces (prueba de idempotencia):**
+
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio
+
+Running 9 integration tests for korvexcio
+ ✔ test_scenario_1_list_filtered_by_company
+ ✔ test_scenario_2_direct_get_other_company_denied      (corregido: client.get, no get_doc)
+ ✔ test_scenario_3_create_in_other_company_denied
+ ✔ test_scenario_4_company_frozen_after_create            <- la pieza nueva de S1.8
+ ✔ test_scenario_5_delete_other_company_denied_no_effect
+ ✔ test_scenario_6_enumeration_same_error_shape           (confirma la fuga menor, no la oculta)
+ ✔ test_scenario_7_unauthenticated_denied
+ ✔ test_scenario_8_owner_sees_both_companies
+ = test_scenario_9_to_12_deferred_to_fase2                (skip explícito, motivo documentado)
+
+Ran 9 tests in 0.924s  ->  OK (skipped=1)
+# segunda corrida, idéntica: OK (skipped=1) — no dejó basura, no rompió en repetición
+
+KORVIS: {"status":"ok",...}
+df -h /: 58G libres, sin cambio
+```
+
+**Limpieza:** los usuarios manuales de prueba de S1.7
+(`cajero.vlj.test@korvexdev.cc`, `dueno.test@korvexdev.cc`) se borraron —
+la suite automatizada crea y gestiona los suyos propios
+(`_test.isolation.*@korvexdev.cc`), no hacía falta duplicar.
+
+**Deuda:**
+- 4 escenarios diferidos a Fase 2 (S2.2 certificados, S2.7 providers,
+  endpoints propios de `korvexcio/ecf`) — el archivo de test es donde se
+  completan cuando esa infraestructura exista, no un archivo nuevo.
+- La fuga de enumeración (`PermissionError` vs `DoesNotExistError`) queda
+  documentada, sin arreglar — es comportamiento de plataforma.
+- `has_permission` custom **no hizo falta escribirlo todavía**: el
+  mecanismo nativo de User Permission (S1.7) + el nuevo `freeze_company`
+  (S1.8) cubren los 8 escenarios reales de hoy. Se revisará si algún
+  doctype propio de `korvexcio` (Fase 2) necesita reglas más finas que lo
+  que User Permission da solo.
+
+**Siguiente al retomar:** S1.9 (Carril B — condicional, no aplicado sin
+aprobación explícita de Yedin) o cerrar Fase 1.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -847,18 +1288,24 @@ S0.8 con veredicto escrito (POSNext, pendiente confirmar) ✅ · S0.9 sin
 TrackID, movida a deuda con el OK explícito de Yedin. **No se fingió que
 está resuelto — está anotado como abierto y sigue así.**
 
-### Fase 1 — Esqueleto de la app · 08/09 → 12/09 *(en curso)*
+### Fase 1 — Esqueleto de la app · 08/09 → 12/09 *(CERRADA 31/08/2026)*
 - [x] S1.1 `bench new-app korvexcio` con módulos `ECF` y `Retail` — GPLv3, instalada, verificada
-- [ ] S1.2 `apps.json` con el repo propio · **fijar SHA o mirrors** para POSNext y URY
-      (hoy están en `develop`, que es mutable) · el despliegue verifica el **SHA**, no
-      el exit code
-- [ ] S1.3 CI: server tests + ruff + los 5 workflows de Secure-Vibe + el test de aislamiento
-- [ ] S1.4 `before_tests` que crea la company de prueba
-- [ ] S1.5 `custom/*.json` con `Customer.rnc` y `Customer.tipo_identificacion`
-- [ ] S1.6 secretos cargados a mano en el nodo, permisos `600`
-- [ ] S1.7 roles y User Permissions por Company
-- [ ] S1.8 🔴 **la barrera de aislamiento + su suite de 12 escenarios**
-- [ ] S1.9 *(solo si se aprueba el carril B)* prompt de handoff con la frontera de archivos
+- [~] S1.2 `apps.json` con el repo propio · **fijar SHA imposible sin mirror** (confirmado
+      en el código de `bench`, git shallow clone no acepta SHA arbitrario) — deuda documentada,
+      no resuelta
+- [x] S1.3 CI: 6 workflows (server-tests, lint, gitleaks, semgrep, osv-scanner, trivy) +
+      regla propia de aislamiento en Semgrep, probada de verdad (2 hallazgos exactos en un
+      fixture con las 2 violaciones a propósito)
+- [x] S1.4 `before_tests` — DOS companies de prueba (`_Test Company KORVEXCIO A/B`), idempotente
+- [x] S1.5 `custom/customer.json` — `tipo_identificacion` + `rnc`, verificado con `bench migrate` real
+- [~] S1.6 `MASTER_ENCRYPTION_KEY` generado (600, nunca visto) · `/security-review` sin hallazgos ·
+      secretos de e-CF siguen bloqueados en S0.9/S2.7 (no existen, no se inventaron)
+- [x] S1.7 roles y User Permissions por Company — probado como el usuario real (`frappe.set_user`),
+      no como Administrator
+- [x] S1.8 🔴 **la barrera de aislamiento** (`freeze_company`) + 8 de 12 escenarios reales,
+      4 diferidos a Fase 2 con motivo explícito — `bench run-tests` verde, dos corridas
+- [ ] S1.9 **N/A** — condicional a aprobar el carril B (§7.2), Yedin no lo aprobó. Correctamente
+      cerrado como "no aplica", no como pendiente
 
 ### Fase 2 — Módulo ECF · 15/09 → 03/10 · ⬅ CAMINO CRÍTICO
 - [ ] S2.1 → S2.15 (`docs/08-BLUEPRINT.md` §6)

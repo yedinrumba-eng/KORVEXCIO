@@ -1,12 +1,16 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
 > **Lo primero que se lee al retomar.** Escrito el 2026-08-31 en sesión de
-> descubrimiento (Cowork). Estado: **🔵 Fase 0 CERRADA (D20) → Fase 1 en
-> curso.** Bench v16, site, Companies, backup y catálogo de pie. **S0.9 (el
-> gate fiscal) y S0.3 (correos) bajaron a deuda técnica** por decisión
-> explícita de Yedin en el chat el 31/08 — ya no bloquean el trabajo de
-> código, pero siguen sin resolverse: **para de verdad en S2.7** si para
-> entonces siguen abiertas.
+> descubrimiento (Cowork). Estado: **🟢 Fase 1 CERRADA → Fase 2 (módulo
+> ECF) es lo que sigue.** La app `korvexcio` existe de verdad: GPLv3,
+> módulos `ECF`/`Retail`, custom fields en `Customer`, roles por Company
+> probados con un usuario real, y **la barrera de aislamiento de D19
+> funcionando y verificada** (`bench run-tests` verde, dos corridas).
+>
+> **S0.9 (el gate fiscal) y S0.3 (correos) siguen en deuda técnica** —
+> decisión de Yedin del 31/08. Ya no bloquean código, pero **paran de
+> verdad en S2.7** (elegir proveedor real) si para entonces siguen sin
+> resolver.
 >
 > **Nombres reales (31/08, confirmados por Yedin):** la vapería es
 > **VAPERIA LA J Y EL JALAPEÑO** (abbr `VLJ`), la cafetería es
@@ -15,26 +19,26 @@
 > del proyecto, no el nombre de ninguna `Company`.
 >
 > **S0.7b (site `demo.korvexdev.cc`) queda FUERA** — decisión explícita de
-> Yedin ("creo que es perder el tiempo"). No bloqueaba nada de Fase 0; el
-> comando queda listo en `PROGRESO.md` por si algún día hace falta.
->
-> **S0.8 recomienda POSNext**, revirtiendo el sesgo hacia el nativo de D16 —
-> con evidencia de código, no de opinión. Pendiente el OK explícito de
-> Yedin y la prueba en vivo (se hace en S4.1). Detalle: `docs/10-SPIKE-POS.md`.
+> Yedin. **S0.8 recomienda POSNext**, revirtiendo el sesgo hacia el nativo
+> de D16 — con evidencia de código, pendiente OK explícito de Yedin
+> (`docs/10-SPIKE-POS.md`).
 >
 > 🟡 **`LICENSE` (el archivo de la raíz del repo) sigue diciendo MIT** y
 > tiene que ser GPLv3 — sin resolver. El `hooks.py` de la app `korvexcio`
-> **ya quedó en GPLv3** (`app_license = "gpl-3.0"`, decidido en S1.1
-> aplicando la regla 11 del `CLAUDE.md`), pero el archivo `LICENSE` de la
-> raíz es una cosa aparte y sigue en deuda.
+> ya quedó en GPLv3; el archivo `LICENSE` de la raíz es aparte y sigue en
+> deuda. **Cámbialo antes de empujar código público.**
 >
-> **S1.1 cerrada:** existe `korvexcio`, la app propia, con módulos `ECF` y
-> `Retail`, instalada en `korvexcio.korvexdev.cc`. Primera línea de código
-> del proyecto. Una lección real pagada en el camino — leer
-> "Lecciones ya pagadas" abajo antes de instalar cualquier otra app.
+> **Fase 1, resumen de lo que existe hoy:** app `korvexcio` instalada ·
+> `apps.json` con el repo propio (SHA de POSNext/URY sigue sin fijar —
+> imposible sin un mirror, confirmado en el código de `bench`) · 6
+> workflows de CI + regla propia de Semgrep, probada de verdad · `custom
+> fields` en Customer · roles y User Permissions por Company · **la
+> barrera de aislamiento** (`korvexcio/isolation.py`, `freeze_company`) con
+> 8 de 12 escenarios reales verificados y 4 diferidos a Fase 2 con motivo
+> explícito. Detalle completo, slice por slice, en `PROGRESO.md`.
 >
-> Próximo paso: **S1.2** — `apps.json` con el repo propio + fijar SHA/mirrors
-> de POSNext y URY (siguen en `develop`, mutable).
+> Próximo paso: **Fase 2 — el módulo `ecf`** (S2.1 en adelante), sabiendo
+> que no puede cerrarse sin resolver S0.9/S2.7 primero.
 > Evidencia de versión y operación: `docs/13-VERSION-FRAPPE.md`.
 >
 > ### Los tres documentos que se leen, en este orden
@@ -51,54 +55,64 @@
 
 ---
 
-## Estado técnico al retomar — Fase 0 al 90%, gate S0.9 abierto
+## Estado técnico al retomar — Fase 1 CERRADA, Fase 2 (ecf) es lo que sigue
 
-- Imagen en `korvex-node1`: `korvexcio:16`, digest
-  `sha256:6ed8f523d2795fdc4c7a808b7cfe8cb50c572d2cabc8f2e6b2485d5e1f4b2ee2`.
-- Stack Compose: proyecto `korvexcio`, nueve servicios runtime arriba,
-  configurator terminado con código 0 y MariaDB healthy.
-- Versiones: Frappe `16.32.0`, ERPNext `16.33.0`, POSNext `1.12.0`, URY
-  `v3.0.0-beta.1`.
-- Red: solo frontend en `127.0.0.1:8080`; DB y Redis sin puertos host.
-- Recursos: límites sumados 5,504 MiB; 60 GB libres, sin cambio medible desde
-  S0.5.
-- KORVIS: servicio activo y `/health` con Postgres/Redis `ok`.
-- Site: **`korvexcio.korvexdev.cc`**, `frappe 16.32.0` + `erpnext 16.33.0`.
+- Imagen en `korvex-node1`: `korvexcio:16`, sitio `korvexcio.korvexdev.cc`,
+  `frappe 16.32.0` + `erpnext 16.33.0` + **`korvexcio 0.0.1` (rama `main`)**.
+  Nueve servicios de runtime arriba, MariaDB healthy. Red y recursos sin
+  cambios desde S0.5.
 - **Companies:** `VAPERIA LA J Y EL JALAPEÑO` (`VLJ`) y
-  `EL SABOR DE LAS 5 ESQUINAS` (`ESE`), cada una con `tax_id` placeholder
-  (RNC pendiente, D13), `default_currency=DOP`, 4 almacenes propios, cost
-  center propio, 94 cuentas (Chart of Accounts).
-- **Catálogo:** 24 Items — template `ELIQ-30ML` con 9 variantes (Sabor ×
-  Nicotina) en VLJ, 6 sueltos en VLJ, 8 de mostrador en ESE. Ver S0.11 en
-  `PROGRESO.md` para el detalle y el bug de `item_defaults` ya resuelto.
-- **Backup:** `scripts/backup-retention.sh` probado en vivo (905.4 KiB, no
-  vacío), unit files de systemd copiados al nodo
-  (`/home/korvex/korvexcio-backup.{service,timer}`). **Falta el `sudo
-  systemctl enable` — solo lo puede correr Yedin.**
-- 🟡 **Hueco de fixtures descubierto en S0.7:** `bench new-site
-  --install-app` headless no siembra `Warehouse Type`, UOM, Item Groups ni
-  Market Segments — eso solo lo hace el Setup Wizard de la UI. Se corrigió a
-  mano llamando `install_fixtures.install()` + funciones sueltas. **Aplica a
-  cualquier tenant nuevo** — debe entrar al script de alta de tenant, no
-  repetirse de memoria.
-- Password de Administrator: generado random en el nodo
+  `EL SABOR DE LAS 5 ESQUINAS` (`ESE`), con `tax_id` placeholder (RNC
+  pendiente, D13), almacenes, cost centers y Chart of Accounts completos.
+  Más dos Companies de prueba (`_Test Company KORVEXCIO A/B`) para la
+  suite automatizada — no tocan datos reales.
+- **Catálogo:** 24 Items (S0.11). **Backup:** probado en vivo, falta el
+  `sudo systemctl enable` de Yedin (S0.10).
+- **La app `korvexcio` — qué existe hoy, todo con evidencia real en
+  `PROGRESO.md`:**
+  - `hooks.py` — GPLv3, módulos `ECF`/`Retail`, `after_migrate` (custom
+    fields + roles), `doc_events["*"]["validate"]` (la barrera).
+  - `install.py` — `before_tests()`, dos Companies de prueba.
+  - `custom_fields.py` + `custom/customer.json` — `Customer.rnc` y
+    `Customer.tipo_identificacion`, patrón KSA.
+  - `roles.py` — 4 Roles (`Cajero VLJ`, `Cajero ESE`, `Dueño`, `Contador`),
+    Dueño sin System Manager pero puede crear cajeros con rol acotado.
+  - **`isolation.py`** — `freeze_company()`, el `WITH CHECK` de D19.
+    Aplica a `Warehouse`, `Cost Center`, `Sales Invoice`, `Sales Order`,
+    `Delivery Note`, `Payment Entry`, `Item Price` hoy; se le agregan los
+    doctypes propios de `korvexcio` cuando existan (Fase 2).
+  - `tests/test_isolation.py` — 8 escenarios reales verdes, 4 diferidos a
+    Fase 2 con `skipTest` explícito. `bench run-tests --app korvexcio` →
+    verde, dos corridas (idempotencia probada).
+- **🔴 Hallazgo de S1.8 que aplica a TODO lo que se escriba en Fase 2:**
+  `frappe.get_doc(doctype, name)` **no chequea permisos de lectura**.
+  Lo que sí los chequea, porque es lo que responde de verdad
+  `/api/resource/<doctype>/<name>`, es `frappe.client.get()`. **Todo
+  método `@frappe.whitelist()` de `korvexcio/ecf` que lea un documento
+  tiene que usar `doc.check_permission("read")` explícito, o pasar por
+  `frappe.client.get()`/`frappe.get_list()` — nunca fiarse de
+  `get_doc()` a secas.**
+- 🟡 **S1.2, `apps.json`:** tiene la entrada de `korvexcio`, pero **fijar
+  SHA de POSNext/URY es técnicamente imposible sin un mirror** — confirmado
+  leyendo el código de `bench` (`git clone --branch <X> --depth 1` no
+  acepta un SHA arbitrario). Mirror propio = crear un repo nuevo y
+  pushear ahí, acción externa que necesita el OK de Yedin.
+- 🟡 **`MASTER_ENCRYPTION_KEY`** generado en el nodo (S1.6), 600, nunca
+  visto por nadie fuera del servidor. Los secretos de e-CF (.p12, tokens)
+  siguen sin existir — bloqueados en S0.9/S2.7.
+- Password de Administrator del site real: generado random en el nodo
   (`/home/korvex/frappe_docker-korvexcio-s05/.korvexcio-admin-pw`, 600).
   **Nunca pasó por el chat ni por este repo.**
-- **S0.8 (POS):** matriz de 8 criterios con evidencia de código, recomienda
-  **POSNext** — revierte el sesgo de D16 hacia el nativo. Detalle:
-  `docs/10-SPIKE-POS.md`. Falta la prueba en vivo (red cortada) y el OK de
-  Yedin; se hace en S4.1.
-- 🔴 **S0.9 (fiscal, EL GATE): BLOQUEADA.** Ninguna de las 3 vías se puede
-  intentar sin S0.3 (correos a Alanube/ECF SSD, sin mandar) o sin RNC+
-  certificado digital (sin pedir). No hay `docs/11-SPIKE-FISCAL.md` porque no
-  hay nada que documentar todavía — no se fabricó ningún TrackID.
-- Commits locales: `e119e00`, `2411f94`, `e611edc`, `4b0027b`, `d47c4ff`,
-  `21809f3` (cierre S0.10/S0.11), más el commit de este cambio (ver
-  `git log --oneline -8`). `origin/main` sigue en `e19389f`: **no hubo
-  push**.
-- Pendiente inmediato: **S0.7b**, site `demo.korvexdev.cc`.
-- Deuda: POSNext/URY están en branches `develop`; fijar referencias inmutables
-  antes de S1.2. Build cache reclamable: 7.154 GB.
+- **S0.8 (POS):** recomienda **POSNext** (revierte D16, evidencia de
+  código en `docs/10-SPIKE-POS.md`). Pendiente OK de Yedin + prueba en
+  vivo (S4.1).
+- 🔴 **S0.9/S0.3 (fiscal):** deuda técnica por decisión de Yedin (D20),
+  ya no bloquea código. **Para de verdad en S2.7** si sigue sin resolver.
+- Deuda menor: build cache reclamable 7.154 GB · SHA-pin de GitHub Actions
+  (`@v6` en vez de SHA fijo, detectado por `/security-review`, no urgente
+  porque nada ha corrido todavía sin push).
+- **Sin push.** `origin/main` sigue en `e19389f`. Commits locales: ver
+  `git log --oneline` — Fase 0 completa + Fase 1 completa, todo en `main`.
 
 ---
 
@@ -336,22 +350,37 @@ solo pide 1–3 GB. Un bench con 2–3 sites cabe; **10 tenants no caben.** El
 | **S0.8** 🟡 | Matriz de 8 criterios con evidencia de código; recomienda POSNext. Falta prueba en vivo (se hace en S4.1) y OK de Yedin |
 | ~~**S0.7b**~~ | **Descartada por Yedin** ("perder el tiempo") — no bloqueaba nada, comando queda listo en `PROGRESO.md` por si algún día hace falta |
 | **S0.12 (D20)** ✅ | Fase 0 cerrada por decisión explícita de Yedin: **S0.9/S0.3 bajan a deuda técnica**, no bloquean más. `data/korvex.json` en "activo" |
-| **S1.1** ✅ | App `korvexcio` creada — GPLv3, módulos `ECF`/`Retail`, instalada en el site. Lección pagada: reiniciar `backend`+colas+scheduler+websocket después de instalar cualquier app nueva |
+| **S1.1** ✅ | App `korvexcio` creada — GPLv3, módulos `ECF`/`Retail`, instalada en el site |
+| **S1.2** 🟡 | `apps.json` con el repo propio. SHA de POSNext/URY **imposible de fijar sin mirror** (confirmado en el código de `bench`) |
+| **S1.3** ✅ | 6 workflows de CI + regla propia de Semgrep, probada de verdad contra un fixture |
+| **S1.4** ✅ | `before_tests` — dos Companies de prueba, idempotente |
+| **S1.5** ✅ | `Customer.rnc` + `Customer.tipo_identificacion`, verificado con `bench migrate` real |
+| **S1.6** 🟡 | `MASTER_ENCRYPTION_KEY` generado · `/security-review` sin hallazgos. Secretos de e-CF siguen sin existir |
+| **S1.7** ✅ | Roles + User Permissions por Company, probado como el usuario real |
+| **S1.8** ✅ | **La barrera de aislamiento** (`freeze_company`) + 8/12 escenarios reales verdes, 4 diferidos a Fase 2 |
+| **S1.9** N/A | Carril B condicional, no aprobado — correctamente cerrado como "no aplica" |
+| ~~**S0.7b**~~ | **Descartada por Yedin** ("perder el tiempo") |
 
-### Lo que sigue
+**Fase 1 CERRADA el 31/08/2026.** Detalle completo, comando por comando, en
+`PROGRESO.md`.
 
-| # | Slice | Qué | Verificación |
-|---|---|---|---|
-| 1 | **S1.2** ⭐ | `apps.json` con el repo propio de `korvexcio` + fijar SHA/mirrors de POSNext y URY (siguen en `develop`) | `bench version` lista `korvexcio`; `git -C apps/korvexcio rev-parse HEAD` coincide con lo pusheado |
-| 2 | **S1.3** | CI: server tests + ruff + los 5 workflows de Secure-Vibe + test de aislamiento | Workflow verde en GitHub Actions |
-| 3 | **S1.4 → S1.9** | `before_tests`, `custom/*.json`, secretos, roles por Company, **la barrera de aislamiento (S1.8)**, carril B si se aprueba | Detalle en `docs/08-BLUEPRINT.md` §6, Fase 1 |
+### Lo que sigue — Fase 2, el módulo `ecf`
 
-**🔴 Deuda que sigue abierta, sin resolver — no bloquea Fase 1, pero
-tampoco desaparece:**
+| # | Slice | Qué |
+|---|---|---|
+| 1 | **S2.1** | `DGII Settings` — **NO Single**, un registro por Company (D19) |
+| 2 | **S2.2** | `DGII Digital Certificate` — `.p12` como Attach, password como Password (nunca Data) |
+| 3 | **S2.3 → S2.6** | Secuencia eNCF, DocType `ECF`, `ECF Integration Log`, interfaz `providers/base.py` |
+| 4 | **S2.7** 🔴 | El proveedor real. **Aquí es donde S0.9/S0.3 paran de verdad** si siguen sin resolver |
+
+**🔴 Deuda que sigue abierta, sin resolver — no bloquea Fase 2, pero para
+de verdad en S2.7:**
 - **S0.9/S0.3** (fiscal) — necesita correos de Yedin o RNC+certificado.
-  **Para de verdad en S2.7** si sigue abierta ahí.
 - **LICENSE de la raíz** — MIT, tiene que ser GPLv3. Decisión de Yedin,
   antes de que haya código público que se distribuya.
+- **D16/POS** — recomienda POSNext, falta el OK explícito de Yedin.
+- **SHA-pin de POSNext/URY** — imposible sin mirror propio (acción externa,
+  necesita OK de Yedin para crear el repo y pushear).
 
 ### Reglas del nodo que aplican a cada uno de esos slices
 
@@ -403,7 +432,10 @@ pagarlas — el detalle completo con comandos está en la entrada de
 |---|---|---|
 | **`bench new-site --install-app` headless no siembra datos maestros** (`Warehouse Type`, UOM, Item Groups, Market Segments). Crear la primera `Company` reventó con `LinkValidationError: Could not find Warehouse Type: Transit` (S0.7) | El sitio se veía sano — `list-apps` mostraba `erpnext` instalado, el `ping` respondía. El hueco solo aparece cuando algo intenta usar ese dato maestro, y eso normalmente pasa recién al crear la primera `Company` | Llamar `erpnext.setup.setup_wizard.operations.install_fixtures.install(country=...)` (+ las funciones sueltas si `set_up_address_templates` revienta por el bug de `frappe.local.lang`, ver abajo) **antes** de crear cualquier `Company`, en todo tenant nuevo |
 | **Un proceso Python vivo no se entera de una app nueva.** Tras `bench new-app` + `install-app`, el site respondía `500 Internal Server Error` — `ModuleNotFoundError: No module named 'korvexcio'` (S1.1) | `install-app` terminó "sin errores" en la consola. El paquete se instaló bien en el venv (`uv pip install -e`). El problema es que `backend`/`queue-*`/`scheduler`/`websocket` ya estaban corriendo **desde antes** de que el paquete existiera, y un proceso vivo no relee `sys.path` solo | `docker compose restart backend queue-short queue-long scheduler websocket` **después** de instalar cualquier app nueva o cambiar `modules.txt`. No hace falta tocar `frontend`, `db` ni los `redis` |
-| **`frappe/locale.py:get_locale_value` revienta si `frappe.local.lang` no está seteado** fuera de un request HTTP (bug de upstream, no de este proyecto) — pasó corriendo `install_fixtures.install()` desde `bench console` (S0.7) | El traceback apunta a Jinja/`Address Template`, parece un problema de plantillas cuando en realidad es que falta un dato de contexto | No se parchea Frappe. Se evita ejecutando solo las funciones de `install_fixtures` que hacen falta (no el `install()` completo), o seteando `frappe.local.lang` a mano antes de llamar algo que dependa de plantillas Jinja desde consola |
+| **`frappe/locale.py:get_locale_value` revienta si `frappe.local.lang` no está seteado** fuera de un request HTTP (bug de upstream, no de este proyecto) — pasó corriendo `install_fixtures.install()` desde `bench console` (S0.7) | El traceback apunta a Jinja/`Address Template`, parece un problema de plantillas cuando en realidad es que falta un dato de contexto | No se parchea Frappe. Se evita ejecutando solo las funciones de `install_fixtures` que hacen falta (no el `install()` completo), o seteando `frappe.local.lang` a mano antes de llamar algo que dependa de plantillas Jinja desde consola. **Volvió a pasar en S1.4** (una `Notification` estándar al crear un `Fiscal Year` de prueba) — desde entonces `before_tests()` lo blinda al principio: `if not frappe.local.lang: frappe.local.lang = "en"` |
+| **Un `Role` recién creado no tiene NINGÚN permiso, ni siquiera leer** (S1.7) | Se probó el aislamiento y reventó con `PermissionError: Insufficient Permission for Company` **antes** de llegar a evaluar el `User Permission` — es el comportamiento correcto de Frappe (sin `DocPerm` no hay acceso), pero fácil de no anticipar si uno asume que un Role "básico" trae algo por default | Todo `Role` nuevo necesita su `Custom DocPerm` explícito en cada doctype que va a tocar — aunque sea solo lectura, como `Company` |
+| **`frappe.get_doc(doctype, name)` NO chequea permisos de lectura** — es una llamada de ORM de bajo nivel (S1.8) | Un test que usa `get_doc()` para simular "¿puede leer esto un usuario sin permiso?" da falso negativo: parece que hay un hueco de seguridad cuando en realidad el test está mal escrito | Usar `frappe.client.get(doctype, name)` — la función real detrás de `/api/resource/<doctype>/<name>` — para probar lectura. Y en código propio: todo `@frappe.whitelist()` que lea un doc debe llamar `doc.check_permission("read")` explícito, nunca confiar en `get_doc()` solo |
+| **Frappe distingue "existe pero no es tuyo" de "no existe"** — `PermissionError` vs `DoesNotExistError` (S1.8) | Es comportamiento nativo de la plataforma, no algo que introdujo este proyecto — pero sí es la fuga de enumeración exacta que el blueprint pedía probar (§7.3, escenario 9) | Documentado como deuda menor en `PROGRESO.md`. No se intentó parchear Frappe para unificar los errores — cambio de mayor alcance que este slice |
 
 ---
 
