@@ -81,11 +81,21 @@ KORVEXCIO/                              ← tu repo, lo único que mantienes
 
 ```json
 [
-  { "url": "https://github.com/frappe/erpnext",           "branch": "version-15" },
-  { "url": "https://github.com/DeeloaSociety/posnext",    "branch": "main" },
-  { "url": "https://github.com/yedinrumba-eng/KORVEXCIO", "branch": "main" }
+  { "url": "https://github.com/frappe/erpnext.git",           "branch": "version-16" },
+  { "url": "https://github.com/DeeloaSociety/posnext.git",    "branch": "develop" },
+  { "url": "https://github.com/ury-erp/ury.git",              "branch": "develop" },
+  { "url": "https://github.com/yedinrumba-eng/KORVEXCIO.git", "branch": "main" }
 ]
 ```
+
+> ⚠️ **Corregido el 31/08 con el `apps.json` real de S0.5.** Antes este ejemplo decía
+> `version-15` y `"branch": "main"` para POSNext. **POSNext no tiene rama `main`** —
+> sus únicas ramas publicadas son `develop` y `version-1.12`; URY tampoco publica
+> `version-16`. La línea de `korvexcio` entra en S1.1, cuando la app exista.
+>
+> 🟡 **Deuda:** `develop` es mutable. Los SHA exactos que se probaron están en
+> `docs/13-VERSION-FRAPPE.md`, y **S1.2 los fija** antes de que esto sea producción.
+> Frappe no va en `apps.json`: entra por `FRAPPE_PATH` / `FRAPPE_BRANCH` del build.
 
 Ese archivo se le pasa al build como secreto de BuildKit y sale una imagen
 propia:
@@ -93,9 +103,9 @@ propia:
 ```bash
 docker build \
   --build-arg=FRAPPE_PATH=https://github.com/frappe/frappe \
-  --build-arg=FRAPPE_BRANCH=version-15 \
+  --build-arg=FRAPPE_BRANCH=version-16 \
   --secret=id=apps_json,src=apps.json \
-  --tag=korvexcio:15 \
+  --tag=korvexcio:16 \
   --file=images/layered/Containerfile .
 ```
 

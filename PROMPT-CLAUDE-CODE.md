@@ -1,104 +1,86 @@
-# Prompt para arrancar en Claude Code
+# Prompt para arrancar una sesión nueva
 
-> Copiar y pegar tal cual en la primera sesión de Claude Code en esta carpeta.
-> Actualizado el 2026-08-31 tras el barrido de arquitectura de referencia.
+> Copiar y pegar tal cual al abrir **Claude Code** o **Codex** en esta carpeta.
+> Actualizado el 2026-08-31 al cerrar **S0.5** (bench v16 de pie, D2 cerrada).
+>
+> **Este archivo se actualiza al cerrar cada slice.** Si el prompt de abajo
+> todavía dice S0.6 y `PROGRESO.md` dice que S0.6 está cerrada, gana
+> `PROGRESO.md` — y hay que corregir este archivo.
 
 ---
 
-## El prompt
+## 1. El prompt — sesión de EDITOR (lo normal)
 
 ```
-Proyecto KORVEXCIO — ERP + POS multi-tenant sobre ERPNext/Frappe para retail y
-food en República Dominicana. Primer cliente: VAPELAND (tienda de vapes/hookah/
-tabaco con cafetería en RD). Se vende después a más clientes.
+Vas de EDITOR en KORVEXCIO (C:\PROYECTOS\KORVEXCIO).
+
+QUÉ ES: ERP + POS multi-tenant sobre ERPNext/Frappe v16 para retail y food en
+República Dominicana. Producto de la casa KORVEX. Primer cliente: VAPELAND
+(vape shop + cafetería, dos negocios del mismo dueño).
 Repo: https://github.com/yedinrumba-eng/KORVEXCIO.git
 
 LEE EN ESTE ORDEN, completo, antes de proponer nada:
-  1. HANDOFF.md                        — decisiones, riesgos, el reloj, y la
-                                         tabla de qué está verificado y qué no
-  2. docs/06-COMO-SE-TRABAJA.md        — CÓMO se extiende ERPNext sin tocarlo
-  3. docs/07-ARQUITECTURA-REFERENCIA.md — el mapa de licencias, los repos de RD
-                                         y la estructura de DocTypes ya destilada
-  4. CLAUDE.md                         — reglas obligatorias y nomenclatura
-  5. docs/02-FISCAL-RD.md              — el e-CF de la DGII, el camino crítico
-
-⛔ NO se clona ni se modifica ERPNext. Se instala vía apps.json con branch
-fijado, y todo lo nuestro va en UNA app de Frappe llamada `korvexcio`, con dos
-módulos internos: `ecf` (fiscal DGII) y `retail` (vertical). Si te encuentras
-editando un archivo dentro de apps/erpnext/ o apps/frappe/, PARA — hay una forma
-correcta y está en el doc 06. Única excepción: POSNext sí se forkea, en rama
-`korvex`, con `upstream` como remote.
+  1. HANDOFF.md            — dónde estamos, las trampas del nodo, qué está
+                             verificado y qué no
+  2. PROGRESO.md           — la bitácora y la deuda técnica abierta. La ÚLTIMA
+                             entrada dice exactamente dónde quedó el trabajo
+  3. docs/08-BLUEPRINT.md  — EL PLAN. Fases, microslices, la verificación de
+                             cada uno, las reglas del ejecutor y la seguridad
+                             por fase. Es la fuente de verdad del qué y del orden
+  4. CLAUDE.md             — reglas obligatorias y nomenclatura
+  5. docs/06-COMO-SE-TRABAJA.md — CÓMO se extiende ERPNext sin tocarlo
 
 EL RELOJ: 15/11/2026, e-CF obligatorio para pequeños/micro/no clasificados
 (Ley 32-23). Multa 5-50 salarios mínimos. Todo lo demás se difiere; esto no.
 
-Las 4 decisiones están tomadas y NO se re-discuten: ERPNext/Frappe · e-CF vía
-proveedor certificado por API · MVP = POS + inventario + e-CF · producto
-genérico retail+food con módulos. Si el spike fiscal falla, eso sí es
-información nueva y se reabre la decisión del proveedor — nunca la base.
+TU SLICE: S0.6 — crear el site `korvexcio.korvexdev.cc` en el bench que ya
+está de pie en korvex-node1, con ERPNext instalado. NADA MÁS. S0.7 (las dos
+Companies) no se adelanta.
 
-TU PRIMERA TAREA — Fase 0, en este orden, sin saltarte pasos:
+Verificación con la que se cierra:
+  curl -H "Host: korvexcio.korvexdev.cc" http://127.0.0.1:8080/api/method/ping
+    -> {"message":"pong"}
+  bench --site korvexcio.korvexdev.cc list-apps   -> frappe, erpnext
+  systemctl status korvex-api && curl -s http://127.0.0.1:4000/health
+  df -h /
 
-  1. VERIFICAR los 4 repos marcados ⭐ en docs/07 (20 minutos):
-       - wilmerm/alanube-python        → ¿MIT? ¿Python? ¿los 10 tipos? ¿vivo?
-       - victors1681/dgii-ecf          → ¿MIT? ¿sendSummary y convertECF32ToRFCE?
-       - platinum-place/laravel-dgii   → ¿MIT? ¿plantillas del XML e-CF y RFCE?
-       - TI-Sin-Problemas/erpnext_mexico_compliance → ¿MIT de verdad?
-     El doc 07 salió de un barrido automatizado que NO se pudo verificar de
-     segunda mano. Confírmalo antes de construir encima, y corrige el doc con
-     lo que encuentres.
+EL NODO NO ESTÁ VACÍO. korvex-node1 corre KORVIS en producción: un banco (ADAP)
+y dos bots de WhatsApp EN VIVO. Lo que rompas ahí le cuesta credibilidad a Yedin
+delante de quien paga. Reglas completas en:
+  C:\PROYECTOS\SERVER PROJECTS\homelab\docs\ACCESO-Y-REGLAS-DEL-NODO.md
 
-  2. Levantar ERPNext v15 en Docker local (frappe_docker) con el site
-     vapeland.localhost. Verifica si v16 instala POSNext y URY limpio; si sí,
-     arrancamos en v16 y me lo dices.
+ACCESO: ssh korvex-host  (korvex@100.102.203.91, llave ~/.ssh/korvex_server).
+Es la IP de TAILSCALE, no la de LAN. sudo pide contraseña salvo reiniciar
+korvex-api / korvex-dashboard / korvex-ops; cualquier otro sudo lo corre Yedin
+con: ssh -t korvex-host "sudo el-comando"
 
-  3. SPIKE FISCAL — timebox 2 días, no más:
-     Emitir un e-CF tipo E32 de prueba contra el ambiente TesteCF de la DGII.
-       Plan A: wilmerm/alanube-python (MIT, Python, reporta los 10 tipos)
-       Plan B: ecf-dgii / ECF SSD
-       Plan C: portar de victors1681/dgii-ecf (MIT, TypeScript, tiene RFCE)
-     Lo que hay que responder, sí o no:
-       - ¿E32 (factura de consumo)?
-       - ¿RFCE (resumen de facturas < RD$250,000)?
-       - ¿Qué se necesita exactamente para autenticar?
-     ⚠️ E32 + RFCE son el 95% de las ventas de este POS. Si ninguno de los tres
-     planes los cubre, PARA y dímelo.
+EL BENCH YA EXISTE. No lo vuelvas a construir. Imagen korvexcio:16, proyecto
+Compose `korvexcio`, red y volúmenes propios, frontend en 127.0.0.1:8080,
+MariaDB y Redis sin puertos al host. Versiones y SHA exactos en
+docs/13-VERSION-FRAPPE.md. Los comandos de compose que se usaron están ahí.
 
-  4. Probar POSNext y POS Awesome con un catálogo real de prueba (variantes de
-     sabor y nicotina). Decidir cuál, con razones.
-
-  5. Modelar el catálogo: 500-1,000 SKUs con Item Variant + Item Attribute.
-
-  6. Conectar esta carpeta al repo (ya existe):
-       git init && git remote add origin https://github.com/yedinrumba-eng/KORVEXCIO.git
-     Revisa el .gitignore ANTES del primer push. Nunca commitear .env ni el .p12.
-
-  7. Recién ahí: scaffold de la app `korvexcio`, usando la estructura de
-     DocTypes de docs/07 §4 — ya está destilada de tres localizaciones fiscales
-     de Frappe en producción, no la rediseñes.
-
-No escribas código de producto hasta cerrar los pasos 1 a 4. Son para reducir
-riesgo, y el 3 es el que decide si el proyecto mantiene su forma.
-
-REGLAS QUE NO SE ROMPEN (completas en CLAUDE.md):
-  - Los upstream NO se tocan. Todo va en `korvexcio` vía DocTypes propios,
-    hooks.py y el directorio custom/*.json (patrón KSA, mejor que fixtures).
-  - doc_events en hooks.py, NUNCA override_doctype_class (solo una app puede
-    reclamar cada DocType — es el error de la localización de México).
-  - frappe.enqueue con enqueue_after_commit=True. Sin eso encolas e-CF de
-    facturas que nunca hicieron commit.
+REGLAS QUE NO SE ROMPEN (completas en CLAUDE.md y en el blueprint §7):
+  - Un slice a la vez. No se adelantan fases.
+  - Sin evidencia no existe "funciona": se pega la salida real del comando.
+    Si no lo corriste, la frase es "escrito pero SIN verificar - falta correr X".
+  - Lo acordado es lo que se hace. Si ves algo mejor: paras, lo dices, esperas.
+  - Los upstream NO se tocan. Si te ves editando apps/erpnext/ o apps/frappe/,
+    PARA. La forma correcta está en el doc 06.
+  - Nunca se edita código en el servidor. Push en DEV -> git pull en el nodo.
+    Un `git status` sucio bloquea el pull SIN RUIDO: verifica el SHA, no el
+    exit code.
+  - Nada del proyecto `korvexcio` toca los recursos de KORVIS: ni su Postgres,
+    ni su Redis, ni su red, ni su compose.
+  - Puertos solo en 127.0.0.1. Se verifica con `ss -tlnp`, NUNCA leyendo el YAML.
+  - Secretos solo en .env (600 en el nodo). Nunca en código, git, logs ni chat.
+  - ignore_permissions=True y frappe.db.sql() crudo están PROHIBIDOS en
+    korvexcio/. Son los bypass del aislamiento entre Companies.
   - El POS nunca espera a la DGII para cerrar una venta.
-  - Sin internet, el negocio sigue vendiendo. Ninguna venta se pierde en
-    silencio.
-  - Secretos con fieldtype Password, nunca Data. El .p12 como Attach. El signer
-    en memoria, jamás cachear la clave desencriptada.
-  - Una factura con e-CF aceptado NO se cancela: se anula con un e-CF de
-    anulación. El before_cancel lo impide.
-  - Ningún default del código compartido puede servirle a un solo tenant.
-  - No se puede usar "ERPNext" ni "Frappe" en el nombre del producto ni en el
-    dominio (marca registrada de Frappe Technologies).
-  - Licencias: MIT/Apache se puede copiar. AGPL (ksa_compliance, posnext) se
-    lee, no se copia. CC BY-NC-ND (Chile) ni se abre. Sin licencia = inusable.
+  - Commit al cerrar cada slice verificado. Push solo cuando Yedin lo pida.
+
+AL CERRAR EL SLICE: resumen corto en prosa — qué se hizo, con qué comando se
+verificó y qué dio, qué quedó sin probar, y qué sigue. Sin bloque con formato
+fijo. Y actualiza PROGRESO.md y HANDOFF.md.
 
 Habla claro y en español. Si algo de lo que digo no se alinea con el plan,
 dímelo de frente en vez de darme la razón.
@@ -106,24 +88,55 @@ dímelo de frente en vez de darme la razón.
 
 ---
 
-## Versión corta
+## 2. Versión corta
 
 ```
-Lee HANDOFF.md, docs/06-COMO-SE-TRABAJA.md y docs/07-ARQUITECTURA-REFERENCIA.md
-antes de proponer nada.
+Vas de editor en KORVEXCIO (C:\PROYECTOS\KORVEXCIO). Lee HANDOFF.md, la última
+entrada de PROGRESO.md y docs/08-BLUEPRINT.md antes de proponer nada.
 
-Proyecto KORVEXCIO: ERP+POS multi-tenant sobre ERPNext/Frappe para retail y food
-en RD. Repo: github.com/yedinrumba-eng/KORVEXCIO. Primer cliente VAPELAND.
+ERP+POS multi-tenant sobre ERPNext/Frappe v16 para retail y food en RD.
 Deadline duro: e-CF de la DGII obligatorio el 15/11/2026.
 
-NO se clona ni se modifica ERPNext: se instala vía apps.json y todo lo nuestro
-va en la app `korvexcio` (módulos `ecf` y `retail`).
+El bench v16 ya está de pie en korvex-node1 (ssh korvex-host). No lo reconstruyas.
+Tu slice es S0.6: crear el site korvexcio.korvexdev.cc con ERPNext instalado, y
+nada más. Se cierra con:
+  curl -H "Host: korvexcio.korvexdev.cc" http://127.0.0.1:8080/api/method/ping
 
-Arranca por la Fase 0 del HANDOFF:
-  1. Verifica los 4 repos ⭐ del doc 07 (salieron de un barrido sin verificar).
-  2. ERPNext en Docker local.
-  3. Spike fiscal contra TesteCF, timebox 2 días — plan A/B/C en el doc 07.
-     Si ninguno da E32 + RFCE, para y dime.
-
-Cero código de producto hasta cerrar los pasos 1 a 4.
+Un slice a la vez. Sin la salida real del comando, no se declara nada cerrado.
+En ese nodo corre KORVIS en producción con un banco en vivo: no se toca su
+Postgres, ni su Redis, ni su compose.
 ```
+
+---
+
+## 3. Si la sesión va de AUDITOR
+
+```
+Vas de AUDITOR en KORVEXCIO (C:\PROYECTOS\KORVEXCIO). No reescribes código:
+devuelves hallazgos.
+
+Lee HANDOFF.md, PROGRESO.md y docs/08-BLUEPRINT.md (§7 reglas del ejecutor,
+§7.1 qué revisión toca en qué fase, §7.3 el sistema de aislamiento).
+
+Formato: archivo:línea — SEVERIDAD: problema. Fix sugerido.
+Severidades: CRÍTICO, ALTO, MEDIO, BAJO.
+Cierras con una línea: APROBADO o DEVUELTO (n críticos, n altos).
+
+Crítico y Alto bloquean y vuelven al editor. Medio y Bajo van a deuda técnica.
+Máximo 3 rondas; si a la ronda 3 queda un Crítico, para y escala.
+```
+
+---
+
+## 4. Lo que NO está decidido y no lo decide la sesión
+
+Si el trabajo te lleva a uno de estos, **para y pregúntale a Yedin**:
+
+| Qué | Estado |
+|---|---|
+| **El `LICENSE` dice MIT** y la app tiene que ser GPLv3 porque ERPNext lo es | Pendiente de decisión. Cambiarlo antes de S1.1 |
+| **Carril B en paralelo** (blueprint §7.2) — Fase 3 en otra sesión mientras el carril A hace la Fase 2 | Propuesto, **no aplicado**. Necesita OK explícito |
+| **Proveedor de e-CF** | Lo decide el spike S0.9. D3 quedó revisada |
+| **POS nativo vs POSNext** | Lo decide el spike S0.8. D16 lo dejó diferido a propósito |
+| **Qué pasa con la caja los días que la mini PC viaje** | Sin resolver. Tiene que estar decidido antes del go-live |
+| **RNC del cliente: uno o dos** | Sin confirmar. Se planifica para dos (D13) |

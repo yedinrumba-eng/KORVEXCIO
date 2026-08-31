@@ -23,6 +23,17 @@
 
 ---
 
+> ⚠️ **Dónde vive cada decisión, actualizado el 31/08/2026.**
+> **D1–D9 están abajo, en este archivo.** **D10–D19 viven en
+> `docs/08-BLUEPRINT.md` §3** y se doblan aquí en S0.12; mientras tanto, ese es
+> el lugar canónico. Estado de las de aquí: **D2 cerrada en v16** ✅ ·
+> **D3 revisada** (el proveedor lo decide S0.9) · **D4 superada** por D15+D16 ·
+> **D6 revisada** por D19.
+>
+> Y una advertencia que ahorra media hora: `PROGRESO.md` numeró un "D4" distinto
+> (el alcance del MVP) en la entrada del descubrimiento. **Ese está derogado por
+> D12.** Ver la sección D4 más abajo.
+
 ## D1 — ERPNext/Frappe como base
 
 **Decisión de Yedin, 2026-08-31.** Se evaluaron cuatro caminos: stack de KORVIS,
@@ -54,27 +65,57 @@ comercial hacia Enterprise es permanente.
 **Descartado — híbrido:** viola la regla de `CONVENCIONES.md` §9 — *"no mover
 la mitad de un sistema"*. Dos sistemas que sincronizar es peor que uno malo.
 
-## D2 — Versión v15, no v16
+## D2 — Versión **v16** ✅ CERRADA el 31/08/2026 con evidencia
 
-v16 salió el 12/01/2026 (beta desde nov 2025).
+**Se arranca en v16.** El slice S0.5 levantó el bench en `korvex-node1` y las
+cuatro apps construyeron y arrancaron:
 
-⚠️ **Ojo — esta decisión es preliminar, no verificada.** POSNext declara
-"Frappe v15 **o superior**", así que v16 debería servir *en el papel*. No se
-encontró evidencia pública de que las apps de terceros (POSNext, URY, POS
-Awesome) estén probadas en producción sobre v16.
+| App | Referencia | Versión que reportó `bench version` |
+|---|---|---|
+| `frappe/frappe` | `version-16` | `frappe 16.32.0` |
+| `frappe/erpnext` | `version-16` | `erpnext 16.33.0` |
+| `DeeloaSociety/posnext` | `develop` | `pos_next 1.12.0` |
+| `ury-erp/ury` | `develop` | `ury v3.0.0-beta.1` |
 
-**Criterio:** contra un deadline de 76 días, la versión con más kilómetros en
-el ecosistema gana. Pero **esto se confirma en el paso 1 del `HANDOFF.md`** —
-levantar el bench y ver qué instala limpio. Si v16 instala las apps sin
-fricción, se arranca en v16 y se ahorra una migración.
+**Por qué v16 y no v15:** el plan ordenaba bajar a v15 *solo si alguna app
+reventaba en v16*. Esa condición no ocurrió, así que probar v15 de todos modos
+habría sido trabajo que no cambia la decisión — y arrancar en v16 ahorra una
+migración antes del 15/11.
 
-## D3 — e-CF vía proveedor certificado, con adaptador
+🟡 **Deuda que nace con esto:** POSNext y URY **no publican rama `version-16`**;
+se instalaron desde `develop`, que es mutable. Los SHA exactos que se probaron
+están en `docs/13-VERSION-FRAPPE.md`, y **S1.2 los fija** (SHA o mirrors de
+Korvex) antes de que esto sea producción. *No se actualiza una app de producción
+siguiendo el HEAD de `develop`.*
 
-**Decisión de Yedin, 2026-08-31.**
+Evidencia completa — build, servicios, memoria, puertos y KORVIS sano:
+`docs/13-VERSION-FRAPPE.md`.
 
-Principal: **ECF SSD** vía `ecf-dgii` (PyPI, **MIT**, v1.0.0 de mayo 2026, de
-Smart Software Development SRL). Es **Python**, así que en una app de Frappe es
-un `import`, no una integración.
+> *Lo que decía antes:* "v15, no v16 — preliminar, no verificada. POSNext declara
+> Frappe v15 o superior; no hay evidencia pública de terceros probados en v16."
+> Se resolvió levantando el bench, que era exactamente lo que pedía.
+
+## D3 — e-CF vía proveedor certificado, con adaptador · 🟡 REVISADA el 31/08
+
+**Decisión de Yedin, 2026-08-31.** La forma se mantiene; **el proveedor
+principal ya no está fijado.**
+
+🔴 **Lo que cambió:** al verificar `ecf-dgii` de segunda mano, se confirmó que
+**solo documenta E31 (Factura de Crédito Fiscal)**. Ni E32 ni RFCE. Y E32 bajo
+RD$250,000 — que va en **resumen (RFCE)**, no uno a uno — es ~100% del volumen
+de un vape shop y una cafetería.
+
+👉 `ecf-dgii` **pasa a candidato #2**. El proveedor lo decide el spike **S0.9**,
+que es el gate del proyecto. **La interfaz `FiscalProvider` se mantiene y ahora
+es más necesaria, no menos.**
+
+> *Lo que decía antes:* "Principal: **ECF SSD** vía `ecf-dgii` (PyPI, **MIT**,
+> v1.0.0 de mayo 2026, de Smart Software Development SRL). Es **Python**, así que
+> en una app de Frappe es un `import`, no una integración."
+
+Sigue siendo cierto que es MIT, Python y de un proveedor certificado, con
+ambientes `test`/`cert`/`prod`. Lo que no está confirmado es que cubra lo que
+este POS necesita.
 
 **Pero se construye detrás de una interfaz `FiscalProvider`** con dos
 implementaciones (SSD y Alanube). Razón: un tenant futuro puede llegar con
@@ -88,15 +129,30 @@ riesgo puro.
 **Descartado — Facturador Gratuito de la DGII:** 150 comprobantes al mes, solo
 web sin API, sin modo offline. No es un POS.
 
-## D4 — POSNext sobre POS Awesome (a validar)
+## D4 — POSNext sobre POS Awesome · 🟡 SUPERADA por D15 + D16
 
-El **offline-first real** (IndexedDB + Service Workers + PWA + sync en
-background) es lo que decide: un POS en RD que se cae con el internet no es un
-POS, y encaja con la regla de contingencia de la DGII.
+⚠️ **Colisión de numeración, resuelta aquí:** en `PROGRESO.md` la entrada del
+descubrimiento numeró como "D4" al *alcance del MVP sin cafetería*. **Ese D4 está
+DEROGADO por D12** (los dos negocios entran juntos en la v1). El D4 de este
+documento es otra cosa: la elección de POS. Para no arrastrar el enredo,
+**a partir de D10 la numeración canónica es la de `docs/08-BLUEPRINT.md` §3.**
 
-⚠️ **No es definitivo.** POS Awesome tiene más comunidad; el fork de POSNext
-evaluado tiene 2 estrellas. **Spike de 2–3 días probando los dos con el
-catálogo real antes de comprometerse.**
+Sobre la elección de POS, lo que hay hoy:
+
+- **D15 — POS Awesome descartado**, y no por popularidad: **Vue 2 (EOL desde
+  diciembre de 2023)**, README declarando **v14**, y **offline no documentado**.
+  Un producto nuevo en 2026 sobre Vue 2 nace endeudado.
+- **D16 — la elección real se difiere al spike S0.8**, entre el **POS nativo de
+  ERPNext** y **POSNext**, con sesgo declarado hacia el nativo. El giro que lo
+  justifica: **la cola offline la escribes tú de todos modos** — la contingencia
+  de la DGII necesita documentos pre-computados y pre-firmados (patrón
+  `ZATCA Precomputed Invoice`), y el offline de POSNext no sabe nada de e-CF. Si
+  la contingencia vive en el módulo `ecf`, el POS solo tiene que ser una pantalla
+  extensible; y la nativa no se forkea, no es AGPL, y la mantiene Frappe.
+
+> *Lo que decía antes:* "POSNext sobre POS Awesome (a validar). El offline-first
+> real (IndexedDB + Service Workers + PWA + sync en background) es lo que decide."
+> El criterio sigue en pie; lo que cambió es quién puede ganarlo.
 
 ## D5 — Los upstream no se tocan · UNA app, dos módulos
 
@@ -117,13 +173,30 @@ dentro y no está diseñado para extenderse desde afuera. Fork propio, rama
 
 Detalle completo con comandos: `docs/06-COMO-SE-TRABAJA.md`.
 
-## D6 — Multi-tenancy: un site por cliente
+## D6 — Multi-tenancy: un site por cliente · 🟡 REVISADA por D19
 
 DNS-based multitenancy de Frappe. Cada site su propia base MariaDB →
 **aislamiento físico**, más fuerte que el `organization_id` de KORVIS.
 
 Trade-off aceptado: **más seguro, menos escalable.** Decenas de tenants por
 servidor, no miles. Para el volumen de KORVEX es lo correcto.
+
+**D19 (31/08) precisa el "por cliente":** un site por **CLIENTE**, y una
+`Company` de ERPNext por **NEGOCIO** dentro de ese site. VAPELAND y la cafetería
+son dos negocios del mismo dueño, así que viven en un solo site
+(`korvexcio.korvexdev.cc`) como dos Companies: una URL, el login decide qué ves,
+y el dueño obtiene un **dashboard consolidado** que dos sites separados no podrían
+dar sin un agregador entre bases de datos.
+
+🔴 **La línea que no se cruza:** **cliente 2 = site propio.** Entre clientes el
+aislamiento se queda físico. Entre negocios del mismo dueño pasa a lógico — y
+eso hay que blindarlo en **S1.8** (`permission_query_conditions` +
+`has_permission` + `company` congelada, con 12 escenarios contra la API en CI).
+Razón para no confiarse: PR frappe/erpnext#44695 (User Permission ignorada en los
+estados financieros) e issue frappe/erpnext#43652 (*admin de Company A ve los
+usuarios de Company B*), **cerrado como `not planned`**.
+
+Detalle completo: `docs/08-BLUEPRINT.md` §5.2.
 
 ⚠️ **Pero la lección del 06/08/2026 sigue aplicando al canal de salida:** las
 credenciales de un canal saliente se resuelven **por mensaje**, nunca una vez

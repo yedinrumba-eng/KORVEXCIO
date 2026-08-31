@@ -185,33 +185,227 @@ pasos + tabla de confianza) · `docs/03` (retirado rob-erply) · `docs/04`
 
 ---
 
+## 2026-08-31 (sesión de ejecución) — Plan maestro aprobado, Fase 0 arrancada
+
+**Qué pasó.** Se cerró el paso 1 de la Fase 0 (verificar los 4 repos ⭐), llegó la
+**luz verde para instalar en `korvex-node1`** con números medidos en vivo, y se
+aprobó el plan maestro completo en fases y microslices.
+
+**El plan vive ahora en `docs/08-BLUEPRINT.md`** (916 líneas, dentro del repo).
+Ese documento es la fuente de verdad del **qué** y del **orden**. Este
+`PROGRESO.md` es la bitácora del **cuándo** y del **con qué se verificó**.
+
+### Decisiones nuevas — D10 a D19
+
+Detalle y porqué completo en `docs/08-BLUEPRINT.md` §3. Resumen:
+
+| # | Decisión |
+|---|---|
+| **D10** | Hosting: **`korvex-node1` + Cloudflare Tunnel**. Luz verde con números medidos |
+| **D11** | El bench vive **en el nodo, no en la laptop**. Se descarta WSL2 + Docker Desktop en DEV |
+| **D12** | **Dos negocios desde v1** — vapería y cafetería entran juntas. **Deroga D4** |
+| **D13** | Se planifica para **dos RNC** (caso conservador) |
+| **D14** | Cafetería en **modo mostrador**. Mesas/comandas/KDS (URY) se difieren a Fase 7 |
+| **D15** | **POS Awesome descartado** — Vue 2 (EOL dic-2023), README en v14, sin offline documentado |
+| **D16** | POS: decisión **diferida al spike S0.8** entre POS nativo de ERPNext y POSNext. Sesgo declarado hacia el nativo |
+| **D17** | Spike fiscal: **proveedores primero, en paralelo**. El técnico arranca con la respuesta |
+| **D18** | **v15 vs v16 se decide con el bench levantado** — es S0.5 |
+| **D19** ⭐ | **Un site por CLIENTE, una `Company` de ERPNext por NEGOCIO.** Una sola URL `korvexcio.korvexdev.cc`; el login decide qué ves; el dueño ve las dos y administra sus usuarios. **Revisa D6, no la deroga**: cliente 2 = site propio, innegociable |
+
+**Correcciones a decisiones viejas:**
+- **D3 revisada** — `ecf-dgii` solo documenta E31. Pasa a candidato #2. La interfaz
+  `FiscalProvider` se mantiene y ahora es *más* necesaria.
+- **D4 derogada** por D12.
+- **D6 revisada** por D19.
+- **D2** quedó sustentada técnicamente en S0.5; el cierre formal del slice está
+  pausado hasta completar la segunda revisión y el commit local.
+
+### Lo que trajo D19 y hay que construir
+
+El aislamiento entre los dos negocios pasa de **físico** (una base de datos por
+cada uno) a **lógico** (campo `company` + User Permission). Esa es justo la clase
+de riesgo que hay que blindar, y por eso entra **Secure-Vibe** como marco de
+seguridad del proyecto (`docs/08-BLUEPRINT.md` §7.3):
+
+- **S1.8** construye la barrera: `permission_query_conditions` + `has_permission` +
+  `company` congelada tras crear el documento, con una **suite de 12 escenarios
+  contra la API, no por la pantalla**, corriendo en CI en cada push.
+- **Regla nueva del proyecto:** `ignore_permissions=True` y `frappe.db.sql()` crudo
+  quedan **prohibidos** dentro de `korvexcio/`. Son los bypass de Frappe.
+- Evidencia de que el riesgo es real en ERPNext, no teórico: PR frappe/erpnext#44695
+  (User Permission ignorada en estados financieros, arreglado en 14.78.3) y el issue
+  frappe/erpnext#43652 (*admin de Company A ve los usuarios de Company B*),
+  **cerrado como `not planned`**.
+
+### Slices cerrados, con su evidencia
+
+| Slice | Qué | Evidencia |
+|---|---|---|
+| **S0.1** ✅ | Repo git con remote, `.gitignore`, `.env.example`, docs commiteados. Corregidas las dos rutas activas que mandaban a `C:\PROYECTOS\VAPELAND` (`HANDOFF.md:7`, `CLAUDE.md:98`) | commit `80e7693` · `git remote -v` apunta a `yedinrumba-eng/KORVEXCIO` · `git status --porcelain` vacío |
+| **S0.1b** ✅ | Secure-Vibe modo A + C: skill `/secure-vibe` instalada, `AGENTS.md` y `docs/SEGURIDAD-SECURE-VIBE.md` en el repo, `pre-commit` con **gitleaks** activo | commit `9f6ad20` · `pre-commit run --all-files` → **7 hooks Passed** · un commit con una clave AWS de ejemplo fue **rechazado**: `RuleID: aws-access-token`, `leaks found: 1`, y `git log` confirmó que no se creó commit |
+| **S0.2** ✅ | `~/.ssh/config` corregido: `HostName 10.0.0.193` → `100.102.203.91` (Tailscale). Backup en `~/.ssh/config.bak-<fecha>` | `ssh korvex-host 'hostname && uptime'` → `korvex-node1, up 1 day, 18:42` |
+| **S0.4** ✅ | Checklist previo del nodo (§6 de `ACCESO-Y-REGLAS-DEL-NODO.md`), corrido completo | `df -h /` → 73G libres · backup del día `ok: true`, dump verificado y subido a R2 · `curl https://github.com` → **200** (IPv4 sano) · 4 units systemd activas · health de KORVIS `{"status":"ok","checks":{"postgres":"ok","redis":"ok"}}` · `docker builder prune -f` liberó **2.168 GB** → 75G libres, 20% usado |
+
+### Escalado a Yedin — dos cosas que necesitan su decisión
+
+1. 🟡 **El `LICENSE` del repo dice MIT.** Los documentos del proyecto dicen que la app
+   será **GPLv3, porque ERPNext es GPLv3** y una app de Frappe que se distribuye
+   hereda esa obligación. Son incompatibles. **No se cambió por cuenta propia (R2/R3).**
+   Recomendación: pasar a GPL-3.0 antes de que exista una línea de código de la app.
+2. 🟡 **El carril B en paralelo** (`docs/08-BLUEPRINT.md` §7.2) — Fase 3, escáner, QZ
+   Tray y manuales en otra sesión (Codex) mientras el carril A hace la Fase 2. Gana
+   ~1 semana de colchón. **Es un cambio al modelo "un slice a la vez", así que está
+   propuesto, no aplicado. Necesita OK explícito.**
+
+### Pendiente de Yedin, no de código
+
+- **S0.3** — mandar los correos a **Alanube** y **ECF SSD**. El texto listo para pegar
+  está en `docs/08-BLUEPRINT.md` §6.1. Va en paralelo; no bloquea el bench, sí bloquea
+  el spike fiscal S0.9.
+- Empujar el **RNC** del cliente y el **certificado digital** (3–10 días hábiles, por
+  cada RNC).
+
+---
+
+## 2026-08-31 — S0.5: implementación verificada; cierre pausado
+
+**Estado:** PARCIAL. La implementación y la prueba operativa terminaron, pero el
+slice no se declara cerrado hasta que Claude revise las dos correcciones de
+evidencia, se repitan las verificaciones locales y exista el commit del slice.
+**S0.6 no se ha iniciado.**
+
+**Qué se hizo:** se construyó una imagen aislada `korvexcio:16` sobre el
+`frappe_docker` oficial, con ERPNext, POSNext y URY. El stack usa proyecto y red
+propios, límites por servicio por debajo de 6 GiB, frontend en
+`127.0.0.1:8080`, y MariaDB/Redis sin puertos publicados al host.
+
+**Decisión sustentada, pendiente de cierre formal:**
+- **D2 — Frappe/ERPNext v16.** v16 construyó y arrancó las cuatro apps: Frappe
+  `16.32.0`, ERPNext `16.33.0`, POSNext `1.12.0` y URY `v3.0.0-beta.1`. v15 era
+  el fallback si alguna fallaba; esa condición no ocurrió.
+
+**Evidencia operativa ya obtenida:**
+
+```bash
+docker compose -p korvexcio --project-directory . -f compose.yaml -f overrides/compose.mariadb.yaml -f overrides/compose.redis.yaml -f compose.s05.yaml ps -a
+docker compose -p korvexcio --project-directory . -f compose.yaml -f overrides/compose.mariadb.yaml -f overrides/compose.redis.yaml -f compose.s05.yaml exec -T backend bench version
+docker stats --no-stream
+ss -tlnp | grep -E '3306|6379|8080'
+systemctl status korvex-api --no-pager
+curl -s http://127.0.0.1:4000/health
+df -h /
+```
+
+**Resultado real decisivo:** nueve servicios runtime `Up`, configurator
+`Exited (0)`, MariaDB `healthy`; `127.0.0.1:8080->8080/tcp`; los nueve servicios
+medidos quedaron bajo su `mem_limit`; KORVIS devolvió
+`{"status":"ok","checks":{"postgres":"ok","redis":"ok"}}`; disco en 37%
+con 60 GB libres. Evidencia completa en `docs/13-VERSION-FRAPPE.md`.
+
+**Revisión recibida:** `Spec Compliance: ⚠️` y `Task quality: Needs fixes`, sin
+hallazgos críticos. Señaló dos huecos documentales: faltaba mostrar `docker stats`
+de los nueve servicios runtime y faltaba pegar la salida de `df -h /` previa al
+build. Ambos quedaron corregidos en `docs/13-VERSION-FRAPPE.md`.
+
+**Punto exacto de pausa:** falta que Claude revise esas dos correcciones, ejecute
+`python -m json.tool apps.json`, `git diff --check`,
+`pre-commit run --all-files` y `git status --short`; si todo pasa, debe actualizar
+S0.5 a `COMPLETADO` y crear el commit local. **No hacer push.**
+
+**Deuda creada:** 🟡 POSNext y URY solo ofrecen `develop`; fijar referencias
+inmutables antes de S1.2. 🟡 El build dejó 7.154 GB de caché reclamable; su
+limpieza requiere mantenimiento autorizado. ⚪ Warnings upstream de Vite se
+revisan solo si producen un fallo observable en S0.8.
+
+**Fuera del commit:** `docs/08-BLUEPRINT.md` sigue sin seguimiento porque el
+propio plan ordena versionarlo en S0.12. Es la línea base de Claude y no se
+modificó dentro de S0.5.
+
+**Siguiente al retomar:** cerrar S0.5. Solo después empieza S0.6 — crear
+`korvexcio.korvexdev.cc` e instalar ERPNext, sin adelantar S0.7.
+
+---
+
 ## Fases
 
-### Fase 0 — Reducir riesgo *(pendiente)*
-- [ ] ERPNext v15 corriendo en Docker local con site `vapeland.localhost`
-- [ ] **Spike `ecf-dgii`**: emitir un E32 de prueba contra TesteCF *(timebox 2 días)*
-- [ ] Probar POSNext y POS Awesome con catálogo real → decidir cuál
-- [ ] Modelar el catálogo: 500–1,000 SKUs con variantes
-- [ ] Repo creado con remote *(§6 de `CONVENCIONES.md`)*
-- [ ] Entrada en `data/korvex.json` + `BITACORA.md` *(§7.2)*
-- [ ] Cliente confirma RNC y arranca el certificado digital
+> El detalle de cada slice, con su verificación y su entregable, está en
+> **`docs/08-BLUEPRINT.md` §6**. Aquí solo el estado.
 
-### Fase 1 — MVP
-- [ ] `korvex_ecf` — E32, E31, E34, RFCE, secuencias, contingencia
-- [ ] `korvex_retail` — atributos del vertical, FEFO, verificación de edad
-- [ ] POS con escáner e impresión térmica con QR
-- [ ] Catálogo e inventario inicial cargados
-- [ ] Reportes del dueño
-- [ ] Certificación como emisor ante DGII
-- [ ] **Producción antes del 15/11/2026**
+### Fase 0 — Reducir riesgo · 31/08 → 07/09 *(en curso)*
+- [x] **S0.1** — repo con remote, `.gitignore`, `.env.example`, rutas corregidas
+- [x] **S0.1b** — Secure-Vibe modo A + pre-commit con gitleaks
+- [x] **S0.2** — acceso al nodo por Tailscale arreglado
+- [ ] **S0.3** — correos a proveedores e-CF *(Yedin)*
+- [x] **S0.4** — checklist previo del nodo, todo verde
+- [ ] **S0.5** — **implementación y prueba operativa hechas; cierre pausado.**
+      Pendiente: segunda revisión, verificaciones locales y commit. Sin sites todavía
+- [ ] **S0.6** ⭐ — site `korvexcio.korvexdev.cc` con ERPNext instalado
+- [ ] **S0.7** — las dos `Company`: VAPELAND y Cafetería, cada una con su `tax_id`
+- [ ] **S0.7b** — site `demo.korvexdev.cc`
+- [ ] **S0.8** — spike POS *(timebox 2 días)* → `docs/10-SPIKE-POS.md`
+- [ ] **S0.9** 🔴 — spike fiscal, **el gate**: TrackID real de TesteCF → `docs/11-SPIKE-FISCAL.md`
+- [ ] **S0.10** — cuota y retención de disco de KORVEXCIO
+- [ ] **S0.11** — catálogo real o 20 SKUs representativos
+- [ ] **S0.12** — cerrar Fase 0 en los documentos y en `data/korvex.json` (⚪ → 🔵)
 
-### Fase 2 — Producto
-- [ ] Segundo site de demo
-- [ ] Frappe CRM
-- [ ] Módulo de cafetería (URY)
-- [ ] Planes y precios validados contra el mercado RD
+**🚦 Gate:** S0.5 con KORVIS intacto, pendiente de cierre documental y commit · S0.9 con TrackID real o el veredicto
+escrito de por qué fallaron las tres vías · S0.8 con veredicto de POS.
+**Si las tres vías de S0.9 fallan: se para y se escala.** No se improvisa (R2).
 
-### Fase 3 — Integración
-- [ ] VAPELAND como tenant de KORVIS *(checklist completo de `LECCIONES-MULTI-TENANT.md`)*
-- [ ] Sincronización de catálogo ERPNext → base de conocimiento de KORVIS
-- [ ] Cotización y cobro dentro del chat
+### Fase 1 — Esqueleto de la app · 08/09 → 12/09
+- [ ] S1.1 `bench new-app korvexcio` con módulos `ECF` y `Retail`
+- [ ] S1.2 `apps.json` con el repo propio · **fijar SHA o mirrors** para POSNext y URY
+      (hoy están en `develop`, que es mutable) · el despliegue verifica el **SHA**, no
+      el exit code
+- [ ] S1.3 CI: server tests + ruff + los 5 workflows de Secure-Vibe + el test de aislamiento
+- [ ] S1.4 `before_tests` que crea la company de prueba
+- [ ] S1.5 `custom/*.json` con `Customer.rnc` y `Customer.tipo_identificacion`
+- [ ] S1.6 secretos cargados a mano en el nodo, permisos `600`
+- [ ] S1.7 roles y User Permissions por Company
+- [ ] S1.8 🔴 **la barrera de aislamiento + su suite de 12 escenarios**
+- [ ] S1.9 *(solo si se aprueba el carril B)* prompt de handoff con la frontera de archivos
+
+### Fase 2 — Módulo ECF · 15/09 → 03/10 · ⬅ CAMINO CRÍTICO
+- [ ] S2.1 → S2.15 (`docs/08-BLUEPRINT.md` §6)
+
+**🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
+sites, con cola asíncrona y contingencia probadas cortando la red. Más `/secure-vibe`
+en verde y el loop de 4 auditores completo.
+
+### Fase 3 — Módulo Retail · 06/10 → 10/10
+- [ ] S3.1 → S3.6 — atributos del vertical, FEFO, verificación de edad, cafetería
+      mostrador, reportes del dueño, **dashboard consolidado de los dos negocios**
+
+### Fase 4 — POS + hardware · 13/10 → 17/10
+- [ ] S4.1 → S4.6 — POS Profile por Company, campos fiscales en caja, escáner,
+      impresión térmica con QR, turno de caja, **contingencia end-to-end**
+
+### Fase 5 — Datos reales + certificación · 20/10 → 25/10
+- [ ] S5.1 → S5.5 — catálogo completo, inventario inicial, usuarios,
+      **certificación ante la DGII para los dos RNC**, manuales
+
+### Fase 6 — Producción · 01/11 → 15/11
+- [ ] S6.1 → S6.6 — publicar los dos sites, backups con restauración probada,
+      `RUNBOOK.md`, **go-live**, superficie de red cerrada, **KORVIS sano**
+
+### Fase 7 — Post-lanzamiento *(después del 15/11)*
+Cafetería con mesas/comandas/KDS (URY) · Frappe CRM · VAPELAND como tenant de
+KORVIS · sincronizar catálogo → base de conocimiento · planes y precios validados
+contra el mercado RD · publicar los XSD + XML golden como repo público.
+
+---
+
+## Deuda técnica abierta
+
+Ordenada por lo que más duele.
+
+| Sev | Qué | Qué la mitiga hoy | La cura de verdad |
+|---|---|---|---|
+| 🔴 | **RFCE no está documentado en ninguna vía Python.** Es ~100% del volumen del POS (E32 bajo RD$250,000) | S0.3 pregunta a los proveedores en paralelo; plan B es portar de `victors1681/dgii-ecf` (MIT, TS) | **S0.9.** Si las tres vías fallan, se para y se escala |
+| 🔴 | **Aislamiento entre Companies es lógico, no físico** (D19) | Nada todavía | **S1.8**: la barrera + su suite de 12 escenarios en CI |
+| 🟡 | **POSNext y URY se instalaron desde `develop`**, que es mutable. Ninguno publica `version-16` | El SHA probado quedó escrito en `docs/13-VERSION-FRAPPE.md` | **S1.2**: fijar SHA o mirrors de Korvex |
+| 🟡 | **`LICENSE` dice MIT y la app tiene que ser GPLv3** | Nada — no hay código de la app todavía | Cambiarlo **antes** de S1.1. Decisión de Yedin |
+| 🟡 | **7.154 GB de caché de build reclamable en el nodo** | La alarma de disco avisa al 80% | Mantenimiento autorizado con `docker builder prune` |
+| 🟡 | **La mini PC viaja con Yedin** | Ninguna mitigación técnica | Decisión de Yedin antes del go-live: deja de viajar · VPS · contingencia por OFV |
+| ⚪ | Warnings de Vite en el build de POSNext/URY | No producen fallo observable | Se revisan solo si rompen S0.8 |
+| ⚪ | **No hay entrada en `data/korvex.json`** (§7.2 de `CONVENCIONES.md`) | — | S0.12 |

@@ -49,8 +49,10 @@ korvex-bench/
 │   ├── crm                            # Frappe CRM (fase 2)
 │   └── ury                            # cafetería (fase 2)
 └── sites/
-    ├── vapeland.korvexdev.cc          # un site = una DB = un tenant
-    └── demo.korvexdev.cc
+    ├── korvexcio.korvexdev.cc         # cliente 1 — un site = una DB
+    │    ├── Company VAPELAND           #   negocio 1 (su RNC, su almacén)
+    │    └── Company Cafetería          #   negocio 2 (su RNC, su almacén)
+    └── demo.korvexdev.cc              # staging / demostración
 ```
 
 ---
@@ -116,6 +118,19 @@ otro tenant. *Ver `ADAP/docs/LECCIONES-MULTI-TENANT.md`.*
 "ERPNext" y "Frappe" son marcas registradas de Frappe Technologies. **No van en
 el nombre del producto, de la empresa, ni en el dominio.** Hay que mantener
 visible `© Frappe Technologies Pvt. Ltd.` y el aviso de GPLv3.
+
+### 12b. `ignore_permissions=True` y `frappe.db.sql()` crudo: PROHIBIDOS.
+Dentro de `korvexcio/` son los bypass del aislamiento — el equivalente de un
+`SECURITY DEFINER` que se salta el RLS. Con dos Companies en una misma base
+(D19), una sola query sin filtrar mezcla los datos de los dos negocios.
+
+Si un caso los necesita de verdad: **se justifica por escrito en el PR y se le
+escribe su propio test de aislamiento.** Sin excepción silenciosa. Semgrep los
+marca en CI desde S1.3.
+
+Y los reportes propios **filtran por `company` explícitamente** — no se confía
+en que User Permission lo haga solo. El PR frappe/erpnext#44695 existe justo
+porque una vez no lo hizo.
 
 ### 12. Licencias: verificar antes de copiar.
 `ecf-dgii` es MIT ✅ · `dgii-compliance` es GPL-3.0 (referencia, no dependencia)

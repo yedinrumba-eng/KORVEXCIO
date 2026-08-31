@@ -1,11 +1,41 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
 > **Lo primero que se lee al retomar.** Escrito el 2026-08-31 en sesión de
-> descubrimiento (Cowork). Estado: **⚪ Semilla** — cero código, decisiones
-> de arquitectura tomadas, camino crítico identificado.
+> descubrimiento (Cowork), actualizado al cerrar S0.5. Estado: **🔵 Fase 0 en
+> curso** — bench v16 levantado en el nodo, D2 cerrada, sin sites todavía.
 >
-> Próximo paso: abrir Claude Code en `C:\PROYECTOS\KORVEXCIO` y planificar
-> las fases sobre este documento.
+> Próximo paso: **S0.6**, crear `korvexcio.korvexdev.cc` e instalar ERPNext.
+> Evidencia de versión y operación: `docs/13-VERSION-FRAPPE.md`.
+>
+> ### Los tres documentos que se leen, en este orden
+>
+> 1. **`docs/08-BLUEPRINT.md`** — el plan maestro: fases, microslices, la
+>    verificación de cada uno, las reglas del ejecutor y la seguridad por fase.
+>    **Es la fuente de verdad del qué y del orden.**
+> 2. **`PROGRESO.md`** — la bitácora: qué se cerró, con qué comando se verificó, y
+>    **exactamente dónde quedó el trabajo**. Al final lleva la deuda técnica abierta.
+> 3. **Este documento** — el porqué del proyecto y las trampas del terreno.
+>
+> El prompt listo para pegar en una sesión nueva (Claude Code o Codex) está en
+> **`PROMPT-CLAUDE-CODE.md`**.
+
+---
+
+## Estado técnico al retomar — después de S0.5
+
+- Imagen en `korvex-node1`: `korvexcio:16`, digest
+  `sha256:6ed8f523d2795fdc4c7a808b7cfe8cb50c572d2cabc8f2e6b2485d5e1f4b2ee2`.
+- Stack Compose: proyecto `korvexcio`, nueve servicios runtime arriba,
+  configurator terminado con código 0 y MariaDB healthy.
+- Versiones: Frappe `16.32.0`, ERPNext `16.33.0`, POSNext `1.12.0`, URY
+  `v3.0.0-beta.1`.
+- Red: solo frontend en `127.0.0.1:8080`; DB y Redis sin puertos host.
+- Recursos: límites sumados 5,504 MiB; 60 GB libres después del build.
+- KORVIS: servicio activo y `/health` con Postgres/Redis `ok` después del
+  arranque de KORVEXCIO.
+- Pendiente inmediato: S0.6 crea el site. **No existe ningún site todavía.**
+- Deuda: POSNext/URY están en branches `develop`; fijar referencias inmutables
+  antes de S1.2. Build cache reclamable: 7.154 GB.
 
 ---
 
@@ -30,6 +60,19 @@ ADAP son **clientes**, no productos.
 | 2 | **e-CF vía proveedor certificado por API** | Integración directa a DGII · diferir el fiscal |
 | 3 | **MVP = POS + inventario + e-CF, nada más** | ⚠️ *Marcado por Yedin: revisar con el cliente antes de cerrar el alcance* |
 | 4 | **Posicionamiento: retail + food genérico con módulos** | Vertical vape-only · "POS legal 15/11" · cliente único |
+
+> ⚠️ **Estas cuatro son de la mañana del 31/08 y dos ya se movieron.** La numeración
+> canónica de decisiones (D1–D19) vive en `TECH_STACK.md` y en `docs/08-BLUEPRINT.md`
+> §3. Lo que cambió:
+>
+> - **D4 ("MVP sin cafetería") está DEROGADA por D12.** Vapería y cafetería entran
+>   **juntas en la v1** — son dos negocios del mismo dueño y arrancan a la vez.
+> - **D3 ("proveedor certificado vía `ecf-dgii`") está REVISADA.** Verificado:
+>   `ecf-dgii` solo documenta E31. La interfaz `FiscalProvider` se mantiene y el
+>   proveedor lo decide el spike S0.9.
+> - **D6 ("un site por cliente") está REVISADA por D19:** un site por **cliente**,
+>   una `Company` de ERPNext por **negocio**. Ver la sección de arquitectura.
+> - **D2 ("v15, no v16") está CERRADA en v16** por S0.5, con evidencia.
 
 ---
 
@@ -149,10 +192,31 @@ cajetilla** (jul–sep 2026: RD$64.65 la cajetilla de 20, RD$32.33 la de 10).
 └────────────────────────────────┘
 ```
 
-**Multi-tenancy:** DNS-based multitenancy de Frappe (`bench config dns_multitenant on`).
-Un **site por cliente** = una base de datos MariaDB por cliente = aislamiento
-físico real, más fuerte que el `organization_id` de KORVIS. Cada tenant su
-subdominio: `vapeland.korvexdev.cc`, `cliente2.korvexdev.cc`.
+**Multi-tenancy (D19 — actualizado 31/08):** DNS-based multitenancy de Frappe
+(`bench config dns_multitenant on`), con **dos capas**:
+
+| Capa | Entre quién | Mecanismo | Fuerza |
+|---|---|---|---|
+| **1** | Entre **CLIENTES** | **Un site = una base de datos MariaDB** | Aislamiento **físico**. Innegociable: cliente 2 = site propio |
+| **2** | Entre **NEGOCIOS del mismo cliente** | **Una `Company` de ERPNext por negocio** + User Permission | Aislamiento **lógico**. Hay que blindarlo (S1.8) |
+
+Los sites de este cliente: **`korvexcio.korvexdev.cc`** (Companies **VAPELAND** y
+**Cafetería**) y **`demo.korvexdev.cc`** (staging, y la prueba de que el modelo por
+cliente funciona sin necesitar un cliente real todavía).
+
+**Por qué una sola URL:** el login decide qué ves. El cajero de la vapería entra a la
+vapería, el de la cafetería a la cafetería, y **el dueño ve las dos con un dashboard
+consolidado** y administra sus propios usuarios. Eso ningún modelo de sites separados
+lo da sin escribir un agregador entre bases de datos.
+
+🔴 **Lo que cuesta, dicho claro:** la capa 2 cambia el aislamiento de físico a lógico.
+En ERPNext eso no es teórico — PR frappe/erpnext#44695 (User Permission ignorada en
+los estados financieros, arreglado en 14.78.3) e issue frappe/erpnext#43652 (*admin de
+Company A ve los usuarios de Company B*, **cerrado como `not planned`**). Por eso
+existe **S1.8**: `permission_query_conditions` + `has_permission` + `company`
+congelada, con una suite de **12 escenarios contra la API**, en CI en cada push. Y por
+eso `ignore_permissions=True` y `frappe.db.sql()` crudo quedan **prohibidos** en
+`korvexcio/`. Detalle en `docs/08-BLUEPRINT.md` §5.2 y §7.3.
 
 ⚠️ **Realidad del hardware:** ERPNext pide **4 GB RAM mínimo** por instalación
 productiva (5–15 usuarios) y **50–100 GB de disco NVMe**. El nodo tiene 14 GB y
@@ -186,22 +250,70 @@ solo pide 1–3 GB. Un bench con 2–3 sites cabe; **10 tenants no caben.** El
 
 ---
 
-## Lo primero que se hace en Claude Code
+## Dónde estamos y qué sigue
 
-En este orden. Nada de esto es código de producto todavía — es reducir riesgo.
+> Reemplaza al viejo "Lo primero que se hace en Claude Code". El orden completo está
+> en `docs/08-BLUEPRINT.md` §6; el estado con evidencia, en `PROGRESO.md`.
 
-| # | Qué | Por qué primero |
-|---|---|---|
-| 1 | **Levantar ERPNext v15 en Docker local** y crear el site `vapeland.localhost` | Hasta que no lo veas corriendo, todo lo demás es teoría |
-| 2 | **Verificar los 4 repos ⭐ de `docs/07`** — abrir y confirmar licencia, actividad y alcance | El barrido salió de un subagente y **no se pudo verificar de segunda mano**. Son 20 min |
-| 3 | **Spike fiscal**: emitir un E32 de prueba contra TesteCF. **Plan A:** `wilmerm/alanube-python` (MIT, Python, los 10 tipos). **Plan B:** `ecf-dgii`/ECF SSD. **Plan C:** portar de `victors1681/dgii-ecf` (MIT, TS, tiene RFCE) | Es el camino crítico. Si ninguno da E32 + RFCE, el proyecto cambia de forma. **Timebox: 2 días.** |
-| 4 | **Probar POSNext y POS Awesome** con el catálogo real del cliente | Decidir cuál se adopta antes de construir encima de ninguno |
-| 5 | **Modelar el catálogo real**: 500–1,000 SKUs con variantes | Es donde se rompen los POS genéricos, no en el cobro |
-| 6 | Recién ahí: scaffold de la app `korvexcio` **con la estructura de DocTypes de `docs/07` §4** | Ya no se diseña desde cero: está destilada de 3 localizaciones en producción |
+### Cerrado
 
-**Regla del `CONVENCIONES.md` que aplica aquí:** el repo se crea **antes** de
-escribir código, y con remote desde el primer commit. `_KORVEX-OPS` ya tiene
-dos proyectos violando esto (DIGIVAL, FRAMERD). Que este no sea el tercero.
+| Slice | Qué |
+|---|---|
+| **Paso 1 de Fase 0** ✅ | Los 4 repos ⭐ verificados. Ver la tabla de confianza al final |
+| **S0.1** ✅ | Repo con remote, `.gitignore`, `.env.example`, docs commiteados (`80e7693`) |
+| **S0.1b** ✅ | Secure-Vibe modo A + `pre-commit` con **gitleaks** (`9f6ad20`). Un commit con una clave falsa fue rechazado |
+| **S0.2** ✅ | Acceso al nodo por Tailscale arreglado |
+| **S0.4** ✅ | Checklist previo del nodo, todo verde |
+| **S0.5** ✅ | **Bench v16 de pie en `korvex-node1`. D2 cerrada.** Ver el bloque "Estado técnico" arriba |
+
+### Lo que sigue, en este orden
+
+| # | Slice | Qué | Verificación |
+|---|---|---|---|
+| 1 | **S0.6** ⭐ | **Crear el site `korvexcio.korvexdev.cc`** e instalar ERPNext. Nada más — S0.7 no se adelanta | `curl -H "Host: korvexcio.korvexdev.cc" http://127.0.0.1:8080/api/method/ping` → `{"message":"pong"}` · `bench --site ... list-apps` |
+| 2 | **S0.7** | Las dos `Company` — **VAPELAND** y **Cafetería** — cada una con su `tax_id`, almacén, cost center y naming series | Las dos aparecen en `Company`; un ítem creado en una **no** aparece en el almacén de la otra |
+| 3 | **S0.7b** | Site `demo.korvexdev.cc` — el modelo por cliente se prueba el día 1, no al final | Dos DBs distintas en `SHOW DATABASES`; un cambio en uno no aparece en el otro |
+| 4 | **S0.8** | Spike POS *(timebox 2 días)*: POS nativo vs POSNext, matriz de 8 criterios llena **antes** de instalar | `docs/10-SPIKE-POS.md` con evidencia por criterio y veredicto de una línea |
+| 5 | **S0.9** 🔴 | **Spike fiscal — EL GATE.** E32 + RFCE contra TesteCF | **TrackID real** pegado en `docs/11-SPIKE-FISCAL.md`. Sin TrackID no se declara nada |
+| 6 | **S0.10 → S0.12** | Cuota de disco, catálogo, cierre de Fase 0 en los documentos | `PROGRESO.md`, `TECH_STACK.md`, `data/korvex.json` ⚪ → 🔵 |
+
+### Reglas del nodo que aplican a cada uno de esos slices
+
+`korvex-node1` **no está vacío**: corre KORVIS en producción con un banco (ADAP) y dos
+bots de WhatsApp en vivo. Detalle en
+`C:\PROYECTOS\SERVER PROJECTS\homelab\docs\ACCESO-Y-REGLAS-DEL-NODO.md`.
+
+1. **Nunca se edita código en el servidor.** Push en DEV → `git pull` en el nodo. Un
+   `git status` sucio **bloquea el pull sin ruido**: verifica el **SHA**, no el exit code.
+2. **Proyecto Compose y red propios** (`name: korvexcio`). No se reusa el Postgres ni
+   el Redis de KORVIS.
+3. **`mem_limit` por servicio**, tope ~6 GiB para toda la pila. Hoy suma 5,504 MiB.
+4. **Puertos solo en `127.0.0.1`.** Se entra por Tailscale. Se verifica con
+   `ss -tlnp`, **nunca leyendo el YAML**.
+5. **Nada detrás del túnel público** hasta que sea real. El site se llama
+   `korvexcio.korvexdev.cc` por la multi-tenancy DNS de Frappe, **no porque esté
+   publicado**: se llega con `curl -H "Host: ..." http://127.0.0.1:8080`.
+6. **Al cerrar cualquier slice que toque el nodo:** `systemctl status korvex-api` y
+   `curl -s http://127.0.0.1:4000/health` — **KORVIS tiene que seguir sano.**
+7. `sudo` pide contraseña salvo reiniciar los tres servicios de KORVIS. Cualquier otro
+   `sudo` lo corre Yedin con `ssh -t korvex-host "sudo ..."`.
+
+### Dos cosas que necesitan decisión de Yedin
+
+1. 🟡 **`LICENSE` dice MIT, y la app tiene que ser GPLv3** porque ERPNext lo es.
+   Cambiarlo **antes** de que exista código de la app (S1.1).
+2. 🟡 **Carril B en paralelo** (`docs/08-BLUEPRINT.md` §7.2): Fase 3 + hardware +
+   manuales en otra sesión (Codex) mientras el carril A hace la Fase 2. Gana ~1 semana
+   de colchón. **Propuesto, no aplicado — necesita OK explícito.**
+
+### Y lo que no depende de código
+
+- **S0.3** — los correos a **Alanube** y **ECF SSD**. Texto listo para pegar en
+  `docs/08-BLUEPRINT.md` §6.1. Bloquea el spike fiscal S0.9.
+- **RNC del cliente** y **certificado digital** (3–10 días hábiles **por cada RNC**).
+
+**Regla del `CONVENCIONES.md` que ya se cumplió:** el repo se creó **antes** de
+escribir código, con remote desde el primer commit.
 
 ---
 
@@ -248,6 +360,11 @@ abierto y commit aparte. **El slug `adap` se queda como está, para siempre.**
 | `docs/05-PREGUNTAS-CLIENTE.md` | Lo que falta confirmar. Llevarlo a la reunión |
 | `docs/06-COMO-SE-TRABAJA.md` | **Cómo se extiende ERPNext sin tocarlo.** Leer antes de escribir la primera línea |
 | `docs/07-ARQUITECTURA-REFERENCIA.md` | **Barrido de ~45 repos de RD + 9 localizaciones fiscales de Frappe.** El mapa de licencias y la estructura de DocTypes ya destilada |
+| `docs/08-BLUEPRINT.md` | ⭐ **El plan maestro.** Fases, microslices, verificación de cada uno, seguridad por fase, riesgos. **La fuente de verdad del qué y del orden** |
+| `docs/13-VERSION-FRAPPE.md` | **D2 cerrada con evidencia:** el build de v16, las versiones, los SHA probados, los límites de memoria y los puertos |
+| `docs/SEGURIDAD-SECURE-VIBE.md` | La plantilla de Secure-Vibe tal cual. Su traducción a Frappe está en el blueprint §7.3 |
+| `AGENTS.md` | La misma plantilla, para Codex / Cursor / Copilot |
+| `apps.json` · `docker/compose.s05.yaml` | Qué upstream se instala y en qué branch · los `mem_limit` y el puerto en loopback |
 | `PRD.md` · `TECH_STACK.md` · `CLAUDE.md` · `PROGRESO.md` | Los obligatorios de `_PLANTILLA` |
 
 
@@ -282,14 +399,34 @@ va marcado. Estado al cierre de la sesión de descubrimiento:
 
 | Afirmación | Estado |
 |---|---|
-| Todo el inventario de repos y el patrón arquitectónico | 🟡 **Barrido de subagente, SIN verificar de segunda mano.** Se agotó el límite de fetch de la sesión. Es un mapa de dónde buscar, no hecho probado |
-| `wilmerm/alanube-python` — MIT, Python, 10 tipos, vivo | ⭐ **Verificar primero.** Es el nuevo candidato #1 |
-| `victors1681/dgii-ecf` — MIT, con `sendSummary` (RFCE) y `convertECF32ToRFCE` | ⭐ **Verificar.** Si es cierto, es la especificación ejecutable del RFCE |
-| `platinum-place/laravel-dgii` — MIT, plantillas del XML de e-CF y RFCE | ⭐ **Verificar.** Traducir Blade→Jinja2 sería mecánico |
-| `erpnext_mexico_compliance` — MIT | ⭐ **Verificar.** La única localización madura de la que se puede copiar código |
+| El resto del inventario de repos y el patrón arquitectónico | 🟡 **Barrido de subagente, SIN verificar de segunda mano.** Mapa de dónde buscar, no hecho probado |
 | `rob-erply/dgii_facturacion_electronica` | ❌ **El repo da 404.** Retirado del doc 03 |
 | No existe librería Python que haga e-CF directo a la DGII | 🟡 Ausencia reportada por el barrido — imposible de probar, pero coherente con lo que ya se sabía |
 
-**Los tres huecos que más duelen:** que el plan fiscal cubra **E32 + RFCE**, que
-el cliente tenga **RNC**, y que los 4 repos ⭐ sean lo que el barrido dice. Los
-tres se cierran esta semana o el plan cambia de forma.
+### ✅ Los 4 repos ⭐ — VERIFICADOS el 2026-08-31 (paso 1 de Fase 0, cerrado)
+
+| Repo | Licencia | E32 | RFCE | Veredicto |
+|---|---|---|---|---|
+| `wilmerm/alanube-python` | **MIT** ✅ | ✅ tipo 32 en el README | ❌ **no documentado** | Python nativo, pero sin RFCE |
+| `victors1681/dgii-ecf` | **MIT** ✅ (v1.8.5) | ✅ | ✅ **`sendSummary`, `convertECF32ToRFCE`** | **Única implementación de RFCE copiable.** Es TypeScript |
+| `platinum-place/laravel-dgii` | **MIT** ✅ | ✅ plantillas Blade e-CF / consumo / anulación / acuse | 🟡 no confirmado explícito | Plantillas XML traducibles a Jinja2 |
+| `LewisMojica/dgii-compliance` | GPL-3.0 | ❌ solo NCF | ❌ | Confirmado: **referencia, no dependencia** |
+
+Verificaciones extra de esa misma pasada:
+
+| Cosa | Resultado |
+|---|---|
+| `ecf-dgii` (ECF SSD) | **MIT**, v1.0.0 del 7-may-2026, ambientes test/cert/prod ✅ — pero **solo documenta E31**. Ni E32 ni RFCE. **Esto revisó D3** |
+| `erpnext_mexico_compliance` | **MIT**, pero guarda el XML en **custom fields** de Sales Invoice → confirma el "no copies a México" del doc 07 |
+| `DeeloaSociety/posnext` | **AGPL-3.0**, Frappe 15+, **Vue 3**, offline con IndexedDB. 🟡 **Sin rama `main` ni `version-16`** — solo `develop` y `version-1.12`. Se instaló desde `develop` en S0.5 |
+| `yrestom/POS-Awesome` | GPL-3.0, pero **README en v14**, **Vue 2** (EOL dic-2023), sin offline documentado → **descartado (D15)** |
+| Alanube (proveedor) | Aprobado por DGII desde 2021. Sandbox `https://sandbox.alanube.co/dom/v1` |
+
+🔴 **El hueco del camino crítico, precisado — no cerrado:** **RFCE no está documentado
+en ninguna vía Python.** Existe en TypeScript bajo MIT (`victors1681/dgii-ecf`) y
+contra el endpoint directo de la DGII (`fc.dgii.gov.do/recepcionfc`). Y no es un caso
+borde: los E32 bajo RD$250,000 van en resumen, no uno a uno — en un vape shop y una
+cafetería eso es **~100% del volumen**. Por eso **S0.9 es el gate del proyecto**.
+
+**Los dos huecos que quedan:** que el plan fiscal cubra **E32 + RFCE** (S0.9), y que el
+cliente tenga **RNC**. Se cierran esta semana o el plan cambia de forma.
