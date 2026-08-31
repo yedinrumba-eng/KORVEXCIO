@@ -1,0 +1,11 @@
+[Unit]
+Description=KORVEXCIO daily bench backup + retention (S0.10)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=korvex
+Group=korvex
+Environment=KORVEXCIO_BACKUP_RETENTION_DAYS=14
+ExecStart=/home/korvex/frappe_docker-korvexcio-s05/backup-retention.sh

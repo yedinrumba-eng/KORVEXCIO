@@ -489,6 +489,170 @@ deuda de fixtures de arriba.
 
 ---
 
+## 2026-08-31 — S0.7b: DIFERIDA — no bloquea nada más de Fase 0
+
+**Estado:** BLOQUEADA técnicamente (ver abajo), y **diferida por decisión de
+Yedin** al preguntar "¿para qué sirve esto?" en caliente. Respuesta corta:
+`demo.korvexdev.cc` es la prueba barata de que "un site por cliente" (D19)
+funciona antes de que llegue un cliente 2 real — staging y demo de venta,
+nada más. **No la usa S0.8, S0.9 ni S0.11** — esos tres trabajan sobre
+`korvexcio.korvexdev.cc`. Se crea cuando Yedin tenga 2 minutos por SSH, o
+cuando aparezca un cliente 2 real, lo que pase primero. No es parte del gate
+de Fase 0.
+
+**Por qué además está bloqueada técnicamente:** `bench new-site
+demo.korvexdev.cc` es la misma operación que en S0.6 (crea una base de datos
+nueva en el nodo) y el clasificador de auto-mode volvió a bloquear a Claude
+al intentarlo directo por SSH — correcto por diseño, mismo motivo que S0.6.
+
+**No se improvisó un rodeo.** Por R2 del `CLAUDE.md` global, esto se reporta
+como bloqueo y se sigue con lo que no depende de él (S0.10, S0.11), no se
+inventa un reemplazo.
+
+**Comando listo para que Yedin lo corra por SSH** (mismo patrón que S0.6):
+
+```bash
+ssh korvex-host
+cd /home/korvex/frappe_docker-korvexcio-s05
+set -a; source .env; set +a
+ADMIN_PW=$(openssl rand -base64 24)
+docker compose -p korvexcio --project-directory . \
+  -f compose.yaml -f overrides/compose.mariadb.yaml -f overrides/compose.redis.yaml -f compose.s05.yaml \
+  exec -T backend bench new-site demo.korvexdev.cc \
+  --mariadb-root-password "$DB_ROOT_PASSWORD" \
+  --admin-password "$ADMIN_PW" \
+  --install-app erpnext \
+  --set-default
+echo "$ADMIN_PW" > .demo-admin-pw
+chmod 600 .demo-admin-pw
+```
+
+**Siguiente al retomar:** cuando Yedin corra ese comando, Claude verifica
+con `curl -H "Host: demo.korvexdev.cc" ...` y cierra S0.7b. Mientras tanto,
+sigue con S0.8/S0.10/S0.11, que no dependen de este site.
+
+---
+
+## 2026-08-31 — S0.10: COMPLETADO (con un paso pendiente de sudo)
+
+**Estado:** COMPLETADO en lo que Claude puede hacer sin `sudo` — que es casi
+todo. Falta un `systemctl enable` que solo puede correr Yedin (regla del
+nodo: sudo fuera de reiniciar los 3 servicios de KORVIS lo corre Yedin).
+
+**Qué se hizo:**
+1. Medido el consumo real de los volúmenes de KORVEXCIO: `korvexcio_db-data`
+   268.5M, `korvexcio_sites` 768K, `korvexcio_redis-queue-data` 92K. Total
+   bajo 300 MB — lejísimos del 80%/90% de alarma del nodo (60 GB libres de
+   98G, 37% uso).
+2. Escrito [scripts/backup-retention.sh](../scripts/backup-retention.sh):
+   corre `bench backup` por cada site del bench y borra dumps con más de 14
+   días (`KORVEXCIO_BACKUP_RETENTION_DAYS`, configurable). Escribe
+   `backup-status.json` con el mismo formato que ya usa KORVIS
+   (`{"timestamp","ok","message"}`) para que la alarma existente del nodo lo
+   pueda leer igual si algún día se conecta.
+3. **Probado de verdad, no solo escrito:** corrido en `korvex-node1`, backup
+   real de `korvexcio.korvexdev.cc` completado (905.4 KiB, no vacío — R2
+   global: "se verifica contenido, no que el archivo exista").
+4. Escritos `docker/systemd/korvexcio-backup.service` y `.timer` (corre a
+   las 03:30, después del backup de KORVIS a las 03:00). Copiados al nodo en
+   `/home/korvex/korvexcio-backup.{service,timer}`, listos para instalar.
+
+**Verificación, salida real:**
+
+```
+docker volume ls --filter name=korvexcio
+-> korvexcio_db-data, korvexcio_redis-queue-data, korvexcio_sites
+
+du -sh de cada volumen: 268.5M / 92.0K / 768.0K
+
+./backup-retention.sh
+-> Backup Summary for korvexcio.korvexdev.cc ...
+   Database: .../database.sql.gz 905.4KiB
+   Backup for Site korvexcio.korvexdev.cc has been successfully completed
+   OK.  (exit 0)
+
+cat backup-status.json
+-> {"timestamp": "2026-08-31T12:29:54Z", "ok": true, "message": "backup completo, retención 14d aplicada"}
+```
+
+**Pendiente — solo esto, y solo Yedin puede correrlo:**
+
+```bash
+ssh korvex-host
+sudo cp /home/korvex/korvexcio-backup.service /home/korvex/korvexcio-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now korvexcio-backup.timer
+systemctl list-timers korvexcio-backup.timer   # confirma la próxima corrida
+```
+
+**Deuda:** no se conectó con el backup a R2 (eso es para cuando haya datos
+reales que valga la pena sacar del nodo — prematuro con 268 MB de prueba).
+No se probó restauración — eso es **S6.2**, con contenido real, no antes.
+
+**Sin verificar todavía:** que el timer corra solo a las 03:30 (no se puede
+probar sin esperar 19 horas ni sin el `sudo` de instalación).
+
+**Siguiente al retomar:** S0.11 — catálogo.
+
+---
+
+## 2026-08-31 — S0.11: COMPLETADO — catálogo representativo, 24 SKUs
+
+**Estado:** COMPLETADO. Sin Excel real del cliente todavía (S0.3/catálogo son
+de Yedin); se modeló un catálogo representativo como pide el plan.
+
+**Qué se hizo, en `korvexcio.korvexdev.cc`:**
+
+- 2 `Item Group` nuevos: `Vapes`, `Cafeteria`.
+- 2 `Item Attribute`: `Sabor` (Menta/Fresa/Mango), `Nicotina mg`
+  (3mg/6mg/12mg). (`Colour` y `Size` ya venían del seed base de ERPNext —
+  no se usaron.)
+- **VAPERIA LA J Y EL JALAPEÑO (VLJ)** — 16 items:
+  - 1 template `ELIQ-30ML` (E-Liquid 30ml, `has_variants=1`) con sus **9
+    variantes** generadas por `erpnext.controllers.item_variant.create_variant`
+    (Sabor × Nicotina, 3×3).
+  - 6 sueltos: Pod System, Mod Kit 80W, Coil 0.3ohm, Coil 0.5ohm, Cargador
+    USB-C, Tanque de repuesto.
+- **EL SABOR DE LAS 5 ESQUINAS (ESE)** — 8 items de mostrador (D14: sin
+  mesas/comandas): Café Americano, Cappuccino, Croissant, Empanada de queso,
+  Agua embotellada, Jugo natural, Brownie, Sandwich.
+- Cada Item lleva su `Item Default` con la `Company` y el almacén
+  (`Stores - VLJ` / `Stores - ESE`) correctos — no quedaron huérfanos.
+
+**Bug propio, no de upstream, encontrado y arreglado en el camino:** asignar
+`variant.item_defaults = [dict, ...]` directamente sobre un doc ya
+construido revienta con `AttributeError: 'dict' object has no attribute
+'is_new'` — Frappe no envuelve la child table si se asigna por atributo
+plano después de construir el doc. Fix: `variant.set("item_defaults", [...])`
+en vez de la asignación directa. Anotado aquí para no volver a pisarlo.
+
+**Verificación, salida real:**
+
+```
+frappe.db.count("Item") -> 24
+frappe.get_all("Item", filters={"variant_of": "ELIQ-30ML"}, pluck="item_code")
+-> ELIQ-30ML-MEN-3mg, ELIQ-30ML-MEN-6mg, ELIQ-30ML-MEN-12mg,
+   ELIQ-30ML-FRE-3mg, ELIQ-30ML-FRE-6mg, ELIQ-30ML-FRE-12mg,
+   ELIQ-30ML-MAN-3mg, ELIQ-30ML-MAN-6mg, ELIQ-30ML-MAN-12mg
+frappe.db.count("Item Default", {"company": "VAPERIA LA J Y EL JALAPEÑO"}) -> 16
+frappe.db.count("Item Default", {"company": "EL SABOR DE LAS 5 ESQUINAS"}) -> 8
+
+KORVIS: {"status":"ok","checks":{"postgres":"ok","redis":"ok"}}
+df -h /: 60G libres, sin cambio
+```
+
+**Sin verificar todavía:** que el template se vea bien **en la UI** (solo se
+probó por API/console, no se abrió el navegador contra el sitio — el
+frontend está en loopback del nodo, sin túnel abierto desde esta sesión).
+Tampoco se pusieron precios/valuation — eso es de Fase 3/5, no de este
+smoke test. Solo dos atributos de los cuatro que menciona el plan (Sabor,
+Nicotina) — Tamaño (ml) y Ohmiaje quedan para el modelado real de **S3.1**,
+cuando haya catálogo real o al menos una decisión de variantes definitiva.
+
+**Siguiente al retomar:** S0.8 — spike POS.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -503,11 +667,11 @@ deuda de fixtures de arriba.
 - [x] **S0.5** — **bench v16 de pie en `korvex-node1`. D2 cerrada.**
 - [x] **S0.6** ⭐ — site `korvexcio.korvexdev.cc` con ERPNext instalado
 - [x] **S0.7** — las dos `Company`: **VAPERIA LA J Y EL JALAPEÑO** y **EL SABOR DE LAS 5 ESQUINAS**, cada una con su `tax_id` (RNC pendiente)
-- [ ] **S0.7b** — site `demo.korvexdev.cc`
+- [ ] **S0.7b** — site `demo.korvexdev.cc` *(diferida, no bloquea el resto de Fase 0 — comando listo para Yedin)*
 - [ ] **S0.8** — spike POS *(timebox 2 días)* → `docs/10-SPIKE-POS.md`
 - [ ] **S0.9** 🔴 — spike fiscal, **el gate**: TrackID real de TesteCF → `docs/11-SPIKE-FISCAL.md`
-- [ ] **S0.10** — cuota y retención de disco de KORVEXCIO
-- [ ] **S0.11** — catálogo real o 20 SKUs representativos
+- [x] **S0.10** — script de backup+retención probado; falta solo el `sudo systemctl enable` de Yedin
+- [x] **S0.11** — 24 SKUs representativos (16 VLJ con 1 template+9 variantes, 8 ESE)
 - [ ] **S0.12** — cerrar Fase 0 en los documentos y en `data/korvex.json` (⚪ → 🔵)
 
 **🚦 Gate:** S0.5 cerrada con KORVIS intacto ✅ · S0.9 con TrackID real o el veredicto
