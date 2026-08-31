@@ -1,0 +1,48 @@
+# .pre-commit-config.yaml — hooks preventivos locales (rápidos, antes del push)
+# Instala: pip install pre-commit && pre-commit install
+# Cada commit corre gitleaks, scan_secrets.py y check_lockfiles.py.
+# Lo "lento" (semgrep, osv-scanner, trivy) va al CI — ver tooling/ci-templates/.
+# Docs: docs/vulnerabilidades/01-secrets-management.md, 10-dependencies-supply-chain.md, 11-ci-cd-containers.md.
+
+# versión mínima de pre-commit
+minimum_pre_commit_version: "3.0.0"
+
+# idioma del output (incluido para evitar warnings en Windows con cp1252)
+default_language_version:
+  python: python3
+
+repos:
+  # secret scanning con gitleaks (local, rápido)
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks
+        # stashes staged changes para incluir el diff en el escaneo
+        stages: [pre-commit, pre-push]
+
+  # fallback / complemento: regex propio (no requiere gitleaks instalado)
+  - repo: local
+    hooks:
+      - id: scan-secrets
+        name: scan_secrets.py (regex fallback)
+        entry: python -X utf8 tooling/scripts/scan_secrets.py --no-history
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: lockfile-check
+        name: check_lockfiles.py
+        entry: python -X utf8 tooling/scripts/check_lockfiles.py --no-warnings
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+  # hygiene mínima — no commitear .env con valores reales
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-merge-conflict
+      - id: detect-private-key
+        stages: [pre-commit, pre-push]
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
