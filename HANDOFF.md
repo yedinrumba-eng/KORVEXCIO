@@ -1,8 +1,9 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
 > **Lo primero que se lee al retomar.** Escrito el 2026-08-31 en sesión de
-> descubrimiento (Cowork), actualizado al cerrar S0.5. Estado: **🔵 Fase 0 en
-> curso** — bench v16 levantado en el nodo, D2 cerrada, sin sites todavía.
+> descubrimiento (Cowork), actualizado al cerrar S0.5 con revisión de
+> seguimiento. Estado: **🔵 Fase 0 en curso** — bench v16 levantado, D2 cerrada,
+> S0.5 **COMPLETADO**. Sin sites todavía.
 >
 > Próximo paso: **S0.6**, crear `korvexcio.korvexdev.cc` e instalar ERPNext.
 > Evidencia de versión y operación: `docs/13-VERSION-FRAPPE.md`.
@@ -30,12 +31,26 @@
 - Versiones: Frappe `16.32.0`, ERPNext `16.33.0`, POSNext `1.12.0`, URY
   `v3.0.0-beta.1`.
 - Red: solo frontend en `127.0.0.1:8080`; DB y Redis sin puertos host.
-- Recursos: límites sumados 5,504 MiB; 60 GB libres después del build.
+- Recursos: límites sumados 5,504 MiB; 75 GB libres antes del build, 60 GB
+  después (~15 GB consumidos entre imagen y caché).
 - KORVIS: servicio activo y `/health` con Postgres/Redis `ok` después del
   arranque de KORVEXCIO.
-- Pendiente inmediato: S0.6 crea el site. **No existe ningún site todavía.**
+- Commits locales: `e119e00` (implementación S0.5), `2411f94` (plan maestro y
+  estado documental), más el commit de cierre de este mismo cambio (ver
+  `git log --oneline -3`). `origin/main` sigue en `e19389f`: **no hubo
+  push**.
+- Pendiente inmediato: **S0.6** crea el site. **No existe ningún site
+  todavía.**
 - Deuda: POSNext/URY están en branches `develop`; fijar referencias inmutables
   antes de S1.2. Build cache reclamable: 7.154 GB.
+
+**Revisión de seguimiento (31/08):** confirmadas las dos correcciones
+pedidas por el primer auditor en `docs/13-VERSION-FRAPPE.md` (docker stats de
+los nueve servicios runtime + `df -h /` previo al build con 75 GB). Sin
+hallazgos críticos ni altos. Verificado: `python -m json.tool apps.json` OK ·
+`git diff --check` y `git diff --cached --check` limpios · `pre-commit
+run --all-files` 7/7 Passed · `git status --short` solo `HANDOFF.md` y
+`PROGRESO.md` modificados.
 
 ---
 
@@ -264,7 +279,7 @@ solo pide 1–3 GB. Un bench con 2–3 sites cabe; **10 tenants no caben.** El
 | **S0.1b** ✅ | Secure-Vibe modo A + `pre-commit` con **gitleaks** (`9f6ad20`). Un commit con una clave falsa fue rechazado |
 | **S0.2** ✅ | Acceso al nodo por Tailscale arreglado |
 | **S0.4** ✅ | Checklist previo del nodo, todo verde |
-| **S0.5** ✅ | **Bench v16 de pie en `korvex-node1`. D2 cerrada.** Ver el bloque "Estado técnico" arriba |
+| **S0.5** ✅ | **Bench v16 de pie en `korvex-node1`. D2 cerrada.** Implementado, probado, revisado en seguimiento (dos correcciones documentales aplicadas) y commiteado |
 
 ### Lo que sigue, en este orden
 

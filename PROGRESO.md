@@ -217,8 +217,8 @@ Detalle y porqué completo en `docs/08-BLUEPRINT.md` §3. Resumen:
   `FiscalProvider` se mantiene y ahora es *más* necesaria.
 - **D4 derogada** por D12.
 - **D6 revisada** por D19.
-- **D2** quedó sustentada técnicamente en S0.5; el cierre formal del slice está
-  pausado hasta completar la segunda revisión y el commit local.
+- **D2 cerrada en v16** por S0.5, con evidencia y revisión de seguimiento
+  completa.
 
 ### Lo que trajo D19 y hay que construir
 
@@ -267,19 +267,18 @@ seguridad del proyecto (`docs/08-BLUEPRINT.md` §7.3):
 
 ---
 
-## 2026-08-31 — S0.5: implementación verificada; cierre pausado
+## 2026-08-31 — S0.5: COMPLETADO tras revisión de seguimiento
 
-**Estado:** PARCIAL. La implementación y la prueba operativa terminaron, pero el
-slice no se declara cerrado hasta que Claude revise las dos correcciones de
-evidencia, se repitan las verificaciones locales y exista el commit del slice.
-**S0.6 no se ha iniciado.**
+**Estado:** COMPLETADO. Implementación, prueba operativa, revisión de
+seguimiento y verificaciones frescas, todo con evidencia. **S0.6 no se ha
+iniciado y no hubo push** — eso sigue pendiente para la próxima sesión.
 
 **Qué se hizo:** se construyó una imagen aislada `korvexcio:16` sobre el
 `frappe_docker` oficial, con ERPNext, POSNext y URY. El stack usa proyecto y red
 propios, límites por servicio por debajo de 6 GiB, frontend en
 `127.0.0.1:8080`, y MariaDB/Redis sin puertos publicados al host.
 
-**Decisión sustentada, pendiente de cierre formal:**
+**Decisión cerrada:**
 - **D2 — Frappe/ERPNext v16.** v16 construyó y arrancó las cuatro apps: Frappe
   `16.32.0`, ERPNext `16.33.0`, POSNext `1.12.0` y URY `v3.0.0-beta.1`. v15 era
   el fallback si alguna fallaba; esa condición no ocurrió.
@@ -307,22 +306,37 @@ hallazgos críticos. Señaló dos huecos documentales: faltaba mostrar `docker s
 de los nueve servicios runtime y faltaba pegar la salida de `df -h /` previa al
 build. Ambos quedaron corregidos en `docs/13-VERSION-FRAPPE.md`.
 
-**Punto exacto de pausa:** falta que Claude revise esas dos correcciones, ejecute
-`python -m json.tool apps.json`, `git diff --check`,
-`pre-commit run --all-files` y `git status --short`; si todo pasa, debe actualizar
-S0.5 a `COMPLETADO` y crear el commit local. **No hacer push.**
+**Commits:**
+- `e119e00` — `feat: bring up isolated Frappe v16 bench on korvex-node1 (S0.5)`.
+- `2411f94` — `docs: land master plan in repo and record Fase 0 state for session handoff`.
+- `docs: close S0.5 after follow-up review` — este cierre (ver `git log --oneline -3`).
+
+**Revisión de seguimiento (misma sesión, 31/08):** las dos correcciones
+pedidas por el primer auditor (docker stats de los nueve servicios runtime +
+`df -h /` previo al build con 75 GB) confirmadas en `docs/13-VERSION-FRAPPE.md`,
+completas y sin exagerar lo comprobado — el propio doc aclara que `docker
+stats` no capturó el pico de `configurator` porque ya había terminado. Sin
+hallazgos críticos ni altos. Verificaciones frescas, salida real:
+
+```
+python -m json.tool apps.json   -> válido, exit 0
+git diff --check                -> limpio, exit 0
+git diff --cached --check       -> limpio, exit 0
+pre-commit run --all-files      -> 7/7 Passed
+git status --short --branch     -> ## main...origin/main [ahead 4]; M HANDOFF.md; M PROGRESO.md
+```
 
 **Deuda creada:** 🟡 POSNext y URY solo ofrecen `develop`; fijar referencias
 inmutables antes de S1.2. 🟡 El build dejó 7.154 GB de caché reclamable; su
 limpieza requiere mantenimiento autorizado. ⚪ Warnings upstream de Vite se
 revisan solo si producen un fallo observable en S0.8.
 
-**Fuera del commit:** `docs/08-BLUEPRINT.md` sigue sin seguimiento porque el
-propio plan ordena versionarlo en S0.12. Es la línea base de Claude y no se
-modificó dentro de S0.5.
+**Plan versionado:** `docs/08-BLUEPRINT.md` entró al repo en `2411f94` como fuente
+de verdad. No se modificó su contenido para cerrar S0.5.
 
-**Siguiente al retomar:** cerrar S0.5. Solo después empieza S0.6 — crear
-`korvexcio.korvexdev.cc` e instalar ERPNext, sin adelantar S0.7.
+**Siguiente al retomar:** S0.6 — crear `korvexcio.korvexdev.cc` e instalar
+ERPNext, sin adelantar S0.7. Todavía sin push a `origin/main`: eso lo pide
+Yedin cuando quiera.
 
 ---
 
@@ -337,8 +351,7 @@ modificó dentro de S0.5.
 - [x] **S0.2** — acceso al nodo por Tailscale arreglado
 - [ ] **S0.3** — correos a proveedores e-CF *(Yedin)*
 - [x] **S0.4** — checklist previo del nodo, todo verde
-- [ ] **S0.5** — **implementación y prueba operativa hechas; cierre pausado.**
-      Pendiente: segunda revisión, verificaciones locales y commit. Sin sites todavía
+- [x] **S0.5** — **bench v16 de pie en `korvex-node1`. D2 cerrada.** Sin sites todavía
 - [ ] **S0.6** ⭐ — site `korvexcio.korvexdev.cc` con ERPNext instalado
 - [ ] **S0.7** — las dos `Company`: VAPELAND y Cafetería, cada una con su `tax_id`
 - [ ] **S0.7b** — site `demo.korvexdev.cc`
@@ -348,7 +361,7 @@ modificó dentro de S0.5.
 - [ ] **S0.11** — catálogo real o 20 SKUs representativos
 - [ ] **S0.12** — cerrar Fase 0 en los documentos y en `data/korvex.json` (⚪ → 🔵)
 
-**🚦 Gate:** S0.5 con KORVIS intacto, pendiente de cierre documental y commit · S0.9 con TrackID real o el veredicto
+**🚦 Gate:** S0.5 cerrada con KORVIS intacto ✅ · S0.9 con TrackID real o el veredicto
 escrito de por qué fallaron las tres vías · S0.8 con veredicto de POS.
 **Si las tres vías de S0.9 fallan: se para y se escala.** No se improvisa (R2).
 
