@@ -1,0 +1,14 @@
+[
+  {
+    "url": "https://github.com/frappe/erpnext.git",
+    "branch": "version-16"
+  },
+  {
+    "url": "https://github.com/DeeloaSociety/posnext.git",
+    "branch": "develop"
+  },
+  {
+    "url": "https://github.com/ury-erp/ury.git",
+    "branch": "develop"
+  }
+]

@@ -1,0 +1,43 @@
+name: korvexcio
+
+services:
+  configurator:
+    image: ${KORVEXCIO_IMAGE:-korvexcio}:${FRAPPE_VERSION:-16}
+    mem_limit: 512m
+
+  backend:
+    image: ${KORVEXCIO_IMAGE:-korvexcio}:${FRAPPE_VERSION:-16}
+    mem_limit: 768m
+
+  frontend:
+    image: ${KORVEXCIO_IMAGE:-korvexcio}:${FRAPPE_VERSION:-16}
+    mem_limit: 256m
+    ports:
+      - "${HTTP_PUBLISH_PORT:-127.0.0.1:8080}:8080"
+
+  websocket:
+    image: ${KORVEXCIO_IMAGE:-korvexcio}:${FRAPPE_VERSION:-16}
+    mem_limit: 256m
+
+  queue-short:
+    image: ${KORVEXCIO_IMAGE:-korvexcio}:${FRAPPE_VERSION:-16}
+    mem_limit: 512m
+
+  queue-long:
+    image: ${KORVEXCIO_IMAGE:-korvexcio}:${FRAPPE_VERSION:-16}
+    mem_limit: 768m
+
+  scheduler:
+    image: ${KORVEXCIO_IMAGE:-korvexcio}:${FRAPPE_VERSION:-16}
+    mem_limit: 384m
+
+  db:
+    mem_limit: 1536m
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD must be set}
+
+  redis-cache:
+    mem_limit: 256m
+
+  redis-queue:
+    mem_limit: 256m
