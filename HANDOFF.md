@@ -1,8 +1,8 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
 > **Lo primero que se lee al retomar.** Escrito el 2026-08-31 en sesión de
-> descubrimiento (Cowork). Estado: **🟢 Fase 1 CERRADA → Fase 2 (módulo
-> ECF) es lo que sigue.** La app `korvexcio` existe de verdad: GPLv3,
+> descubrimiento (Cowork). Estado: **🟡 Fase 2 en curso: S2.1 implementado,
+> con dos evidencias literales pendientes de recapturar.** La app `korvexcio` existe de verdad: GPLv3,
 > módulos `ECF`/`Retail`, custom fields en `Customer`, roles por Company
 > probados con un usuario real, y **la barrera de aislamiento de D19
 > funcionando y verificada** (`bench run-tests` verde, dos corridas).
@@ -37,7 +37,8 @@
 > 8 de 12 escenarios reales verificados y 4 diferidos a Fase 2 con motivo
 > explícito. Detalle completo, slice por slice, en `PROGRESO.md`.
 >
-> Próximo paso: **Fase 2 — el módulo `ecf`** (S2.1 en adelante), sabiendo
+> Próximo paso: recapturar la evidencia pendiente de S2.1 y seguir con
+> **Fase 2 — el módulo `ecf`** (S2.2 en adelante), sabiendo
 > que no puede cerrarse sin resolver S0.9/S2.7 primero.
 > Evidencia de versión y operación: `docs/13-VERSION-FRAPPE.md`.
 >
@@ -55,7 +56,7 @@
 
 ---
 
-## Estado técnico al retomar — Fase 1 CERRADA, Fase 2 (ecf) es lo que sigue
+## Estado técnico al retomar — Fase 2 en curso, S2.1 implementado
 
 - Imagen en `korvex-node1`: `korvexcio:16`, sitio `korvexcio.korvexdev.cc`,
   `frappe 16.32.0` + `erpnext 16.33.0` + **`korvexcio 0.0.1` (rama `main`)**.
@@ -79,11 +80,13 @@
     Dueño sin System Manager pero puede crear cajeros con rol acotado.
   - **`isolation.py`** — `freeze_company()`, el `WITH CHECK` de D19.
     Aplica a `Warehouse`, `Cost Center`, `Sales Invoice`, `Sales Order`,
-    `Delivery Note`, `Payment Entry`, `Item Price` hoy; se le agregan los
-    doctypes propios de `korvexcio` cuando existan (Fase 2).
-  - `tests/test_isolation.py` — 8 escenarios reales verdes, 4 diferidos a
-    Fase 2 con `skipTest` explícito. `bench run-tests --app korvexcio` →
-    verde, dos corridas (idempotencia probada).
+    `Delivery Note`, `Payment Entry`, `Item Price`, `DGII Settings`; los
+    doctypes propios de `korvexcio` se agregan al crearse.
+  - `ecf/doctype/dgii_settings/` — S2.1: una configuración por Company,
+    timeouts validados, sin certificados, providers funcionales ni secretos.
+  - `tests/test_isolation.py` — 9 escenarios reales verdes; quedan S2.2/S2.7
+    diferidos con `skipTest` explícito. La suite completa dio 13 tests, OK
+    (skipped=1) después del migrate y restart de S2.1.
 - **🔴 Hallazgo de S1.8 que aplica a TODO lo que se escriba en Fase 2:**
   `frappe.get_doc(doctype, name)` **no chequea permisos de lectura**.
   Lo que sí los chequea, porque es lo que responde de verdad
@@ -368,7 +371,7 @@ solo pide 1–3 GB. Un bench con 2–3 sites cabe; **10 tenants no caben.** El
 
 | # | Slice | Qué |
 |---|---|---|
-| 1 | **S2.1** | `DGII Settings` — **NO Single**, un registro por Company (D19) |
+| 1 | **S2.1** 🟡 | `DGII Settings` — implementado, migrate y tests verdes; falta recapturar `get_all` con `provider` y linter equivalente |
 | 2 | **S2.2** | `DGII Digital Certificate` — `.p12` como Attach, password como Password (nunca Data) |
 | 3 | **S2.3 → S2.6** | Secuencia eNCF, DocType `ECF`, `ECF Integration Log`, interfaz `providers/base.py` |
 | 4 | **S2.7** 🔴 | El proveedor real. **Aquí es donde S0.9/S0.3 paran de verdad** si siguen sin resolver |
@@ -436,6 +439,7 @@ pagarlas — el detalle completo con comandos está en la entrada de
 | **Un `Role` recién creado no tiene NINGÚN permiso, ni siquiera leer** (S1.7) | Se probó el aislamiento y reventó con `PermissionError: Insufficient Permission for Company` **antes** de llegar a evaluar el `User Permission` — es el comportamiento correcto de Frappe (sin `DocPerm` no hay acceso), pero fácil de no anticipar si uno asume que un Role "básico" trae algo por default | Todo `Role` nuevo necesita su `Custom DocPerm` explícito en cada doctype que va a tocar — aunque sea solo lectura, como `Company` |
 | **`frappe.get_doc(doctype, name)` NO chequea permisos de lectura** — es una llamada de ORM de bajo nivel (S1.8) | Un test que usa `get_doc()` para simular "¿puede leer esto un usuario sin permiso?" da falso negativo: parece que hay un hueco de seguridad cuando en realidad el test está mal escrito | Usar `frappe.client.get(doctype, name)` — la función real detrás de `/api/resource/<doctype>/<name>` — para probar lectura. Y en código propio: todo `@frappe.whitelist()` que lea un doc debe llamar `doc.check_permission("read")` explícito, nunca confiar en `get_doc()` solo |
 | **Frappe distingue "existe pero no es tuyo" de "no existe"** — `PermissionError` vs `DoesNotExistError` (S1.8) | Es comportamiento nativo de la plataforma, no algo que introdujo este proyecto — pero sí es la fuga de enumeración exacta que el blueprint pedía probar (§7.3, escenario 9) | Documentado como deuda menor en `PROGRESO.md`. No se intentó parchear Frappe para unificar los errores — cambio de mayor alcance que este slice |
+| **El checkout del nodo quedó sucio antes de consumir Git** (S2.1) | Un `git pull --ff-only` puede quedar bloqueado o mezclar cambios manuales con el artefacto versionado; el exit code solo no prueba qué SHA corre | Antes de conectar el nodo a Git: crear backup recuperable del árbol, verificarlo y hacer `git stash` de todo cambio local. Luego el nodo solo hace pull de commits conocidos y se verifica el SHA |
 
 ---
 

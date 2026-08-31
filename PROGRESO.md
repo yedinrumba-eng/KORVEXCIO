@@ -1262,6 +1262,85 @@ aprobación explícita de Yedin) o cerrar Fase 1.
 
 ---
 
+## 2026-08-31 — S2.1: DGII Settings por Company, barrera D19 extendida
+
+**Estado:** implementación y suite verde. `DGII Settings` es un DocType
+estándar del módulo `ECF`, no un Single: su nombre deriva de `company` y el
+campo conserva `unique: 1`. Solo se persistieron dos configuraciones de
+prueba bajo `_Test Company KORVEXCIO A/B`; las dos Companies reales quedaron
+sin configuración fiscal falsa.
+
+**Qué se escribió:**
+- `korvexcio/ecf/doctype/dgii_settings/` — DocType con `company`, ambiente
+  (`TesteCF`, `CerteCF`, `eCF`), proveedor (`Alanube`, `ECF SSD`), timeouts
+  obligatorios de 10/30 segundos y `live_sync` apagado. No hay default de
+  provider, adapter HTTP, certificado ni secreto: S2.2/S2.7 siguen fuera.
+- `dgii_settings.py` rechaza ambos timeouts fuera de 1–300 segundos con
+  mensajes para usuario en español.
+- Permisos: `System Manager` administra; `Dueño` lee/escribe/crea sin borrar;
+  `Contador` solo lee; ningún cajero recibe permiso.
+- `DGII Settings` entró a `COMPANY_SCOPED_DOCTYPES`, por lo que D19 congela
+  la Company después de crear el documento. El escenario 9 de aislamiento
+  confirma que un Contador limitado a A lista/lee A, no B, y no puede moverla.
+
+**RED real:** el commit `74a5205` se aplicó al nodo y el test falló por la
+ausencia del DocType/controlador (`ModuleNotFoundError`, `Ran 0 tests`, exit
+1), no por sintaxis. Después del primer GREEN apareció una trampa de Frappe:
+un test ubicado dentro de `doctype/dgii_settings/` infiere ese DocType y trata
+de sembrar toda la cadena de Links antes de `setUpClass`; la cadena de Company
+terminó en `DoesNotExistError: DocType Payment Gateway not found`. El arreglo
+oficial y mínimo fue `IGNORE_TEST_RECORD_DEPENDENCIES = ["Company"]`: no
+siembra esa dependencia rota, pero `before_tests()` crea explícitamente las
+Companies A/B que los tres tests necesitan.
+
+**GREEN y operación, salida real:**
+
+```text
+bench --site korvexcio.korvexdev.cc migrate
+Updating DocTypes for korvexcio [100%]
+after_migrate ejecutado
+exit 0
+
+docker compose restart backend queue-short queue-long scheduler websocket
+backend Started
+queue-short Started
+queue-long Started
+scheduler Started
+websocket Started
+
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --module korvexcio.ecf.doctype.dgii_settings.test_dgii_settings
+Ran 3 tests in 0.263s
+OK
+
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio
+Running 13 integration tests for korvexcio
+Ran 13 tests in 0.953s
+OK (skipped=1)
+
+frappe.get_all("DGII Settings", fields=["company", "ambiente"])
+[{"company":"_Test Company KORVEXCIO B","ambiente":"CerteCF"},
+ {"company":"_Test Company KORVEXCIO A","ambiente":"TesteCF"}]
+
+systemctl status korvex-api --no-pager
+Active: active (running)
+curl -s http://127.0.0.1:4000/health
+{"status":"ok","checks":{"postgres":"ok","redis":"ok"},"uptime":175968}
+df -h /
+98G total, 36G used, 58G avail, 39%
+```
+
+**Evidencia pendiente de recapturar:** la consulta recibida del nodo omitió
+`provider` aunque el comando de cierre lo pide; los valores distintos de
+provider sí están cubiertos por los tres tests específicos. `ruff` tampoco
+está instalado en DEV; se corrió `python -m py_compile` sobre el test nuevo,
+pero falta una corrida de linter equivalente si se exige ese renglón literal.
+
+**Deuda que no cambió:** S0.3/S0.9 siguen abiertas por D20. No bloquean la
+estructura de S2.1, pero detienen S2.7 si siguen sin correo de proveedor,
+RNC y certificado real.
+
+---
+
 ## 2026-08-31 — Branding: logo en el login real, README actualizado
 
 **Estado:** COMPLETADO, fuera de la secuencia de slices — pedido directo de
@@ -1355,13 +1434,15 @@ está resuelto — está anotado como abierto y sigue así.**
       secretos de e-CF siguen bloqueados en S0.9/S2.7 (no existen, no se inventaron)
 - [x] S1.7 roles y User Permissions por Company — probado como el usuario real (`frappe.set_user`),
       no como Administrator
-- [x] S1.8 🔴 **la barrera de aislamiento** (`freeze_company`) + 8 de 12 escenarios reales,
-      4 diferidos a Fase 2 con motivo explícito — `bench run-tests` verde, dos corridas
+- [x] S1.8 🔴 **la barrera de aislamiento** (`freeze_company`) + 9 de 12 escenarios reales;
+      S2.1 habilitó el escenario de DGII Settings y dejó S2.2/S2.7 diferidos
 - [ ] S1.9 **N/A** — condicional a aprobar el carril B (§7.2), Yedin no lo aprobó. Correctamente
       cerrado como "no aplica", no como pendiente
 
 ### Fase 2 — Módulo ECF · 15/09 → 03/10 · ⬅ CAMINO CRÍTICO
-- [ ] S2.1 → S2.15 (`docs/08-BLUEPRINT.md` §6)
+- [~] S2.1 `DGII Settings` — código, migrate y suites verdes; falta recapturar
+      el `get_all` con `provider` y la evidencia literal de linter
+- [ ] S2.2 → S2.15 (`docs/08-BLUEPRINT.md` §6)
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
 sites, con cola asíncrona y contingencia probadas cortando la red. Más `/secure-vibe`
