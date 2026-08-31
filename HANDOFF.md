@@ -1,11 +1,12 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
 > **Lo primero que se lee al retomar.** Escrito el 2026-08-31 en sesión de
-> descubrimiento (Cowork). Estado: **🔵 Fase 0 en curso, gate abierto** —
-> bench v16, site, Companies, backup y catálogo de pie; S0.8 (POS) tiene
-> veredicto con evidencia; **S0.9 (el gate fiscal) está BLOQUEADA**, no
-> fallida — ninguna de sus 3 vías se puede intentar sin que Yedin mande los
-> correos de S0.3 o consiga RNC+certificado.
+> descubrimiento (Cowork). Estado: **🔵 Fase 0 CERRADA (D20) → Fase 1 en
+> curso.** Bench v16, site, Companies, backup y catálogo de pie. **S0.9 (el
+> gate fiscal) y S0.3 (correos) bajaron a deuda técnica** por decisión
+> explícita de Yedin en el chat el 31/08 — ya no bloquean el trabajo de
+> código, pero siguen sin resolverse: **para de verdad en S2.7** si para
+> entonces siguen abiertas.
 >
 > **Nombres reales (31/08, confirmados por Yedin):** la vapería es
 > **VAPERIA LA J Y EL JALAPEÑO** (abbr `VLJ`), la cafetería es
@@ -21,10 +22,12 @@
 > con evidencia de código, no de opinión. Pendiente el OK explícito de
 > Yedin y la prueba en vivo (se hace en S4.1). Detalle: `docs/10-SPIKE-POS.md`.
 >
-> Próximo paso: **no es un slice de código — es que Yedin destrabe S0.9**
-> (mandar los correos de S0.3, o conseguir RNC+certificado). Mientras eso no
-> pase, Fase 1 no arranca con el módulo `ecf` real, aunque sí se puede
-> adelantar el esqueleto de la app (S1.1) si Yedin lo pide explícitamente.
+> 🟡 **`LICENSE` sigue diciendo MIT** y la app tiene que ser GPLv3 — sin
+> resolver, y S1.1 arranca sin esperar por eso. Cámbialo **antes de empujar
+> código real** a `korvexcio/`.
+>
+> Próximo paso: **S1.1** — `bench new-app korvexcio`, `modules.txt` con
+> `ECF` y `Retail`, instalada en `korvexcio.korvexdev.cc`.
 > Evidencia de versión y operación: `docs/13-VERSION-FRAPPE.md`.
 >
 > ### Los tres documentos que se leen, en este orden

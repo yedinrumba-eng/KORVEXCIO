@@ -723,33 +723,59 @@ con S0.9 abierta y anotada, no fingida.
 
 ---
 
+## 2026-08-31 — D20: Fase 0 cierra con S0.9/S0.3 como deuda, arranca Fase 1
+
+**Decisión de Yedin, explícita, en el chat.** No se esperó a que se
+resolviera el gate fiscal para seguir. **S0.9 y S0.3 bajan de "gate
+bloqueante" a deuda técnica** en la tabla de abajo — siguen abiertas, siguen
+🔴, pero ya no paran el trabajo de código.
+
+**Por qué es seguro hacerlo así:** el propio `docs/08-BLUEPRINT.md` (D17)
+ya preveía que el módulo `ecf` (Fase 2) puede arrancar en paralelo sin
+esperar a S0.9 — lo único que S0.9 bloquea de verdad es **declarar cerrado
+el módulo fiscal**, no empezar a escribirlo. Arrancar Fase 1 (el esqueleto
+de la app, sin nada fiscal todavía) no choca con nada.
+
+**Lo que NO cambia:** sigue sin existir ningún TrackID, ningún proveedor
+elegido, ningún certificado. Cuando la Fase 2 llegue a S2.7 (el provider
+real), si S0.9 sigue sin resolverse, **ahí sí para de verdad** — no antes.
+
+**Fase 0, estado final:** cerrada en todo lo que no depende de terceros.
+`data/korvex.json` se actualiza a "activo" (ya se hizo en la sesión
+anterior). S0.9/S0.3 quedan en la tabla de deuda técnica, no en un gate.
+
+**Siguiente al retomar:** **S1.1** — `bench new-app korvexcio`,
+`modules.txt` con `ECF` y `Retail`, instalada en `korvexcio.korvexdev.cc`.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
 > **`docs/08-BLUEPRINT.md` §6**. Aquí solo el estado.
 
-### Fase 0 — Reducir riesgo · 31/08 → 07/09 *(en curso)*
+### Fase 0 — Reducir riesgo · 31/08 → 07/09 *(CERRADA 31/08 — con deuda conocida, D20)*
 - [x] **S0.1** — repo con remote, `.gitignore`, `.env.example`, rutas corregidas
 - [x] **S0.1b** — Secure-Vibe modo A + pre-commit con gitleaks
 - [x] **S0.2** — acceso al nodo por Tailscale arreglado
-- [ ] **S0.3** — correos a proveedores e-CF *(Yedin)*
+- [ ] **S0.3** — correos a proveedores e-CF *(Yedin — bajó a deuda técnica por D20, ya no bloquea)*
 - [x] **S0.4** — checklist previo del nodo, todo verde
 - [x] **S0.5** — **bench v16 de pie en `korvex-node1`. D2 cerrada.**
 - [x] **S0.6** ⭐ — site `korvexcio.korvexdev.cc` con ERPNext instalado
 - [x] **S0.7** — las dos `Company`: **VAPERIA LA J Y EL JALAPEÑO** y **EL SABOR DE LAS 5 ESQUINAS**, cada una con su `tax_id` (RNC pendiente)
-- [ ] **S0.7b** — site `demo.korvexdev.cc` *(diferida, no bloquea el resto de Fase 0 — comando listo para Yedin)*
+- [ ] **S0.7b** — site `demo.korvexdev.cc` *(descartada por Yedin, no bloquea nada)*
 - [~] **S0.8** — matriz completa con evidencia de código, recomienda POSNext (revierte D16); prueba de red cortada pendiente → `docs/10-SPIKE-POS.md`
-- [ ] **S0.9** 🔴 **BLOQUEADA** — necesita S0.3 (correos) o RNC+certificado de Yedin. Ninguna de las 3 vías se puede intentar sin eso → `docs/11-SPIKE-FISCAL.md` (sin crear, nada que documentar todavía)
+- [ ] **S0.9** 🔴 *(bajó a deuda técnica por D20)* — necesita S0.3 o RNC+certificado. Ninguna de las 3 vías se puede intentar sin eso. **Para de verdad en S2.7**, no antes
 - [x] **S0.10** — script de backup+retención probado; falta solo el `sudo systemctl enable` de Yedin
 - [x] **S0.11** — 24 SKUs representativos (16 VLJ con 1 template+9 variantes, 8 ESE)
-- [~] **S0.12** — Fase 0 cerrada **en lo que no depende de Yedin**; el gate real (S0.9) sigue abierto, `data/korvex.json` se queda en ⚪ hasta que lo esté
+- [x] **S0.12** — Fase 0 cerrada por **D20** (decisión explícita de Yedin en el chat, 31/08): S0.9/S0.3 bajan a deuda técnica en vez de gate. `data/korvex.json` actualizado a "activo"
 
-**🚦 Gate — NO CUMPLIDO todavía:** S0.5 ✅ KORVIS intacto · S0.8 con veredicto
-escrito (POSNext, pendiente confirmar) ✅ · **S0.9 sin TrackID — bloqueada,
-no fallida.** Fase 1 no arranca hasta que esto se resuelva.
-**No se improvisó un reemplazo (R2).**
+**🚦 Gate original — NO se esperó a que se cumpliera (D20).** S0.5 ✅ ·
+S0.8 con veredicto escrito (POSNext, pendiente confirmar) ✅ · S0.9 sin
+TrackID, movida a deuda con el OK explícito de Yedin. **No se fingió que
+está resuelto — está anotado como abierto y sigue así.**
 
-### Fase 1 — Esqueleto de la app · 08/09 → 12/09
+### Fase 1 — Esqueleto de la app · 08/09 → 12/09 *(en curso)*
 - [ ] S1.1 `bench new-app korvexcio` con módulos `ECF` y `Retail`
 - [ ] S1.2 `apps.json` con el repo propio · **fijar SHA o mirrors** para POSNext y URY
       (hoy están en `develop`, que es mutable) · el despliegue verifica el **SHA**, no
@@ -798,11 +824,11 @@ Ordenada por lo que más duele.
 
 | Sev | Qué | Qué la mitiga hoy | La cura de verdad |
 |---|---|---|---|
-| 🔴 | **RFCE no está documentado en ninguna vía Python.** Es ~100% del volumen del POS (E32 bajo RD$250,000) | S0.3 pregunta a los proveedores en paralelo; plan B es portar de `victors1681/dgii-ecf` (MIT, TS) | **S0.9.** Si las tres vías fallan, se para y se escala |
+| 🔴 | **S0.9/S0.3 — degradado de gate a deuda por D20 (OK de Yedin, 31/08).** RFCE no está documentado en ninguna vía Python (~100% del volumen del POS, E32 bajo RD$250,000), y ninguna de las 3 vías se puede intentar sin correos a proveedores o RNC+certificado | Nada — sigue exactamente igual de sin resolver que antes, solo que ya no bloquea Fase 1 | Yedin manda los correos de S0.3 (texto en `docs/08-BLUEPRINT.md` §6.1) o consigue RNC+certificado → entonces S0.9 con TrackID real. **Para de verdad en S2.7** si sigue sin resolverse ahí |
 | 🔴 | **Aislamiento entre Companies es lógico, no físico** (D19) | Nada todavía | **S1.8**: la barrera + su suite de 12 escenarios en CI |
+| 🟡 | **`LICENSE` dice MIT y la app tiene que ser GPLv3.** S1.1 arranca sin resolverlo — Yedin no lo mencionó al dar el OK para Fase 1 | Nada — no hay código de la app todavía | Cambiarlo **antes de empujar código real a `korvexcio/`**. Decisión de Yedin, sigue pendiente |
 | 🟡 | **POSNext y URY se instalaron desde `develop`**, que es mutable. Ninguno publica `version-16` | El SHA probado quedó escrito en `docs/13-VERSION-FRAPPE.md` | **S1.2**: fijar SHA o mirrors de Korvex |
-| 🟡 | **`LICENSE` dice MIT y la app tiene que ser GPLv3** | Nada — no hay código de la app todavía | Cambiarlo **antes** de S1.1. Decisión de Yedin |
+| 🟡 | **D16 (POS) recomendado hacia POSNext por S0.8, sin confirmar** | Evidencia de código en `docs/10-SPIKE-POS.md` | OK explícito de Yedin, o prueba en vivo en S4.1 |
 | 🟡 | **7.154 GB de caché de build reclamable en el nodo** | La alarma de disco avisa al 80% | Mantenimiento autorizado con `docker builder prune` |
 | 🟡 | **La mini PC viaja con Yedin** | Ninguna mitigación técnica | Decisión de Yedin antes del go-live: deja de viajar · VPS · contingencia por OFV |
-| ⚪ | Warnings de Vite en el build de POSNext/URY | No producen fallo observable | Se revisan solo si rompen S0.8 |
-| ⚪ | **No hay entrada en `data/korvex.json`** (§7.2 de `CONVENCIONES.md`) | — | S0.12 |
+| ⚪ | Warnings de Vite en el build de POSNext/URY | No producen fallo observable | Se revisan solo si rompen algo observable |
