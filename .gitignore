@@ -1,0 +1,58 @@
+# ─── Secretos — R5, nunca se commitean ───────────────────────────────
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.pem
+*.key
+secrets/
+
+# ─── Frappe / bench ──────────────────────────────────────────────────
+# Los sites son datos del tenant, no código. Viven en el nodo.
+sites/
+config/
+logs/
+*.sql
+*.sql.gz
+*.tar
+*.tar.gz
+
+# ─── Python ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+env/
+venv/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ─── Node (assets de Frappe) ─────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.yarn/
+
+# ─── Upstream que NO se versiona (docs/06: se instala, no se clona) ──
+frappe_docker/
+apps/
+
+# ─── Herramientas y sesión ───────────────────────────────────────────
+.remember/
+SECURITY-AUDIT-REPORT.md
+
+# ─── Sistema operativo / editor ──────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
