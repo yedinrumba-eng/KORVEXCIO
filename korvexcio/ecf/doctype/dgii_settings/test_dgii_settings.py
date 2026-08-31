@@ -4,6 +4,8 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Company"]
+
 COMPANY_A = "_Test Company KORVEXCIO A"
 COMPANY_B = "_Test Company KORVEXCIO B"
 
