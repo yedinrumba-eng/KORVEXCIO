@@ -2,7 +2,7 @@
 
 > **Lo primero que se lee al retomar.** Escrito el 2026-08-31 en sesión de
 > descubrimiento (Cowork). Estado: **🟡 Fase 2 en curso: S2.1 implementado,
-> con dos evidencias literales pendientes de recapturar.** La app `korvexcio` existe de verdad: GPLv3,
+> con evidencia completa y pendiente únicamente de auditorías.** La app `korvexcio` existe de verdad: GPLv3,
 > módulos `ECF`/`Retail`, custom fields en `Customer`, roles por Company
 > probados con un usuario real, y **la barrera de aislamiento de D19
 > funcionando y verificada** (`bench run-tests` verde, dos corridas).
@@ -37,8 +37,8 @@
 > 8 de 12 escenarios reales verificados y 4 diferidos a Fase 2 con motivo
 > explícito. Detalle completo, slice por slice, en `PROGRESO.md`.
 >
-> Próximo paso: recapturar la evidencia pendiente de S2.1 y seguir con
-> **Fase 2 — el módulo `ecf`** (S2.2 en adelante), sabiendo
+> Próximo paso: recibir los veredictos de auditoría de S2.1 antes de seguir
+> con **Fase 2 — el módulo `ecf`** (S2.2 en adelante), sabiendo
 > que no puede cerrarse sin resolver S0.9/S2.7 primero.
 > Evidencia de versión y operación: `docs/13-VERSION-FRAPPE.md`.
 >
@@ -371,7 +371,7 @@ solo pide 1–3 GB. Un bench con 2–3 sites cabe; **10 tenants no caben.** El
 
 | # | Slice | Qué |
 |---|---|---|
-| 1 | **S2.1** 🟡 | `DGII Settings` — implementado, migrate y tests verdes; falta recapturar `get_all` con `provider` y linter equivalente |
+| 1 | **S2.1** 🟡 | `DGII Settings` — evidencia completa; pendiente únicamente de auditorías |
 | 2 | **S2.2** | `DGII Digital Certificate` — `.p12` como Attach, password como Password (nunca Data) |
 | 3 | **S2.3 → S2.6** | Secuencia eNCF, DocType `ECF`, `ECF Integration Log`, interfaz `providers/base.py` |
 | 4 | **S2.7** 🔴 | El proveedor real. **Aquí es donde S0.9/S0.3 paran de verdad** si siguen sin resolver |

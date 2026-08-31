@@ -1329,11 +1329,30 @@ df -h /
 98G total, 36G used, 58G avail, 39%
 ```
 
-**Evidencia pendiente de recapturar:** la consulta recibida del nodo omitió
-`provider` aunque el comando de cierre lo pide; los valores distintos de
-provider sí están cubiertos por los tres tests específicos. `ruff` tampoco
-está instalado en DEV; se corrió `python -m py_compile` sobre el test nuevo,
-pero falta una corrida de linter equivalente si se exige ese renglón literal.
+**Evidencia adicional recapturada, salida real:**
+
+```text
+frappe.get_all("DGII Settings", fields=["company", "ambiente", "provider"])
+[{"company":"_Test Company KORVEXCIO B","ambiente":"CerteCF","provider":"ECF SSD"},
+ {"company":"_Test Company KORVEXCIO A","ambiente":"TesteCF","provider":"Alanube"}]
+exit 0
+
+python -m compileall -f korvexcio\ecf\doctype\dgii_settings korvexcio\isolation.py korvexcio\tests\test_isolation.py
+exit 0; compiló los 5 archivos
+
+python -m json.tool korvexcio\ecf\doctype\dgii_settings\dgii_settings.json
+exit 0
+
+git diff --check f0e7301..HEAD
+exit 0
+
+rg "ignore_permissions=True|frappe\.db\.sql\(" korvexcio
+NO MATCHES: ignore_permissions=True / frappe.db.sql(
+```
+
+No se instaló una dependencia solo para lint: `compileall` es el mecanismo
+equivalente disponible. S2.1 queda pendiente únicamente de las auditorías;
+no se declara cerrada antes de sus veredictos.
 
 **Deuda que no cambió:** S0.3/S0.9 siguen abiertas por D20. No bloquean la
 estructura de S2.1, pero detienen S2.7 si siguen sin correo de proveedor,
@@ -1440,8 +1459,8 @@ está resuelto — está anotado como abierto y sigue así.**
       cerrado como "no aplica", no como pendiente
 
 ### Fase 2 — Módulo ECF · 15/09 → 03/10 · ⬅ CAMINO CRÍTICO
-- [~] S2.1 `DGII Settings` — código, migrate y suites verdes; falta recapturar
-      el `get_all` con `provider` y la evidencia literal de linter
+- [~] S2.1 `DGII Settings` — código, migrate, suites y evidencia completa;
+      pendiente únicamente de auditorías
 - [ ] S2.2 → S2.15 (`docs/08-BLUEPRINT.md` §6)
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
