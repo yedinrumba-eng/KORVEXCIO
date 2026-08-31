@@ -1,0 +1,85 @@
+{
+ "actions": [],
+ "autoname": "field:company",
+ "creation": "2026-08-31 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "ambiente",
+  "provider",
+  "connect_timeout_seconds",
+  "read_timeout_seconds",
+  "live_sync"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "ambiente",
+   "fieldtype": "Select",
+   "label": "Ambiente",
+   "options": "TesteCF\nCerteCF\neCF",
+   "reqd": 1
+  },
+  {
+   "fieldname": "provider",
+   "fieldtype": "Select",
+   "label": "Proveedor activo",
+   "options": "Alanube\nECF SSD",
+   "reqd": 1
+  },
+  {
+   "default": "10",
+   "fieldname": "connect_timeout_seconds",
+   "fieldtype": "Int",
+   "label": "Tiempo de conexion (segundos)",
+   "reqd": 1
+  },
+  {
+   "default": "30",
+   "fieldname": "read_timeout_seconds",
+   "fieldtype": "Int",
+   "label": "Tiempo de lectura (segundos)",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "live_sync",
+   "fieldtype": "Check",
+   "label": "Sincronizacion en vivo"
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-31 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ECF",
+ "name": "DGII Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Dueño",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Contador"
+  }
+ ]
+}

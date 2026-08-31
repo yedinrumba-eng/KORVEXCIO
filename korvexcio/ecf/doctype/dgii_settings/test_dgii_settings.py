@@ -77,6 +77,7 @@ class TestDGIISettings(IntegrationTestCase):
                 settings.connect_timeout_seconds = timeout
                 with self.assertRaises(frappe.ValidationError):
                     settings.save()
+                settings.reload()
                 settings.read_timeout_seconds = timeout
                 with self.assertRaises(frappe.ValidationError):
                     settings.save()

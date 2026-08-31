@@ -26,6 +26,7 @@ COMPANY_SCOPED_DOCTYPES = {
     "Delivery Note",
     "Payment Entry",
     "Item Price",
+    "DGII Settings",
 }
 
 
