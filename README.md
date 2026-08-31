@@ -1,65 +1,83 @@
-# VAPELAND — KORVEXCIO
+<p align="center">
+  <img src="assets/branding/final/korvexcio-logo-transparent-4k.png" alt="KORVEXCIO" width="420">
+</p>
 
-ERP + POS para tienda de vapes/hookah/tabaco con cafetería adjunta en República
-Dominicana, construido sobre ERPNext/Frappe, multi-tenant, para revenderse como
-producto KORVEX a otros negocios de retail + food.
+# KORVEXCIO
 
-**Cliente:** VAPELAND (RD) · **Producto:** KORVEXCIO
-**Estado:** ⚪ Semilla — descubrimiento hecho, cero código
-**Carpeta:** `C:\PROYECTOS\KORVEXCIO` ⏳ *pendiente de renombrar desde `VAPELAND`*
-**Repo:** [`yedinrumba-eng/KORVEXCIO`](https://github.com/yedinrumba-eng/KORVEXCIO.git) ✅ *creado 31/08/2026*
+ERP + POS multi-tenant sobre **ERPNext/Frappe v16** para retail y food en
+República Dominicana. Producto de la casa **KORVEX**. Primer cliente: dos
+negocios del mismo dueño — **VAPERIA LA J Y EL JALAPEÑO** (vapería) y **EL
+SABOR DE LAS 5 ESQUINAS** (cafetería) — operando desde un solo panel.
+
+**Estado:** 🟢 Fase 0 y Fase 1 cerradas (31/08/2026). Fase 2 (módulo `ecf`) en
+curso. Detalle slice por slice, con evidencia real, en [`PROGRESO.md`](PROGRESO.md).
 
 ---
 
 ## Nomenclatura — la familia de marcas
 
-Decidido el 2026-08-31. Los tres nombres cumplen §1 de `CONVENCIONES.md`
-(carpeta = producto = repo).
-
 | Nombre | Qué es |
 |---|---|
-| **KORVEX** | La casa. La empresa: Korvex Dev · `korvexdev.cc` |
-| **KORVEXCIO** | **Este producto.** ERP + POS + inventario + e-CF para retail y food. Juego con *comerCIO* |
-| **KORVIS** | *The AI Assistant by Korvex* — el asistente conversacional de WhatsApp. **Producto de KORVEX, marca propia** |
-| **VAPELAND** | **Un cliente**, no un producto. Primer tenant de KORVEXCIO |
-| **ADAP** | **Un cliente** de KORVIS (banco RD), no el nombre del producto |
+| **KORVEX** | La casa. Korvex Dev · `korvexdev.cc` |
+| **KORVEXCIO** | **Este producto.** De *comerCIO*. Repo: `yedinrumba-eng/KORVEXCIO` · app de Frappe: `korvexcio` |
+| **KORVIS** | *The AI Assistant by Korvex* — el bot de WhatsApp. Otro producto de la casa |
+| **VAPELAND** | Codename interno del cliente 1 en este repo — no el nombre de ninguna `Company` real |
 
-⚠️ **Sin guion: `KORVEXCIO`, no `KORVEX-CIO`.** El guion parte la palabra y mata
-el juego con *comercio*.
-
-⚠️ **En disco, la carpeta de KORVIS todavía se llama `C:\PROYECTOS\ADAP`.** Las
-rutas de este documento apuntan al nombre real de hoy, no al que debería tener
-(ver `_KORVEX-OPS/MUDANZA.md`).
+Los dos negocios reales del cliente 1 son las Companies `VAPERIA LA J Y EL
+JALAPEÑO` (`VLJ`) y `EL SABOR DE LAS 5 ESQUINAS` (`ESE`), en un solo site
+(`korvexcio.korvexdev.cc`) — D19, ver `docs/08-BLUEPRINT.md` §5.2.
 
 ---
 
 ## Empezar aquí
 
-1. **`HANDOFF.md`** — lo primero que se lee. Decisiones tomadas, el reloj de
-   76 días, las tres facturas de elegir ERPNext, y qué se hace primero.
-2. **`docs/05-PREGUNTAS-CLIENTE.md`** — lo que falta confirmar. Llevarlo a la
-   reunión.
+Léase en este orden, siempre:
+
+1. **`docs/08-BLUEPRINT.md`** — el plan maestro: fases, microslices, la
+   verificación de cada uno. Fuente de verdad del qué y del orden.
+2. **`PROGRESO.md`** — la bitácora. La última entrada dice exactamente dónde
+   quedó el trabajo, con la salida real de los comandos que lo probaron.
+3. **`HANDOFF.md`** — el porqué del proyecto, las trampas del nodo, y
+   "Lecciones ya pagadas" — bugs reales ya resueltos, para no volver a
+   pagarlos.
+4. **`PROMPT-CLAUDE-CODE.md`** — el prompt listo para pegar en una sesión
+   nueva de Claude Code o Codex.
+
+## La fecha que manda
+
+**15 de noviembre de 2026** — e-CF obligatorio para pequeños, micro y no
+clasificados (Ley 32-23). Multa: 5 a 50 salarios mínimos. El módulo fiscal
+(Fase 2) es el camino crítico; todo lo demás se difiere.
+
+## Stack
+
+Frappe Framework v16 · ERPNext v16 · MariaDB · Redis 7 · POSNext (spike con
+evidencia, pendiente confirmar — `docs/10-SPIKE-POS.md`) · Docker Compose
+(dev y prod, imagen propia vía `apps.json`) · Cloudflare Tunnel →
+`*.korvexdev.cc`. Detalle y porqué de cada pieza en `TECH_STACK.md`.
 
 ## Los archivos
 
 | Archivo | Qué contiene |
 |---|---|
-| `HANDOFF.md` | Estado, decisiones, riesgos, primeros pasos |
-| `PROMPT-CLAUDE-CODE.md` | **El prompt listo para pegar** en la primera sesión de Claude Code |
-| `PRD.md` | Qué se acordó (y qué no) |
-| `TECH_STACK.md` | Decisiones técnicas y por qué |
-| `CLAUDE.md` | Reglas obligatorias para trabajar en este repo |
-| `PROGRESO.md` | Bitácora del proyecto. Se marca al cerrar un slice |
-| `docs/01-DESCUBRIMIENTO.md` | El negocio, los dos rubros, el inventario de un vape shop |
-| `docs/02-FISCAL-RD.md` | e-CF, ISC, ITBIS, RST, certificado digital, contingencia |
-| `docs/03-BENCHMARK-OPENSOURCE.md` | Repos evaluados, con licencia y veredicto |
-| `docs/04-ARQUITECTURA.md` | Multi-tenancy, hosting, apps, seguridad, modelo de producto |
-| `docs/05-PREGUNTAS-CLIENTE.md` | Lo que falta confirmar |
-| `docs/06-COMO-SE-TRABAJA.md` | **Cómo se extiende ERPNext sin tocarlo.** El modelo de trabajo |
-| `docs/07-ARQUITECTURA-REFERENCIA.md` | **Barrido de ~45 repos de RD + 9 localizaciones fiscales de Frappe.** El mapa de licencias y la estructura de DocTypes ya destilada |
+| `docs/08-BLUEPRINT.md` | El plan maestro — fases, slices, verificación, reglas del ejecutor |
+| `PROGRESO.md` | Bitácora con evidencia real de cada slice cerrado |
+| `HANDOFF.md` | Estado técnico, trampas del nodo, lecciones ya pagadas |
+| `PROMPT-CLAUDE-CODE.md` | Prompt listo para pegar en una sesión nueva |
+| `TECH_STACK.md` | Decisiones técnicas (D1–D19) con su porqué |
+| `CLAUDE.md` | Reglas obligatorias del repo |
+| `korvexcio/` | La app de Frappe — módulos `ECF` y `Retail` |
+| `docs/06-COMO-SE-TRABAJA.md` | Cómo se extiende ERPNext sin tocar el upstream |
+| `docs/10-SPIKE-POS.md` | Veredicto del spike de POS, con evidencia de código |
+| `docs/13-VERSION-FRAPPE.md` | Evidencia operativa del bench (D2 cerrada en v16) |
 
-## La fecha que manda
+## Licencia
 
-**15 de noviembre de 2026** — facturación electrónica obligatoria para
-pequeños, micro y no clasificados en RD (Ley 32-23). Multa por incumplir:
-5 a 50 salarios mínimos.
+⚠️ **Pendiente de corregir** — el archivo `LICENSE` de este repo dice MIT,
+pero la app hereda de ERPNext (GPLv3) y **tiene que ser GPLv3**. Decisión de
+Yedin, sin resolver todavía. El `hooks.py` de la app ya declara
+`app_license = "gpl-3.0"`; el archivo de la raíz es aparte.
+
+Este producto no puede llamarse "ERPNext" ni "Frappe" en ningún lugar del
+nombre, la marca o el dominio — son marcas registradas de Frappe
+Technologies Pvt. Ltd. Se mantiene visible su aviso de copyright.

@@ -1262,6 +1262,59 @@ aprobación explícita de Yedin) o cerrar Fase 1.
 
 ---
 
+## 2026-08-31 — Branding: logo en el login real, README actualizado
+
+**Estado:** COMPLETADO, fuera de la secuencia de slices — pedido directo de
+Yedin, no bloquea Fase 2.
+
+**Qué se hizo:** Yedin trajo el logo de KORVEXCIO (concepto "validación
+fiscal"). Se subió como `File` de Frappe y se seteó en
+`Website Settings.app_logo` — aparece de verdad en `/login`, no solo
+guardado en disco. Se usó la versión **transparente 4K**
+(`assets/branding/final/korvexcio-logo-transparent-4k.png`), mejor que el
+primer intento con la versión de fondo blanco. Los archivos sueltos que
+llegaron a la raíz del repo se organizaron bajo `assets/branding/{concepts,final}/`.
+
+**README.md reescrito** — seguía diciendo "⚪ Semilla, cero código" desde el
+día 1. Ahora refleja Fase 0+1 cerradas, los nombres reales de las dos
+Companies, y el logo arriba.
+
+**Se investigó y se descartó, con motivo:** Yedin pidió agregar el logo
+también en el repo de ADAP (`C:\PROYECTOS\ADAP`, el proyecto de KORVIS),
+usando de referencia cómo `aiassistant.korvexdev.cc` maneja su login. Un
+subagente exploró ese repo a fondo: el login del dashboard de KORVIS
+(`apps/dashboard/src/app/login/page.tsx`) usa un componente `KorvexWordmark`
+con un PNG fijo — y **su propio `CLAUDE.md` prohíbe explícitamente meterle
+marca de un tenant o producto**: *"El dashboard es el producto de la
+PLATAFORMA, no del tenant. Lleva marca Korvex y NO los colores de la
+institución."* No existe ningún registro de productos hermanos ni carpeta
+de assets compartida entre repos donde el logo de KORVEXCIO tuviera un
+lugar real. **No se tocó el repo de ADAP** — hacerlo habría violado una
+regla escrita de ese proyecto sin ganar nada, porque no hay dónde
+engancharlo.
+
+**Verificación, salida real:**
+
+```
+curl -H "Host: korvexcio.korvexdev.cc" http://127.0.0.1:8080/login | grep korvexcio-logo
+-> korvexcio-logo-finalffac59.png  (aparece 3 veces en el HTML)
+
+KORVIS: {"status":"ok",...}
+df -h /: 58G libres, sin cambio
+```
+
+**Deuda:** el login sigue siendo el genérico de Frappe con el logo
+cambiado — no hay una pantalla de login propia con la paleta de marca
+completa (azul `#2b44e6`-ish + gris acero, viendo el logo). Eso es trabajo
+de frontend que no está en ningún slice todavía; se anota para cuando
+haya UI propia (Fase 4+).
+
+**Siguiente al retomar:** Fase 2 — el módulo `ecf`, empezando por S2.1.
+**Esta sesión para aquí** — el prompt para continuar queda en
+`PROMPT-CLAUDE-CODE.md`, listo para pegar en Codex.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
