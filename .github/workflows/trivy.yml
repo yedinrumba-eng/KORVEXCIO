@@ -1,0 +1,24 @@
+name: Container/dependency scan (trivy)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  trivy-fs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      # Escanea el repo (deps de korvexcio) en modo filesystem — rapido,
+      # no requiere buildear la imagen korvexcio:16 en cada push.
+      # El escaneo de la IMAGEN completa (que incluye erpnext/posnext/ury,
+      # upstream, no auditado por nosotros) queda para cuando el build via
+      # apps.json este automatizado — ver deuda de S1.2.
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: 1

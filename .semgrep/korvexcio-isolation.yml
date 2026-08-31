@@ -1,0 +1,42 @@
+rules:
+  - id: korvexcio-no-ignore-permissions
+    languages: [python]
+    severity: ERROR
+    message: >
+      ignore_permissions=True esta prohibido en korvexcio/ (CLAUDE.md #12b).
+      Salta permission_query_conditions y has_permission — el aislamiento
+      entre Companies (D19) depende de que esos hooks corran siempre. Si
+      este caso lo necesita de verdad, se justifica por escrito en el PR y
+      se le escribe su propio test de aislamiento.
+    paths:
+      include:
+        - "**/*.py"
+      exclude:
+        - "**/test_*.py"
+        - "**/*_test.py"
+    patterns:
+      - pattern-either:
+          - pattern: $DOC.insert(ignore_permissions=True)
+          - pattern: $DOC.save(ignore_permissions=True)
+          - pattern: $DOC.delete(ignore_permissions=True)
+          - pattern: frappe.delete_doc(..., ignore_permissions=True, ...)
+          - pattern: frappe.get_doc(...).insert(ignore_permissions=True)
+
+  - id: korvexcio-no-raw-sql
+    languages: [python]
+    severity: ERROR
+    message: >
+      frappe.db.sql() crudo esta prohibido en korvexcio/ (CLAUDE.md #12b).
+      Sin el ORM no hay garantia de que la query filtre por company — es
+      el mismo bug que el PR frappe/erpnext#44695 (User Permission
+      ignorada en los estados financieros). Usa frappe.get_all /
+      frappe.qb con el filtro de company explicito.
+    paths:
+      include:
+        - "**/*.py"
+      exclude:
+        - "**/test_*.py"
+        - "**/*_test.py"
+        - "**/patches/**"
+    patterns:
+      - pattern: frappe.db.sql(...)

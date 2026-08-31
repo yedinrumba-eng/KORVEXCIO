@@ -10,5 +10,9 @@
   {
     "url": "https://github.com/ury-erp/ury.git",
     "branch": "develop"
+  },
+  {
+    "url": "https://github.com/yedinrumba-eng/KORVEXCIO.git",
+    "branch": "main"
   }
 ]

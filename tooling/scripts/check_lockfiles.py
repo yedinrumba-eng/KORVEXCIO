@@ -115,6 +115,17 @@ def check_python_pin(path: Path, rep: Report):
                     f"(='{line.strip()}'); usa '==' para reproducibilidad")
 
 
+def is_frappe_app_manifest(path: Path) -> bool:
+    """pyproject.toml de una app de Frappe (build-backend flit_core, deps
+    gestionadas por `bench` contra el venv del site, no por un lockfile
+    propio) — mismo patron que erpnext/posnext/ury. No aplica poetry.lock."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return "flit_core.buildapi" in text and "# Installed and managed by bench" in text
+
+
 def scan(root: Path, excludes: set[str], rep: Report):
     # collect every manifest file present (deduplicated by path)
     manifest_pairs: dict[str, list[Path]] = {m: [] for m, _ in LOCKFILE_PAIRS}
@@ -143,6 +154,8 @@ def scan(root: Path, excludes: set[str], rep: Report):
                 continue
             has_any = any((mf.parent / l).exists() for l in candidates)
             if not has_any:
+                if mf_name == "pyproject.toml" and is_frappe_app_manifest(mf):
+                    continue
                 rep.add(0,
                         f"{mf}: {mf_name} sin lockfile asociado "
                         f"(commitea uno de: {', '.join(candidates)})")

@@ -1,0 +1,26 @@
+name: SAST (semgrep)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v6
+      # p/python + p/security-audit cubren inyeccion, secretos hardcodeados,
+      # etc. Regla propia: ignore_permissions=True y frappe.db.sql() crudo
+      # dentro de korvexcio/ estan prohibidos (CLAUDE.md #12b) — marcados
+      # aparte porque no son un patron generico de OWASP.
+      - run: |
+          semgrep scan \
+            --config p/python \
+            --config p/security-audit \
+            --config ".semgrep/korvexcio-isolation.yml" \
+            --error \
+            korvexcio/
