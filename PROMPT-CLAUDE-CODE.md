@@ -1,9 +1,9 @@
 # Prompt para arrancar una sesión nueva
 
 > Copiar y pegar tal cual al abrir **Claude Code** o **Codex** en esta carpeta.
-> Actualizado el 2026-08-31 tras cerrar S0.5–S0.8, S0.10, S0.11. **Fase 0
-> tiene un solo pendiente y no es de código: S0.9, el gate fiscal, está
-> BLOQUEADA esperando por Yedin** (correos de S0.3, o RNC+certificado).
+> Actualizado el 2026-08-31 al cerrar **S1.1** (esqueleto de la app
+> `korvexcio`). **Fase 0 cerrada por D20** — S0.9/S0.3 son deuda técnica,
+> ya no gate. Fase 1 en curso.
 >
 > **Este archivo se actualiza al cerrar cada slice.** Si el prompt de abajo
 > ya no coincide con `PROGRESO.md`, gana `PROGRESO.md` — y hay que corregir
@@ -35,31 +35,24 @@ LEE EN ESTE ORDEN, completo, antes de proponer nada:
 EL RELOJ: 15/11/2026, e-CF obligatorio para pequeños/micro/no clasificados
 (Ley 32-23). Multa 5-50 salarios mínimos. Todo lo demás se difiere; esto no.
 
-TU SLICE: **no hay slice de código pendiente en Fase 0.** El único bloqueo
-es S0.9 (spike fiscal, el gate) y depende de dos cosas que solo Yedin puede
-mover:
-  a) mandar los 2 correos de S0.3 a Alanube y ECF SSD (texto en
-     docs/08-BLUEPRINT.md §6.1), o
-  b) confirmar el/los RNC y pedir el certificado digital (3-10 días
-     hábiles) para probar directo contra TesteCF.
+TU SLICE: S1.2 — actualizar `apps.json` con el repo propio de `korvexcio`
+(ya existe en el bench, instalado, GPLv3, módulos ECF/Retail vacíos) y
+**fijar SHA o mirrors de Korvex** para POSNext y URY — hoy están en
+`develop`, que es mutable, y eso es deuda desde S0.5. NADA MÁS.
 
-Si Yedin ya resolvió (a) o (b) y trae la respuesta: tu slice es **S0.9** —
-seguir la vía correspondiente (proveedor con RFCE, o portar de
-`victors1681/dgii-ecf` contra el XSD oficial), y NO declarar nada cerrado
-sin un TrackID real de TesteCF pegado en `docs/11-SPIKE-FISCAL.md`.
+DESPUÉS de instalar o reinstalar cualquier app: `docker compose restart
+backend queue-short queue-long scheduler websocket` — si no, el site tira
+500 `ModuleNotFoundError` aunque `install-app` haya dicho que todo salió
+bien. Pasó en S1.1, está en "Lecciones ya pagadas" de HANDOFF.md.
 
-Si Yedin NO trae nada de S0.3 todavía pero quiere adelantar trabajo de
-código de todos modos: eso es **arrancar Fase 1** (S1.1, esqueleto de la
-app `korvexcio`) sabiendo que el módulo `ecf` no puede cerrarse sin S0.9.
-Eso necesita su **OK explícito** en el mismo turno — no es la secuencia
-acordada, no se asume.
+Deuda abierta que NO bloquea este slice pero sigue viva: S0.9/S0.3
+(fiscal, para de verdad en S2.7) · LICENSE de la raíz en MIT en vez de
+GPLv3 (el `hooks.py` de la app ya está en GPLv3, el archivo del repo no) ·
+D16/POS pendiente de OK explícito de Yedin.
 
-Nota aparte, sin urgencia: **S0.8 recomienda POSNext** (revierte el sesgo
-hacia el nativo de D16, con evidencia de código real, no de opinión —
-`docs/10-SPIKE-POS.md`). Sigue pendiente el OK de Yedin para fijar D16.
-
-Verificación con la que se cierra S0.9 quedaría:
-  TrackID real de TesteCF, pegado en docs/11-SPIKE-FISCAL.md
+Verificación con la que se cierra:
+  bench --site korvexcio.korvexdev.cc list-apps -> incluye korvexcio
+  git -C apps/korvexcio rev-parse HEAD -> coincide con lo pusheado
   systemctl status korvex-api && curl -s http://127.0.0.1:4000/health
   df -h /
 
@@ -117,14 +110,14 @@ ERP+POS multi-tenant sobre ERPNext/Frappe v16 para retail y food en RD.
 Deadline duro: e-CF de la DGII obligatorio el 15/11/2026.
 
 El bench v16, el site korvexcio.korvexdev.cc, sus dos Company reales
-(VAPERIA LA J Y EL JALAPEÑO, EL SABOR DE LAS 5 ESQUINAS), el catálogo y el
-backup ya están de pie en korvex-node1 (ssh korvex-host). No los reconstruyas.
+(VAPERIA LA J Y EL JALAPEÑO, EL SABOR DE LAS 5 ESQUINAS), el catálogo, el
+backup y la app korvexcio (GPLv3, módulos ECF/Retail) ya están de pie en
+korvex-node1 (ssh korvex-host). No los reconstruyas.
 
-No hay slice de código pendiente en Fase 0. Lo único que falta es S0.9 (el
-gate fiscal), bloqueada esperando que Yedin mande los correos de S0.3 o
-consiga RNC+certificado. Si trae eso, tu slice es S0.9 con TrackID real. Si
-no, pregúntale si quiere adelantar Fase 1 (S1.1) con su OK explícito, o
-esperar.
+Fase 0 cerrada (D20): S0.9/S0.3 bajan a deuda técnica, ya no bloquean.
+Tu slice es S1.2: apps.json con el repo korvexcio + fijar SHA de POSNext y
+URY (están en develop, mutable). Después de instalar cualquier app,
+reinicia backend+colas+scheduler+websocket o el site tira 500.
 
 Un slice a la vez. Sin la salida real del comando, no se declara nada cerrado.
 En ese nodo corre KORVIS en producción con un banco en vivo: no se toca su

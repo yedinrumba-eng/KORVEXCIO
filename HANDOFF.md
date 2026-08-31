@@ -22,12 +22,19 @@
 > con evidencia de código, no de opinión. Pendiente el OK explícito de
 > Yedin y la prueba en vivo (se hace en S4.1). Detalle: `docs/10-SPIKE-POS.md`.
 >
-> 🟡 **`LICENSE` sigue diciendo MIT** y la app tiene que ser GPLv3 — sin
-> resolver, y S1.1 arranca sin esperar por eso. Cámbialo **antes de empujar
-> código real** a `korvexcio/`.
+> 🟡 **`LICENSE` (el archivo de la raíz del repo) sigue diciendo MIT** y
+> tiene que ser GPLv3 — sin resolver. El `hooks.py` de la app `korvexcio`
+> **ya quedó en GPLv3** (`app_license = "gpl-3.0"`, decidido en S1.1
+> aplicando la regla 11 del `CLAUDE.md`), pero el archivo `LICENSE` de la
+> raíz es una cosa aparte y sigue en deuda.
 >
-> Próximo paso: **S1.1** — `bench new-app korvexcio`, `modules.txt` con
-> `ECF` y `Retail`, instalada en `korvexcio.korvexdev.cc`.
+> **S1.1 cerrada:** existe `korvexcio`, la app propia, con módulos `ECF` y
+> `Retail`, instalada en `korvexcio.korvexdev.cc`. Primera línea de código
+> del proyecto. Una lección real pagada en el camino — leer
+> "Lecciones ya pagadas" abajo antes de instalar cualquier otra app.
+>
+> Próximo paso: **S1.2** — `apps.json` con el repo propio + fijar SHA/mirrors
+> de POSNext y URY (siguen en `develop`, mutable).
 > Evidencia de versión y operación: `docs/13-VERSION-FRAPPE.md`.
 >
 > ### Los tres documentos que se leen, en este orden
@@ -328,23 +335,23 @@ solo pide 1–3 GB. Un bench con 2–3 sites cabe; **10 tenants no caben.** El
 | **S0.11** ✅ | Catálogo representativo: 24 Items, template con 9 variantes, item_defaults por Company |
 | **S0.8** 🟡 | Matriz de 8 criterios con evidencia de código; recomienda POSNext. Falta prueba en vivo (se hace en S4.1) y OK de Yedin |
 | ~~**S0.7b**~~ | **Descartada por Yedin** ("perder el tiempo") — no bloqueaba nada, comando queda listo en `PROGRESO.md` por si algún día hace falta |
+| **S0.12 (D20)** ✅ | Fase 0 cerrada por decisión explícita de Yedin: **S0.9/S0.3 bajan a deuda técnica**, no bloquean más. `data/korvex.json` en "activo" |
+| **S1.1** ✅ | App `korvexcio` creada — GPLv3, módulos `ECF`/`Retail`, instalada en el site. Lección pagada: reiniciar `backend`+colas+scheduler+websocket después de instalar cualquier app nueva |
 
-### Lo que sigue — y no es un slice de código
+### Lo que sigue
 
-| # | Qué | Quién |
-|---|---|---|
-| 1 | 🔴 **S0.9, el gate** — spike fiscal. Ninguna de sus 3 vías se puede intentar sin uno de los dos siguientes | — |
-| 1a | Mandar los 2 correos de **S0.3** (Alanube, ECF SSD) — texto listo en `docs/08-BLUEPRINT.md` §6.1 | **Yedin** |
-| 1b | *(alternativa a 1a)* Confirmar RNC(s) y pedir el certificado digital (3-10 días hábiles) para pegarle directo a TesteCF | **Yedin** |
-| 2 | Con lo anterior resuelto: correr S0.9 de verdad, con TrackID real | Claude |
-| 3 | **S0.12** — cerrar Fase 0 en los documentos, solo cuando S0.9 tenga TrackID o el veredicto de las 3 vías fallidas | Claude |
+| # | Slice | Qué | Verificación |
+|---|---|---|---|
+| 1 | **S1.2** ⭐ | `apps.json` con el repo propio de `korvexcio` + fijar SHA/mirrors de POSNext y URY (siguen en `develop`) | `bench version` lista `korvexcio`; `git -C apps/korvexcio rev-parse HEAD` coincide con lo pusheado |
+| 2 | **S1.3** | CI: server tests + ruff + los 5 workflows de Secure-Vibe + test de aislamiento | Workflow verde en GitHub Actions |
+| 3 | **S1.4 → S1.9** | `before_tests`, `custom/*.json`, secretos, roles por Company, **la barrera de aislamiento (S1.8)**, carril B si se aprueba | Detalle en `docs/08-BLUEPRINT.md` §6, Fase 1 |
 
-**Mientras S0.9 está bloqueada, no hay más slices de Fase 0 en los que
-avanzar sin código de producto real.** Si Yedin quiere adelantar trabajo de
-todos modos, la opción honesta es empezar **Fase 1** (S1.1, el esqueleto de
-la app `korvexcio`) sabiendo que el módulo `ecf` no puede cerrarse hasta que
-S0.9 tenga evidencia real — eso requiere su OK explícito, no es la
-secuencia acordada.
+**🔴 Deuda que sigue abierta, sin resolver — no bloquea Fase 1, pero
+tampoco desaparece:**
+- **S0.9/S0.3** (fiscal) — necesita correos de Yedin o RNC+certificado.
+  **Para de verdad en S2.7** si sigue abierta ahí.
+- **LICENSE de la raíz** — MIT, tiene que ser GPLv3. Decisión de Yedin,
+  antes de que haya código público que se distribuya.
 
 ### Reglas del nodo que aplican a cada uno de esos slices
 
@@ -383,6 +390,20 @@ bots de WhatsApp en vivo. Detalle en
 
 **Regla del `CONVENCIONES.md` que ya se cumplió:** el repo se creó **antes** de
 escribir código, con remote desde el primer commit.
+
+---
+
+## Lecciones ya pagadas
+
+Cada una costó tiempo real en esta sesión. Se listan para no volver a
+pagarlas — el detalle completo con comandos está en la entrada de
+`PROGRESO.md` del slice donde pasó.
+
+| Qué pasó | Por qué engañaba | El fix |
+|---|---|---|
+| **`bench new-site --install-app` headless no siembra datos maestros** (`Warehouse Type`, UOM, Item Groups, Market Segments). Crear la primera `Company` reventó con `LinkValidationError: Could not find Warehouse Type: Transit` (S0.7) | El sitio se veía sano — `list-apps` mostraba `erpnext` instalado, el `ping` respondía. El hueco solo aparece cuando algo intenta usar ese dato maestro, y eso normalmente pasa recién al crear la primera `Company` | Llamar `erpnext.setup.setup_wizard.operations.install_fixtures.install(country=...)` (+ las funciones sueltas si `set_up_address_templates` revienta por el bug de `frappe.local.lang`, ver abajo) **antes** de crear cualquier `Company`, en todo tenant nuevo |
+| **Un proceso Python vivo no se entera de una app nueva.** Tras `bench new-app` + `install-app`, el site respondía `500 Internal Server Error` — `ModuleNotFoundError: No module named 'korvexcio'` (S1.1) | `install-app` terminó "sin errores" en la consola. El paquete se instaló bien en el venv (`uv pip install -e`). El problema es que `backend`/`queue-*`/`scheduler`/`websocket` ya estaban corriendo **desde antes** de que el paquete existiera, y un proceso vivo no relee `sys.path` solo | `docker compose restart backend queue-short queue-long scheduler websocket` **después** de instalar cualquier app nueva o cambiar `modules.txt`. No hace falta tocar `frontend`, `db` ni los `redis` |
+| **`frappe/locale.py:get_locale_value` revienta si `frappe.local.lang` no está seteado** fuera de un request HTTP (bug de upstream, no de este proyecto) — pasó corriendo `install_fixtures.install()` desde `bench console` (S0.7) | El traceback apunta a Jinja/`Address Template`, parece un problema de plantillas cuando en realidad es que falta un dato de contexto | No se parchea Frappe. Se evita ejecutando solo las funciones de `install_fixtures` que hacen falta (no el `install()` completo), o seteando `frappe.local.lang` a mano antes de llamar algo que dependa de plantillas Jinja desde consola |
 
 ---
 

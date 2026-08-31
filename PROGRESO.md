@@ -749,6 +749,78 @@ anterior). S0.9/S0.3 quedan en la tabla de deuda técnica, no en un gate.
 
 ---
 
+## 2026-08-31 — S1.1: COMPLETADO — esqueleto de la app `korvexcio`
+
+**Estado:** COMPLETADO. Primera línea de código propio del proyecto.
+**S1.2 no se ha iniciado.**
+
+**Qué se hizo:** `bench new-app korvexcio` en `korvex-node1`, dentro del
+bench v16 ya existente (no se reconstruyó nada). `bench new-app` es
+interactivo (6 prompts sin flags no-interactivos en esta versión); se
+alimentó por stdin:
+
+| Prompt | Respuesta |
+|---|---|
+| App Title | `KORVEXCIO` |
+| App Description | ERP y POS multi-tenant con e-CF para retail y food en RD |
+| App Publisher | `Korvex` |
+| App Email | `dev@korvexdev.cc` *(placeholder del dominio propio, no el gmail personal de Yedin)* |
+| App License | **`gpl-3.0`** — no `mit`. Aplica la regla 11 del `CLAUDE.md` del repo: la app tiene que ser GPLv3 porque hereda de ERPNext. Esto es el `app_license` de `hooks.py`, **no** resuelve el conflicto del archivo `LICENSE` en la raíz del repo, que sigue en deuda |
+| Create GitHub Workflow | No — CI es S1.3, slice aparte |
+| Branch Name | `main` |
+
+Luego, a mano (no hay `bench make-module` en esta versión):
+- `modules.txt` reescrito a `ECF` / `Retail` (reemplazando el `KORVEXCIO`
+  genérico por default).
+- Carpetas `korvexcio/korvexcio/ecf/__init__.py` y
+  `korvexcio/korvexcio/retail/__init__.py` creadas — vacías, listas para los
+  DocTypes de Fase 2 y 3.
+- `bench --site korvexcio.korvexdev.cc install-app korvexcio`.
+
+**🔴 Hallazgo real en el camino, ya resuelto — anotado porque se va a repetir:**
+después de instalar la app, `curl .../api/method/ping` empezó a devolver
+`500 Internal Server Error`. El log de `backend` mostró
+`ModuleNotFoundError: No module named 'korvexcio'` — los workers de
+gunicorn (`backend`, `queue-short`, `queue-long`, `scheduler`, `websocket`)
+ya estaban arriba **desde antes de que el paquete Python existiera** en el
+venv del bench, y un proceso Python vivo no relee `sys.path`/módulos
+nuevos solo. **Fix:** `docker compose restart backend queue-short
+queue-long scheduler websocket` (no se tocó `frontend`, `db` ni los dos
+`redis`). **Esta regla aplica a cada slice que instale una app o cambie
+`modules.txt` de aquí en adelante — reiniciar esos 5 servicios después,
+no antes de darlo por bueno.**
+
+**Verificación, salida real:**
+
+```
+bench --site korvexcio.korvexdev.cc list-apps
+-> frappe 16.32.0, erpnext 16.33.0, korvexcio 0.0.1 (main)
+
+frappe.get_all("Module Def", filters={"app_name": "korvexcio"}, fields=["name","module_name"])
+-> [{'name': 'Retail', ...}, {'name': 'ECF', ...}]
+
+curl -H "Host: korvexcio.korvexdev.cc" http://127.0.0.1:8080/api/method/ping
+-> {"message":"pong"}   (después del restart; antes daba 500)
+
+KORVIS: {"status":"ok","checks":{"postgres":"ok","redis":"ok"}}, uptime nunca se reinició
+docker ps --filter name=korvexcio: los 9 contenedores Up, db healthy
+df -h /: 60G libres, sin cambio
+```
+
+**Sin verificar todavía:** que el `install-app` corriera también sobre un
+segundo site (no aplica, `demo.korvexdev.cc` está descartado). Cero
+DocTypes propios todavía — `ecf/` y `retail/` son carpetas vacías, es
+literal el "esqueleto".
+
+**Deuda que sigue igual:** LICENSE del repo en MIT (el `hooks.py` de la app
+ya quedó en GPLv3, pero el archivo raíz no) — sigue pendiente de Yedin.
+
+**Siguiente al retomar:** S1.2 — `apps.json` con el repo propio de
+`korvexcio` + fijar SHA/mirrors de POSNext y URY (siguen en `develop`,
+mutable).
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -776,7 +848,7 @@ TrackID, movida a deuda con el OK explícito de Yedin. **No se fingió que
 está resuelto — está anotado como abierto y sigue así.**
 
 ### Fase 1 — Esqueleto de la app · 08/09 → 12/09 *(en curso)*
-- [ ] S1.1 `bench new-app korvexcio` con módulos `ECF` y `Retail`
+- [x] S1.1 `bench new-app korvexcio` con módulos `ECF` y `Retail` — GPLv3, instalada, verificada
 - [ ] S1.2 `apps.json` con el repo propio · **fijar SHA o mirrors** para POSNext y URY
       (hoy están en `develop`, que es mutable) · el despliegue verifica el **SHA**, no
       el exit code
