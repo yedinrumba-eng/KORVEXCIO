@@ -653,6 +653,76 @@ cuando haya catálogo real o al menos una decisión de variantes definitiva.
 
 ---
 
+## 2026-08-31 — S0.8: matriz completa, prueba en vivo pendiente
+
+**Estado:** 🟡 **PARCIAL, y honesto sobre por qué.** Los 8 criterios de la
+matriz se respondieron con evidencia de código fuente real (no de README,
+no de memoria) dentro del contenedor `korvexcio-backend-1`. **La prueba
+dura del plan — cortar la red, 5 ventas, reconectar — no se hizo**: requiere
+un túnel SSH + `hosts` local para llegar a la UI en `127.0.0.1:8080` del
+nodo, y no se armó por presupuesto de tiempo de esta sesión, no por
+imposibilidad. Documento completo: `docs/10-SPIKE-POS.md`.
+
+**Hallazgo que revierte el sesgo declarado de D16:** D16 asumía "la cola
+offline la escribes tú de todos modos" para justificar el sesgo hacia el
+nativo. El código real dice lo contrario — **POSNext ya tiene una
+arquitectura de offline completa** (`offline.worker.js` + capa `db`/`cache`/
+`sync` + store dedicado), mientras que el POS nativo de ERPNext **no tiene
+ningún mecanismo de offline** (cero archivos, `grep` en cero). Además
+POSNext crea `Sales Invoice` directo — el doctype donde previsiblemente
+enganchan los hooks de `ecf` (S2.9) — mientras el nativo usa `POS Invoice`,
+que se consolida después con retraso.
+
+**Esto se dice de frente, no se aplica solo:** el veredicto del documento
+recomienda cerrar **D16 hacia POSNext**, pero eso es una recomendación con
+evidencia, no una decisión tomada por Claude — D16 sigue "diferida" hasta
+que Yedin la confirme.
+
+**Deuda:** la prueba en vivo (offline real, 5 ventas, reconectar) queda
+para **S4.1**, contra datos reales y con POS Profile por Company ya
+armado — más barato que repetir el spike con el catálogo de prueba de
+S0.11.
+
+**Siguiente al retomar:** reportar S0.9 (el gate) y cerrar S0.12.
+
+---
+
+## 2026-08-31 — S0.9: BLOQUEADA — el gate no se puede intentar todavía
+
+**Estado:** 🔴 BLOQUEADA. No es que las tres vías fallaron — es que
+**ninguna de las tres se puede ni intentar** sin algo que solo Yedin puede
+mover:
+
+- **Vía A** (proveedor certificado con RFCE) necesita respuesta de Alanube
+  o ECF SSD. **S0.3 (los correos) sigue sin mandarse** — el texto está listo
+  desde el plan maestro, en `docs/08-BLUEPRINT.md` §6.1, y en el checklist
+  de abajo sigue `[ ]`.
+- **Vía B** (portar RFCE de `victors1681/dgii-ecf`, MIT, contra el XSD
+  oficial) necesita pegarle directo a `fc.dgii.gov.do/recepcionfc` en
+  TesteCF — y **eso pide RNC + certificado digital**, que tampoco están
+  (D13: RNC "en movimiento", certificado "3-10 días hábiles" sin pedirse
+  aún).
+- **Vía C** es la que toca: **parar y escalar**, tal como dice el propio
+  gate del plan (§6, Fase 0).
+
+**No se fabricó un TrackID ni se simuló una respuesta.** R1 del `CLAUDE.md`
+global es explícito: sin la salida real de TesteCF, la frase es "escrito
+pero SIN verificar — falta correr X", nunca "funciona".
+
+**Lo que sí queda listo para cuando se destrabe:** la interfaz
+`FiscalProvider` (D3), el candidato #2 (`ecf-dgii`, solo E31) y el plan B
+completo con su repo fuente (D3, `TECH_STACK.md`). El trabajo de código de
+la Fase 2 (S2.1 en adelante) puede arrancar en paralelo sin esperar a
+S0.9 — lo único que no puede pasar sin TrackID real es **declarar cerrado
+el módulo fiscal**.
+
+**Siguiente al retomar:** esto no lo destraba una sesión de Claude Code —
+lo destraba Yedin mandando los dos correos de S0.3, o consiguiendo el RNC +
+certificado para tirar directo contra TesteCF. Mientras tanto, Fase 0 cierra
+con S0.9 abierta y anotada, no fingida.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -668,15 +738,16 @@ cuando haya catálogo real o al menos una decisión de variantes definitiva.
 - [x] **S0.6** ⭐ — site `korvexcio.korvexdev.cc` con ERPNext instalado
 - [x] **S0.7** — las dos `Company`: **VAPERIA LA J Y EL JALAPEÑO** y **EL SABOR DE LAS 5 ESQUINAS**, cada una con su `tax_id` (RNC pendiente)
 - [ ] **S0.7b** — site `demo.korvexdev.cc` *(diferida, no bloquea el resto de Fase 0 — comando listo para Yedin)*
-- [ ] **S0.8** — spike POS *(timebox 2 días)* → `docs/10-SPIKE-POS.md`
-- [ ] **S0.9** 🔴 — spike fiscal, **el gate**: TrackID real de TesteCF → `docs/11-SPIKE-FISCAL.md`
+- [~] **S0.8** — matriz completa con evidencia de código, recomienda POSNext (revierte D16); prueba de red cortada pendiente → `docs/10-SPIKE-POS.md`
+- [ ] **S0.9** 🔴 **BLOQUEADA** — necesita S0.3 (correos) o RNC+certificado de Yedin. Ninguna de las 3 vías se puede intentar sin eso → `docs/11-SPIKE-FISCAL.md` (sin crear, nada que documentar todavía)
 - [x] **S0.10** — script de backup+retención probado; falta solo el `sudo systemctl enable` de Yedin
 - [x] **S0.11** — 24 SKUs representativos (16 VLJ con 1 template+9 variantes, 8 ESE)
-- [ ] **S0.12** — cerrar Fase 0 en los documentos y en `data/korvex.json` (⚪ → 🔵)
+- [~] **S0.12** — Fase 0 cerrada **en lo que no depende de Yedin**; el gate real (S0.9) sigue abierto, `data/korvex.json` se queda en ⚪ hasta que lo esté
 
-**🚦 Gate:** S0.5 cerrada con KORVIS intacto ✅ · S0.9 con TrackID real o el veredicto
-escrito de por qué fallaron las tres vías · S0.8 con veredicto de POS.
-**Si las tres vías de S0.9 fallan: se para y se escala.** No se improvisa (R2).
+**🚦 Gate — NO CUMPLIDO todavía:** S0.5 ✅ KORVIS intacto · S0.8 con veredicto
+escrito (POSNext, pendiente confirmar) ✅ · **S0.9 sin TrackID — bloqueada,
+no fallida.** Fase 1 no arranca hasta que esto se resuelva.
+**No se improvisó un reemplazo (R2).**
 
 ### Fase 1 — Esqueleto de la app · 08/09 → 12/09
 - [ ] S1.1 `bench new-app korvexcio` con módulos `ECF` y `Retail`

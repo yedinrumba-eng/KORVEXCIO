@@ -27,8 +27,10 @@
 > **D1–D9 están abajo, en este archivo.** **D10–D19 viven en
 > `docs/08-BLUEPRINT.md` §3** y se doblan aquí en S0.12; mientras tanto, ese es
 > el lugar canónico. Estado de las de aquí: **D2 cerrada en v16** ✅ ·
-> **D3 revisada** (el proveedor lo decide S0.9) · **D4 superada** por D15+D16 ·
-> **D6 revisada** por D19.
+> **D3 revisada** (el proveedor lo decide S0.9, bloqueada) · **D4 superada**
+> por D15+D16 · **D6 revisada** por D19 · **D16 revisada el 31/08 por S0.8**:
+> recomienda POSNext, revirtiendo el sesgo hacia el nativo, pendiente OK de
+> Yedin.
 >
 > Y una advertencia que ahorra media hora: `PROGRESO.md` numeró un "D4" distinto
 > (el alcance del MVP) en la entrada del descubrimiento. **Ese está derogado por
@@ -142,17 +144,24 @@ Sobre la elección de POS, lo que hay hoy:
 - **D15 — POS Awesome descartado**, y no por popularidad: **Vue 2 (EOL desde
   diciembre de 2023)**, README declarando **v14**, y **offline no documentado**.
   Un producto nuevo en 2026 sobre Vue 2 nace endeudado.
-- **D16 — la elección real se difiere al spike S0.8**, entre el **POS nativo de
-  ERPNext** y **POSNext**, con sesgo declarado hacia el nativo. El giro que lo
-  justifica: **la cola offline la escribes tú de todos modos** — la contingencia
-  de la DGII necesita documentos pre-computados y pre-firmados (patrón
-  `ZATCA Precomputed Invoice`), y el offline de POSNext no sabe nada de e-CF. Si
-  la contingencia vive en el módulo `ecf`, el POS solo tiene que ser una pantalla
-  extensible; y la nativa no se forkea, no es AGPL, y la mantiene Frappe.
+- **D16 — 🟡 REVISADA el 31/08 por el spike S0.8, con evidencia de código.**
+  El sesgo original hacia el nativo asumía "la cola offline la escribes tú de
+  todos modos" — **el spike encontró que eso es falso**: POSNext ya tiene una
+  arquitectura de offline completa y funcionando en su código fuente
+  (`offline.worker.js` + capa `db`/`cache`/`sync` + store dedicado), mientras
+  que el POS nativo de ERPNext **no tiene ningún mecanismo de offline** (cero
+  archivos, verificado por `grep`). Además POSNext factura contra `Sales
+  Invoice` directo — el doctype donde previsiblemente enganchan los hooks de
+  `ecf` (S2.9) — mientras el nativo usa `POS Invoice`, que se consolida
+  después con retraso. **Recomendación del spike: POSNext.** Sigue pendiente
+  el OK explícito de Yedin y la prueba en vivo (red cortada, 5 ventas), que
+  se hace en **S4.1** con datos reales en vez de repetir el spike. Detalle
+  completo con la matriz de 8 criterios: `docs/10-SPIKE-POS.md`.
 
 > *Lo que decía antes:* "POSNext sobre POS Awesome (a validar). El offline-first
 > real (IndexedDB + Service Workers + PWA + sync en background) es lo que decide."
-> El criterio sigue en pie; lo que cambió es quién puede ganarlo.
+> El criterio sigue en pie; lo que cambió es quién puede ganarlo — y ganó
+> POSNext, al revés de lo que el sesgo original de D16 asumía.
 
 ## D5 — Los upstream no se tocan · UNA app, dos módulos
 

@@ -1,12 +1,13 @@
 # Prompt para arrancar una sesión nueva
 
 > Copiar y pegar tal cual al abrir **Claude Code** o **Codex** en esta carpeta.
-> Actualizado el 2026-08-31 al cerrar **S0.7** (las dos `Company` reales:
-> VAPERIA LA J Y EL JALAPEÑO, EL SABOR DE LAS 5 ESQUINAS).
+> Actualizado el 2026-08-31 tras cerrar S0.5–S0.8, S0.10, S0.11. **Fase 0
+> tiene un solo pendiente y no es de código: S0.9, el gate fiscal, está
+> BLOQUEADA esperando por Yedin** (correos de S0.3, o RNC+certificado).
 >
 > **Este archivo se actualiza al cerrar cada slice.** Si el prompt de abajo
-> todavía dice S0.6 y `PROGRESO.md` dice que S0.6 está cerrada, gana
-> `PROGRESO.md` — y hay que corregir este archivo.
+> ya no coincide con `PROGRESO.md`, gana `PROGRESO.md` — y hay que corregir
+> este archivo.
 
 ---
 
@@ -34,27 +35,31 @@ LEE EN ESTE ORDEN, completo, antes de proponer nada:
 EL RELOJ: 15/11/2026, e-CF obligatorio para pequeños/micro/no clasificados
 (Ley 32-23). Multa 5-50 salarios mínimos. Todo lo demás se difiere; esto no.
 
-TU SLICE: S0.7b — crear el site `demo.korvexdev.cc` en el mismo bench (sin
-reconstruirlo). Es staging y la prueba de que el modelo "un site por
-cliente" funciona sin necesitar un cliente real. NADA MÁS — no le crees
-Companies todavía salvo que Yedin lo pida en el mismo turno.
+TU SLICE: **no hay slice de código pendiente en Fase 0.** El único bloqueo
+es S0.9 (spike fiscal, el gate) y depende de dos cosas que solo Yedin puede
+mover:
+  a) mandar los 2 correos de S0.3 a Alanube y ECF SSD (texto en
+     docs/08-BLUEPRINT.md §6.1), o
+  b) confirmar el/los RNC y pedir el certificado digital (3-10 días
+     hábiles) para probar directo contra TesteCF.
 
-OJO — `bench new-site` crea una base de datos nueva: en S0.6 el clasificador
-de auto-mode bloqueó a Claude corriéndolo directo (nodo con un banco en
-producción). Prepara el comando exacto y pídele a Yedin que lo corra él por
-SSH, como se hizo en S0.6.
+Si Yedin ya resolvió (a) o (b) y trae la respuesta: tu slice es **S0.9** —
+seguir la vía correspondiente (proveedor con RFCE, o portar de
+`victors1681/dgii-ecf` contra el XSD oficial), y NO declarar nada cerrado
+sin un TrackID real de TesteCF pegado en `docs/11-SPIKE-FISCAL.md`.
 
-🟡 DEUDA DE S0.7: `bench new-site --install-app` headless NO siembra
-`Warehouse Type`, UOM, Item Groups ni Market Segments (eso solo lo hace el
-Setup Wizard de la UI). Si en este slice o el siguiente creas una Company en
-`demo.korvexdev.cc`, vas a pegar con el mismo `LinkValidationError: Could
-not find Warehouse Type: Transit` que ya se resolvió en S0.7 — la solución
-completa está documentada en `PROGRESO.md`, entrada "S0.7: COMPLETADO".
+Si Yedin NO trae nada de S0.3 todavía pero quiere adelantar trabajo de
+código de todos modos: eso es **arrancar Fase 1** (S1.1, esqueleto de la
+app `korvexcio`) sabiendo que el módulo `ecf` no puede cerrarse sin S0.9.
+Eso necesita su **OK explícito** en el mismo turno — no es la secuencia
+acordada, no se asume.
 
-Verificación con la que se cierra:
-  curl -H "Host: demo.korvexdev.cc" http://127.0.0.1:8080/api/method/ping
-    -> {"message":"pong"}
-  Dos DBs distintas en `SHOW DATABASES` (korvexcio.korvexdev.cc y demo.korvexdev.cc)
+Nota aparte, sin urgencia: **S0.8 recomienda POSNext** (revierte el sesgo
+hacia el nativo de D16, con evidencia de código real, no de opinión —
+`docs/10-SPIKE-POS.md`). Sigue pendiente el OK de Yedin para fijar D16.
+
+Verificación con la que se cierra S0.9 quedaría:
+  TrackID real de TesteCF, pegado en docs/11-SPIKE-FISCAL.md
   systemctl status korvex-api && curl -s http://127.0.0.1:4000/health
   df -h /
 
@@ -111,13 +116,15 @@ entrada de PROGRESO.md y docs/08-BLUEPRINT.md antes de proponer nada.
 ERP+POS multi-tenant sobre ERPNext/Frappe v16 para retail y food en RD.
 Deadline duro: e-CF de la DGII obligatorio el 15/11/2026.
 
-El bench v16, el site korvexcio.korvexdev.cc y sus dos Company reales
-(VAPERIA LA J Y EL JALAPEÑO, EL SABOR DE LAS 5 ESQUINAS) ya están de pie en
-korvex-node1 (ssh korvex-host). No los reconstruyas.
-Tu slice es S0.7b: crear el site demo.korvexdev.cc, y nada más. bench
-new-site crea DB nueva -> el clasificador bloquea a Claude corriéndolo
-directo, pídeselo a Yedin por SSH. Se cierra con:
-  curl -H "Host: demo.korvexdev.cc" http://127.0.0.1:8080/api/method/ping
+El bench v16, el site korvexcio.korvexdev.cc, sus dos Company reales
+(VAPERIA LA J Y EL JALAPEÑO, EL SABOR DE LAS 5 ESQUINAS), el catálogo y el
+backup ya están de pie en korvex-node1 (ssh korvex-host). No los reconstruyas.
+
+No hay slice de código pendiente en Fase 0. Lo único que falta es S0.9 (el
+gate fiscal), bloqueada esperando que Yedin mande los correos de S0.3 o
+consiga RNC+certificado. Si trae eso, tu slice es S0.9 con TrackID real. Si
+no, pregúntale si quiere adelantar Fase 1 (S1.1) con su OK explícito, o
+esperar.
 
 Un slice a la vez. Sin la salida real del comando, no se declara nada cerrado.
 En ese nodo corre KORVIS en producción con un banco en vivo: no se toca su
@@ -154,6 +161,6 @@ Si el trabajo te lleva a uno de estos, **para y pregúntale a Yedin**:
 | **El `LICENSE` dice MIT** y la app tiene que ser GPLv3 porque ERPNext lo es | Pendiente de decisión. Cambiarlo antes de S1.1 |
 | **Carril B en paralelo** (blueprint §7.2) — Fase 3 en otra sesión mientras el carril A hace la Fase 2 | Propuesto, **no aplicado**. Necesita OK explícito |
 | **Proveedor de e-CF** | Lo decide el spike S0.9. D3 quedó revisada |
-| **POS nativo vs POSNext** | Lo decide el spike S0.8. D16 lo dejó diferido a propósito |
+| **POS nativo vs POSNext** | S0.8 ya tiene evidencia y recomienda **POSNext** (revierte D16). Falta el OK explícito de Yedin para fijarlo |
 | **Qué pasa con la caja los días que la mini PC viaje** | Sin resolver. Tiene que estar decidido antes del go-live |
 | **RNC del cliente: uno o dos** | Sin confirmar. Se planifica para dos (D13) |

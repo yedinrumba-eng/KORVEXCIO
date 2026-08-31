@@ -1,9 +1,11 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
 > **Lo primero que se lee al retomar.** Escrito el 2026-08-31 en sesión de
-> descubrimiento (Cowork), actualizado al cerrar S0.11. Estado: **🔵 Fase 0 en
-> curso** — bench v16, site, Companies, backup y catálogo representativo
-> todos de pie. Falta el spike de POS (S0.8) y el gate fiscal (S0.9).
+> descubrimiento (Cowork). Estado: **🔵 Fase 0 en curso, gate abierto** —
+> bench v16, site, Companies, backup y catálogo de pie; S0.8 (POS) tiene
+> veredicto con evidencia; **S0.9 (el gate fiscal) está BLOQUEADA**, no
+> fallida — ninguna de sus 3 vías se puede intentar sin que Yedin mande los
+> correos de S0.3 o consiga RNC+certificado.
 >
 > **Nombres reales (31/08, confirmados por Yedin):** la vapería es
 > **VAPERIA LA J Y EL JALAPEÑO** (abbr `VLJ`), la cafetería es
@@ -12,10 +14,17 @@
 > del proyecto, no el nombre de ninguna `Company`.
 >
 > **S0.7b (site `demo.korvexdev.cc`) queda FUERA** — decisión explícita de
-> Yedin ("creo que es perder el tiempo"). No bloquea nada de Fase 0; el
+> Yedin ("creo que es perder el tiempo"). No bloqueaba nada de Fase 0; el
 > comando queda listo en `PROGRESO.md` por si algún día hace falta.
 >
-> Próximo paso: **S0.8**, spike POS.
+> **S0.8 recomienda POSNext**, revirtiendo el sesgo hacia el nativo de D16 —
+> con evidencia de código, no de opinión. Pendiente el OK explícito de
+> Yedin y la prueba en vivo (se hace en S4.1). Detalle: `docs/10-SPIKE-POS.md`.
+>
+> Próximo paso: **no es un slice de código — es que Yedin destrabe S0.9**
+> (mandar los correos de S0.3, o conseguir RNC+certificado). Mientras eso no
+> pase, Fase 1 no arranca con el módulo `ecf` real, aunque sí se puede
+> adelantar el esqueleto de la app (S1.1) si Yedin lo pide explícitamente.
 > Evidencia de versión y operación: `docs/13-VERSION-FRAPPE.md`.
 >
 > ### Los tres documentos que se leen, en este orden
@@ -32,7 +41,7 @@
 
 ---
 
-## Estado técnico al retomar — después de S0.11
+## Estado técnico al retomar — Fase 0 al 90%, gate S0.9 abierto
 
 - Imagen en `korvex-node1`: `korvexcio:16`, digest
   `sha256:6ed8f523d2795fdc4c7a808b7cfe8cb50c572d2cabc8f2e6b2485d5e1f4b2ee2`.
@@ -65,9 +74,18 @@
 - Password de Administrator: generado random en el nodo
   (`/home/korvex/frappe_docker-korvexcio-s05/.korvexcio-admin-pw`, 600).
   **Nunca pasó por el chat ni por este repo.**
-- Commits locales: `e119e00`, `2411f94`, `e611edc`, `4b0027b`, `d47c4ff`
-  (cierre de S0.7), más el commit de este cambio (ver `git log --oneline -6`).
-  `origin/main` sigue en `e19389f`: **no hubo push**.
+- **S0.8 (POS):** matriz de 8 criterios con evidencia de código, recomienda
+  **POSNext** — revierte el sesgo de D16 hacia el nativo. Detalle:
+  `docs/10-SPIKE-POS.md`. Falta la prueba en vivo (red cortada) y el OK de
+  Yedin; se hace en S4.1.
+- 🔴 **S0.9 (fiscal, EL GATE): BLOQUEADA.** Ninguna de las 3 vías se puede
+  intentar sin S0.3 (correos a Alanube/ECF SSD, sin mandar) o sin RNC+
+  certificado digital (sin pedir). No hay `docs/11-SPIKE-FISCAL.md` porque no
+  hay nada que documentar todavía — no se fabricó ningún TrackID.
+- Commits locales: `e119e00`, `2411f94`, `e611edc`, `4b0027b`, `d47c4ff`,
+  `21809f3` (cierre S0.10/S0.11), más el commit de este cambio (ver
+  `git log --oneline -8`). `origin/main` sigue en `e19389f`: **no hubo
+  push**.
 - Pendiente inmediato: **S0.7b**, site `demo.korvexdev.cc`.
 - Deuda: POSNext/URY están en branches `develop`; fijar referencias inmutables
   antes de S1.2. Build cache reclamable: 7.154 GB.
@@ -305,15 +323,25 @@ solo pide 1–3 GB. Un bench con 2–3 sites cabe; **10 tenants no caben.** El
 | **S0.7** ✅ | Las dos `Company` reales — **VAPERIA LA J Y EL JALAPEÑO** (`VLJ`) y **EL SABOR DE LAS 5 ESQUINAS** (`ESE`) — con `tax_id`, almacenes y cost centers propios. Reparado un hueco de fixtures de ERPNext en el camino (ver deuda) |
 | **S0.10** ✅ | Script de backup+retención probado en vivo (905.4 KiB). Falta solo el `sudo systemctl enable` de Yedin |
 | **S0.11** ✅ | Catálogo representativo: 24 Items, template con 9 variantes, item_defaults por Company |
+| **S0.8** 🟡 | Matriz de 8 criterios con evidencia de código; recomienda POSNext. Falta prueba en vivo (se hace en S4.1) y OK de Yedin |
 | ~~**S0.7b**~~ | **Descartada por Yedin** ("perder el tiempo") — no bloqueaba nada, comando queda listo en `PROGRESO.md` por si algún día hace falta |
 
-### Lo que sigue, en este orden
+### Lo que sigue — y no es un slice de código
 
-| # | Slice | Qué | Verificación |
-|---|---|---|---|
-| 1 | **S0.8** ⭐ | Spike POS *(timebox 2 días)*: POS nativo vs POSNext, matriz de 8 criterios llena **antes** de instalar | `docs/10-SPIKE-POS.md` con evidencia por criterio y veredicto de una línea |
-| 2 | **S0.9** 🔴 | **Spike fiscal — EL GATE.** E32 + RFCE contra TesteCF | **TrackID real** pegado en `docs/11-SPIKE-FISCAL.md`. Sin TrackID no se declara nada |
-| 3 | **S0.12** | Cierre de Fase 0 en los documentos | `PROGRESO.md`, `TECH_STACK.md`, `data/korvex.json` ⚪ → 🔵 |
+| # | Qué | Quién |
+|---|---|---|
+| 1 | 🔴 **S0.9, el gate** — spike fiscal. Ninguna de sus 3 vías se puede intentar sin uno de los dos siguientes | — |
+| 1a | Mandar los 2 correos de **S0.3** (Alanube, ECF SSD) — texto listo en `docs/08-BLUEPRINT.md` §6.1 | **Yedin** |
+| 1b | *(alternativa a 1a)* Confirmar RNC(s) y pedir el certificado digital (3-10 días hábiles) para pegarle directo a TesteCF | **Yedin** |
+| 2 | Con lo anterior resuelto: correr S0.9 de verdad, con TrackID real | Claude |
+| 3 | **S0.12** — cerrar Fase 0 en los documentos, solo cuando S0.9 tenga TrackID o el veredicto de las 3 vías fallidas | Claude |
+
+**Mientras S0.9 está bloqueada, no hay más slices de Fase 0 en los que
+avanzar sin código de producto real.** Si Yedin quiere adelantar trabajo de
+todos modos, la opción honesta es empezar **Fase 1** (S1.1, el esqueleto de
+la app `korvexcio`) sabiendo que el módulo `ecf` no puede cerrarse hasta que
+S0.9 tenga evidencia real — eso requiere su OK explícito, no es la
+secuencia acordada.
 
 ### Reglas del nodo que aplican a cada uno de esos slices
 
