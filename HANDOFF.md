@@ -1,8 +1,9 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
 > **Lo primero que se lee al retomar.** Escrito el 2026-08-31 en sesión de
-> descubrimiento (Cowork). Estado: **🟡 Fase 2 en curso: S2.1 implementado,
-> con evidencia completa y pendiente únicamente de auditorías.** La app `korvexcio` existe de verdad: GPLv3,
+> descubrimiento (Cowork). Estado: **🟢 Fase 2 en curso: S2.1 COMPLETADO y
+> auditado (code-review + security-review, APROBADO, cero críticos/altos).**
+> Siguiente: S2.2. La app `korvexcio` existe de verdad: GPLv3,
 > módulos `ECF`/`Retail`, custom fields en `Customer`, roles por Company
 > probados con un usuario real, y **la barrera de aislamiento de D19
 > funcionando y verificada** (`bench run-tests` verde, dos corridas).
@@ -37,9 +38,9 @@
 > 8 de 12 escenarios reales verificados y 4 diferidos a Fase 2 con motivo
 > explícito. Detalle completo, slice por slice, en `PROGRESO.md`.
 >
-> Próximo paso: recibir los veredictos de auditoría de S2.1 antes de seguir
-> con **Fase 2 — el módulo `ecf`** (S2.2 en adelante), sabiendo
-> que no puede cerrarse sin resolver S0.9/S2.7 primero.
+> Próximo paso: **S2.2** — `DGII Digital Certificate` (bloqueado en la
+> práctica sin certificado real, S0.9/S0.3). Fase 2 no puede cerrarse sin
+> resolver S0.9/S2.7 primero.
 > Evidencia de versión y operación: `docs/13-VERSION-FRAPPE.md`.
 >
 > ### Los tres documentos que se leen, en este orden

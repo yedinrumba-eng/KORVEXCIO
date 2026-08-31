@@ -1360,6 +1360,78 @@ RNC y certificado real.
 
 ---
 
+## 2026-08-31 — Auditoría de S2.1: APROBADO
+
+**Quién:** Claude, en rol de auditor — Codex dejó S2.1 explícitamente
+pendiente de esto ("no se declara cerrada antes de sus veredictos").
+**No se confió en lo escrito**: cada comando de evidencia de Codex se
+volvió a correr de forma independiente antes de dar veredicto.
+
+**Verificación independiente, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio
+Ran 13 tests in 0.940s -> OK (skipped=1)          # confirma el 13/13 de Codex
+
+rg "ignore_permissions=True|frappe\.db\.sql\(" korvexcio/ -> sin resultados
+
+docker run --rm semgrep/semgrep scan --config .semgrep/korvexcio-isolation.yml korvexcio/
+FINDINGS: 0
+
+docker run --rm ghcr.io/astral-sh/ruff:latest check korvexcio/
+1 error (formato de imports en test_dgii_settings.py) -> corregido y reverificado, 0 errores
+
+frappe.get_all("DGII Settings") -> solo las dos _Test Company, VLJ/ESE reales sin config falsa
+
+KORVIS: {"status":"ok",...}, uptime nunca se reinició
+docker ps: 9 contenedores Up, db healthy
+```
+
+**`/code-review` (nivel medium):** 0 hallazgos. Revisadas las 8 aristas
+(correctitud, comportamiento removido, cruce de archivos, reuso,
+simplificación, eficiencia, altitud, convenciones de `CLAUDE.md`) contra el
+diff completo. Un candidato descartado tras análisis (timeout `None` vía
+API): Frappe castea campos `Int` con `cint()` antes de `validate()`, así
+que `None` llega como `0` — el validador ya lo atrapa, no hay excepción sin
+manejar.
+
+**`/security-review`:** 0 hallazgos con confianza >80%. Revisado el modelo
+de permisos (ningún cajero tiene acceso a `DGII Settings`, `Contador`
+solo lectura, `Dueño` sin borrar), la validación de timeouts (server-side,
+no evadible por API), y el mensaje de error de `freeze_company()` (expone
+`company_en_db`, pero como `autoname` deriva de `company`, quien ya puede
+disparar ese error ya conocía el valor — sin fuga nueva).
+
+**No se corrió `/secure-vibe` (modo B) completo — a propósito, según la
+propia regla del proyecto:** `docs/08-BLUEPRINT.md` §7.1 reserva el loop de
+4 auditores y `/secure-vibe` para el **cierre** de Fase 2, Fase 5, y
+pre-go-live — no para cada slice individual. Correrlo aquí sería quemar
+rate limit sin ganar rigor extra; `/security-review` es exactamente lo que
+la tabla del blueprint pide para slices dentro de Fase 2.
+
+**Hallazgo positivo, no un problema:** Codex montó un checkout de git real
+en `apps/korvexcio` del nodo (`feat/ecf`, limpio, `HEAD` verificado) — el
+nodo ahora consume por `git pull`, no por `scp`/`docker cp` manual como en
+sesiones anteriores. Es una mejora real sobre el flujo previo, más fiel a
+la regla 7 del `CLAUDE.md` ("nunca se edita código en el servidor").
+También confirmado: la rama `feat/ecf` es la que el propio blueprint §7.2
+ya tenía reservada para el carril crítico de Fase 2 — no es una desviación
+del plan, aunque el Carril B (paralelo) nunca se aprobó.
+
+**Un lint real, arreglado en el camino:** import mal formateado en
+`test_dgii_settings.py` (ruff I001) — no estaba en el radar de Codex porque
+`ruff` no está instalado en el bench; se corrió vía contenedor Docker,
+corregido, reverificado limpio en todo `korvexcio/`. Commit `2ceef25`.
+
+**Veredicto: APROBADO.** S2.1 pasa a `COMPLETADO`. Cero críticos, cero
+altos. Un lint menor, ya corregido.
+
+**Siguiente al retomar:** S2.2 — `DGII Digital Certificate` (`.p12` como
+Attach, password como Password). Sigue bloqueado en la práctica por
+S0.9/S0.3 — se puede escribir la estructura del DocType, pero sin
+certificado real no hay nada que cargar.
+
+---
+
 ## 2026-08-31 — Branding: logo en el login real, README actualizado
 
 **Estado:** COMPLETADO, fuera de la secuencia de slices — pedido directo de
@@ -1459,8 +1531,7 @@ está resuelto — está anotado como abierto y sigue así.**
       cerrado como "no aplica", no como pendiente
 
 ### Fase 2 — Módulo ECF · 15/09 → 03/10 · ⬅ CAMINO CRÍTICO
-- [~] S2.1 `DGII Settings` — código, migrate, suites y evidencia completa;
-      pendiente únicamente de auditorías
+- [x] S2.1 `DGII Settings` — código, migrate, suites, evidencia y auditoría (code-review + security-review, APROBADO)
 - [ ] S2.2 → S2.15 (`docs/08-BLUEPRINT.md` §6)
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
