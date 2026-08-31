@@ -1,11 +1,17 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
 > **Lo primero que se lee al retomar.** Escrito el 2026-08-31 en sesión de
-> descubrimiento (Cowork), actualizado al cerrar S0.6. Estado: **🔵 Fase 0 en
-> curso** — bench v16 levantado, D2 cerrada, site `korvexcio.korvexdev.cc` de
-> pie con ERPNext instalado. Ninguna `Company` creada todavía.
+> descubrimiento (Cowork), actualizado al cerrar S0.7. Estado: **🔵 Fase 0 en
+> curso** — bench v16 levantado, D2 cerrada, site `korvexcio.korvexdev.cc` con
+> ERPNext y las dos `Company` reales creadas.
 >
-> Próximo paso: **S0.7**, las dos `Company` (VAPELAND y Cafetería).
+> **Nombres reales (31/08, confirmados por Yedin):** la vapería es
+> **VAPERIA LA J Y EL JALAPEÑO** (abbr `VLJ`), la cafetería es
+> **EL SABOR DE LAS 5 ESQUINAS** (abbr `ESE`). El codename interno del
+> cliente en la cabecera de este repo sigue siendo "VAPELAND" — es shorthand
+> del proyecto, no el nombre de ninguna `Company`.
+>
+> Próximo paso: **S0.7b**, site `demo.korvexdev.cc`.
 > Evidencia de versión y operación: `docs/13-VERSION-FRAPPE.md`.
 >
 > ### Los tres documentos que se leen, en este orden
@@ -22,7 +28,7 @@
 
 ---
 
-## Estado técnico al retomar — después de S0.6
+## Estado técnico al retomar — después de S0.7
 
 - Imagen en `korvex-node1`: `korvexcio:16`, digest
   `sha256:6ed8f523d2795fdc4c7a808b7cfe8cb50c572d2cabc8f2e6b2485d5e1f4b2ee2`.
@@ -31,22 +37,29 @@
 - Versiones: Frappe `16.32.0`, ERPNext `16.33.0`, POSNext `1.12.0`, URY
   `v3.0.0-beta.1`.
 - Red: solo frontend en `127.0.0.1:8080`; DB y Redis sin puertos host.
-- Recursos: límites sumados 5,504 MiB; 60 GB libres, sin cambio tras crear el
-  site (el site no engordó el disco de forma medible).
-- KORVIS: servicio activo y `/health` con Postgres/Redis `ok` después de
-  crear el site.
-- Site: **`korvexcio.korvexdev.cc`**, creado por Yedin vía SSH con `bench
-  new-site` — el clasificador de auto-mode bloqueó que Claude lo corriera
-  directo (crea DB nueva en un nodo con un banco en producción; bloqueo
-  correcto). Tiene `frappe 16.32.0` y `erpnext 16.33.0` instalados,
-  `UNVERSIONED`. Ninguna `Company` creada — eso es **S0.7**.
+- Recursos: límites sumados 5,504 MiB; 60 GB libres, sin cambio medible desde
+  S0.5.
+- KORVIS: servicio activo y `/health` con Postgres/Redis `ok`.
+- Site: **`korvexcio.korvexdev.cc`**, `frappe 16.32.0` + `erpnext 16.33.0`.
+- **Companies:** `VAPERIA LA J Y EL JALAPEÑO` (`VLJ`) y
+  `EL SABOR DE LAS 5 ESQUINAS` (`ESE`), cada una con `tax_id` placeholder
+  (RNC pendiente, D13), `default_currency=DOP`, 4 almacenes propios, cost
+  center propio, 94 cuentas (Chart of Accounts). Creadas por Claude vía
+  `bench console` — es operación de datos dentro de un site existente, el
+  clasificador **no** la bloqueó (a diferencia de `bench new-site`).
+- 🟡 **Hueco de fixtures descubierto en S0.7:** `bench new-site
+  --install-app` headless no siembra `Warehouse Type`, UOM, Item Groups ni
+  Market Segments — eso solo lo hace el Setup Wizard de la UI. Se corrigió a
+  mano llamando `install_fixtures.install()` + funciones sueltas. **Hay que
+  repetirlo en S0.7b** (`demo.korvexdev.cc`) y en cualquier tenant nuevo.
+  Debe entrar al script de alta de tenant, no repetirse de memoria.
 - Password de Administrator: generado random en el nodo
   (`/home/korvex/frappe_docker-korvexcio-s05/.korvexcio-admin-pw`, 600).
   **Nunca pasó por el chat ni por este repo.**
-- Commits locales: `e119e00`, `2411f94`, `e611edc` (cierre de S0.5), más el
-  commit de este cambio (ver `git log --oneline -4`). `origin/main` sigue en
-  `e19389f`: **no hubo push**.
-- Pendiente inmediato: **S0.7**, las dos `Company`.
+- Commits locales: `e119e00`, `2411f94`, `e611edc`, `4b0027b` (cierre de
+  S0.6), más el commit de este cambio (ver `git log --oneline -5`).
+  `origin/main` sigue en `e19389f`: **no hubo push**.
+- Pendiente inmediato: **S0.7b**, site `demo.korvexdev.cc`.
 - Deuda: POSNext/URY están en branches `develop`; fijar referencias inmutables
   antes de S1.2. Build cache reclamable: 7.154 GB.
 
@@ -213,9 +226,10 @@ cajetilla** (jul–sep 2026: RD$64.65 la cajetilla de 20, RD$32.33 la de 10).
 | **1** | Entre **CLIENTES** | **Un site = una base de datos MariaDB** | Aislamiento **físico**. Innegociable: cliente 2 = site propio |
 | **2** | Entre **NEGOCIOS del mismo cliente** | **Una `Company` de ERPNext por negocio** + User Permission | Aislamiento **lógico**. Hay que blindarlo (S1.8) |
 
-Los sites de este cliente: **`korvexcio.korvexdev.cc`** (Companies **VAPELAND** y
-**Cafetería**) y **`demo.korvexdev.cc`** (staging, y la prueba de que el modelo por
-cliente funciona sin necesitar un cliente real todavía).
+Los sites de este cliente: **`korvexcio.korvexdev.cc`** (Companies
+**VAPERIA LA J Y EL JALAPEÑO** y **EL SABOR DE LAS 5 ESQUINAS**) y
+**`demo.korvexdev.cc`** (staging, y la prueba de que el modelo por cliente
+funciona sin necesitar un cliente real todavía).
 
 **Por qué una sola URL:** el login decide qué ves. El cajero de la vapería entra a la
 vapería, el de la cafetería a la cafetería, y **el dueño ve las dos con un dashboard
@@ -279,16 +293,16 @@ solo pide 1–3 GB. Un bench con 2–3 sites cabe; **10 tenants no caben.** El
 | **S0.4** ✅ | Checklist previo del nodo, todo verde |
 | **S0.5** ✅ | **Bench v16 de pie en `korvex-node1`. D2 cerrada.** Implementado, probado, revisado en seguimiento (dos correcciones documentales aplicadas) y commiteado |
 | **S0.6** ✅ | **Site `korvexcio.korvexdev.cc` con ERPNext instalado.** `bench new-site` lo corrió Yedin (el clasificador bloqueó a Claude); `ping` responde `pong`, `list-apps` lista `frappe`+`erpnext`, KORVIS intacto |
+| **S0.7** ✅ | Las dos `Company` reales — **VAPERIA LA J Y EL JALAPEÑO** (`VLJ`) y **EL SABOR DE LAS 5 ESQUINAS** (`ESE`) — con `tax_id`, almacenes y cost centers propios. Reparado un hueco de fixtures de ERPNext en el camino (ver deuda) |
 
 ### Lo que sigue, en este orden
 
 | # | Slice | Qué | Verificación |
 |---|---|---|---|
-| 1 | **S0.7** ⭐ | Las dos `Company` — **VAPELAND** y **Cafetería** — cada una con su `tax_id`, almacén, cost center y naming series | Las dos aparecen en `Company`; un ítem creado en una **no** aparece en el almacén de la otra |
-| 2 | **S0.7b** | Site `demo.korvexdev.cc` — el modelo por cliente se prueba el día 1, no al final | Dos DBs distintas en `SHOW DATABASES`; un cambio en uno no aparece en el otro |
-| 3 | **S0.8** | Spike POS *(timebox 2 días)*: POS nativo vs POSNext, matriz de 8 criterios llena **antes** de instalar | `docs/10-SPIKE-POS.md` con evidencia por criterio y veredicto de una línea |
-| 4 | **S0.9** 🔴 | **Spike fiscal — EL GATE.** E32 + RFCE contra TesteCF | **TrackID real** pegado en `docs/11-SPIKE-FISCAL.md`. Sin TrackID no se declara nada |
-| 5 | **S0.10 → S0.12** | Cuota de disco, catálogo, cierre de Fase 0 en los documentos | `PROGRESO.md`, `TECH_STACK.md`, `data/korvex.json` ⚪ → 🔵 |
+| 1 | **S0.7b** ⭐ | Site `demo.korvexdev.cc` — el modelo por cliente se prueba el día 1, no al final. **Recordar el fix de fixtures de S0.7** antes de crear cualquier Company ahí | Dos DBs distintas en `SHOW DATABASES`; un cambio en uno no aparece en el otro |
+| 2 | **S0.8** | Spike POS *(timebox 2 días)*: POS nativo vs POSNext, matriz de 8 criterios llena **antes** de instalar | `docs/10-SPIKE-POS.md` con evidencia por criterio y veredicto de una línea |
+| 3 | **S0.9** 🔴 | **Spike fiscal — EL GATE.** E32 + RFCE contra TesteCF | **TrackID real** pegado en `docs/11-SPIKE-FISCAL.md`. Sin TrackID no se declara nada |
+| 4 | **S0.10 → S0.12** | Cuota de disco, catálogo, cierre de Fase 0 en los documentos | `PROGRESO.md`, `TECH_STACK.md`, `data/korvex.json` ⚪ → 🔵 |
 
 ### Reglas del nodo que aplican a cada uno de esos slices
 

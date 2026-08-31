@@ -394,6 +394,101 @@ Cafetería) con su `tax_id`, almacén, cost center y naming series. S0.7b
 
 ---
 
+## 2026-08-31 — Nombres reales de los dos negocios (corrección de Yedin)
+
+Yedin confirmó los nombres comerciales reales:
+- **Vapería:** `VAPERIA LA J Y EL JALAPEÑO` (abbr `VLJ`) — antes referida como
+  "VAPELAND" en toda la documentación de planeación.
+- **Cafetería:** `EL SABOR DE LAS 5 ESQUINAS` (abbr `ESE`) — antes referida
+  genéricamente como "Cafetería".
+
+**Nota de alcance:** el codename interno del cliente (`cliente 1: VAPELAND`
+en la cabecera de `CLAUDE.md`, la nomenclatura del proyecto) **no se tocó** —
+es un shorthand interno del repo, no el nombre de una `Company`. Lo que
+cambió son los nombres reales que entran como registros `Company` en
+ERPNext, y así se documentan de aquí en adelante. `docs/08-BLUEPRINT.md` no
+se modificó (sigue con los nombres genéricos del plan original, es el
+histórico de la decisión D19, no el dato operativo).
+
+---
+
+## 2026-08-31 — S0.7: COMPLETADO — las dos Company con nombre real
+
+**Estado:** COMPLETADO. Las dos `Company` de ERPNext creadas, con su
+`tax_id` (RNC de prueba, pendiente el real), almacenes y cost centers
+propios. **S0.7b no se ha iniciado.**
+
+**Qué se hizo:** vía `bench --site korvexcio.korvexdev.cc console` (Claude,
+sin bloqueo del clasificador — esto es una operación de datos dentro de un
+site que ya existe, no una operación de infraestructura), se creó:
+
+- `VAPERIA LA J Y EL JALAPEÑO` (abbr `VLJ`)
+- `EL SABOR DE LAS 5 ESQUINAS` (abbr `ESE`)
+
+Las dos con `default_currency=DOP`, `country=Dominican Republic`, y
+`tax_id` placeholder (`000-0000000-0`/`-1`, marcado "RNC PENDIENTE" — D13:
+se planifica para dos RNC hasta que Yedin confirme).
+
+**Hallazgo real, no cosmético — y ya resuelto:** el primer intento de crear
+las Companies falló a medio camino: `LinkValidationError: Could not find
+Warehouse Type: Transit`. Causa raíz: `bench new-site --install-app erpnext`
+(headless) **no corre el mismo seed de datos que corre el Setup Wizard** de
+la interfaz web (`erpnext.setup.setup_wizard.operations.install_fixtures`).
+Ese seed es el que crea `Warehouse Type`, UOM, Item Groups, Market Segments
+y las plantillas de dirección por país — en un install headless, esa tabla
+queda vacía.
+
+**Fix aplicado** (dato maestro, no código — no se tocó nada en
+`apps/erpnext/` ni `apps/frappe/`, R6 del CLAUDE.md del repo): se llamó a
+`install_fixtures.install(country="Dominican Republic")` y a las funciones
+`update_selling_defaults`, `update_buying_defaults`,
+`update_item_variant_settings`, `add_uom_data`, `add_market_segments` una
+por una desde la consola. Un sub-paso del propio `install()`
+(`set_up_address_templates`) chocó con un bug de upstream en
+`frappe/locale.py` (`get_locale_value` revienta con `frappe.local.lang` sin
+setear fuera de un request) — no se parcheó frappe; se dejó así porque no
+bloqueaba el objetivo (la plantilla de Dominican Republic sí quedó creada
+antes del choque) y `add_sale_stages()` solo devolvió un duplicado
+inofensivo (ya estaban sembradas).
+
+**🔴 Deuda para S0.7b:** el site `demo.korvexdev.cc` va a pegar con el mismo
+hueco (`bench new-site` headless no siembra `install_fixtures`). Antes de
+crear cualquier Company ahí, correr la misma secuencia. Vale también para
+cualquier tenant nuevo en producción — **esto tiene que quedar como paso
+explícito del script de alta de tenant**, no repetirse a mano cada vez.
+
+**Verificación, salida real:**
+
+```
+frappe.get_all("Company", fields=["name","tax_id","default_currency","country"])
+-> VAPERIA LA J Y EL JALAPEÑO | 000-0000000-0 (RNC PENDIENTE) | DOP | Dominican Republic
+-> EL SABOR DE LAS 5 ESQUINAS | 000-0000000-1 (RNC PENDIENTE) | DOP | Dominican Republic
+
+Warehouses VLJ: Finished Goods - VLJ, Work In Progress - VLJ, Stores - VLJ, All Warehouses - VLJ
+Warehouses ESE: Finished Goods - ESE, Work In Progress - ESE, Stores - ESE, All Warehouses - ESE
+-> cero solapamiento entre las dos listas
+
+Cost centers: 'Main - VLJ' / 'Main - ESE' (más el cost center raíz de cada Company)
+Accounts (Chart of Accounts): 94 por Company
+
+frappe.db.exists("Warehouse", {"name": "Stores - VLJ", "company": "EL SABOR DE LAS 5 ESQUINAS"})
+-> None  (un almacén de una Company no existe bajo la otra)
+
+KORVIS: {"status":"ok","checks":{"postgres":"ok","redis":"ok"}}
+df -h /: 60G libres, sin cambio
+```
+
+**Sin verificar todavía:** naming series con sufijo de abbr para documentos
+transaccionales (Sales Invoice, etc.) — no se probó crear un documento real
+todavía; eso llega naturalmente en S0.8/Fase 2. El aislamiento que se probó
+aquí es de **datos maestros** (almacenes, cuentas), no el de
+`permission_query_conditions` — ese sigue siendo **S1.8**, sin construir.
+
+**Siguiente al retomar:** S0.7b — site `demo.korvexdev.cc`. Aplica la misma
+deuda de fixtures de arriba.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -407,7 +502,7 @@ Cafetería) con su `tax_id`, almacén, cost center y naming series. S0.7b
 - [x] **S0.4** — checklist previo del nodo, todo verde
 - [x] **S0.5** — **bench v16 de pie en `korvex-node1`. D2 cerrada.**
 - [x] **S0.6** ⭐ — site `korvexcio.korvexdev.cc` con ERPNext instalado
-- [ ] **S0.7** — las dos `Company`: VAPELAND y Cafetería, cada una con su `tax_id`
+- [x] **S0.7** — las dos `Company`: **VAPERIA LA J Y EL JALAPEÑO** y **EL SABOR DE LAS 5 ESQUINAS**, cada una con su `tax_id` (RNC pendiente)
 - [ ] **S0.7b** — site `demo.korvexdev.cc`
 - [ ] **S0.8** — spike POS *(timebox 2 días)* → `docs/10-SPIKE-POS.md`
 - [ ] **S0.9** 🔴 — spike fiscal, **el gate**: TrackID real de TesteCF → `docs/11-SPIKE-FISCAL.md`

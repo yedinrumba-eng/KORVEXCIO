@@ -50,8 +50,8 @@ korvex-bench/
 │   └── ury                            # cafetería (fase 2)
 └── sites/
     ├── korvexcio.korvexdev.cc         # cliente 1 — un site = una DB
-    │    ├── Company VAPELAND           #   negocio 1 (su RNC, su almacén)
-    │    └── Company Cafetería          #   negocio 2 (su RNC, su almacén)
+    │    ├── Company VAPERIA LA J Y EL JALAPEÑO   # vapería (su RNC, su almacén)
+    │    └── Company EL SABOR DE LAS 5 ESQUINAS   # cafetería (su RNC, su almacén)
     └── demo.korvexdev.cc              # staging / demostración
 ```
 

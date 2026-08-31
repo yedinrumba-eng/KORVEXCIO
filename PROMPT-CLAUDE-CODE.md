@@ -1,8 +1,8 @@
 # Prompt para arrancar una sesión nueva
 
 > Copiar y pegar tal cual al abrir **Claude Code** o **Codex** en esta carpeta.
-> Actualizado el 2026-08-31 al cerrar **S0.6** (site `korvexcio.korvexdev.cc`
-> con ERPNext instalado).
+> Actualizado el 2026-08-31 al cerrar **S0.7** (las dos `Company` reales:
+> VAPERIA LA J Y EL JALAPEÑO, EL SABOR DE LAS 5 ESQUINAS).
 >
 > **Este archivo se actualiza al cerrar cada slice.** Si el prompt de abajo
 > todavía dice S0.6 y `PROGRESO.md` dice que S0.6 está cerrada, gana
@@ -34,24 +34,29 @@ LEE EN ESTE ORDEN, completo, antes de proponer nada:
 EL RELOJ: 15/11/2026, e-CF obligatorio para pequeños/micro/no clasificados
 (Ley 32-23). Multa 5-50 salarios mínimos. Todo lo demás se difiere; esto no.
 
-TU SLICE: S0.7 — crear las dos `Company` de ERPNext en el site que ya existe
-(`korvexcio.korvexdev.cc`): **VAPELAND** y **Cafetería**, cada una con su
-`tax_id` (RNC, de prueba hasta que Yedin confirme el real), su almacén, su
-cost center y su naming series. NADA MÁS. S0.7b (site `demo.korvexdev.cc`) no
-se adelanta salvo que Yedin lo pida en el mismo turno.
+TU SLICE: S0.7b — crear el site `demo.korvexdev.cc` en el mismo bench (sin
+reconstruirlo). Es staging y la prueba de que el modelo "un site por
+cliente" funciona sin necesitar un cliente real. NADA MÁS — no le crees
+Companies todavía salvo que Yedin lo pida en el mismo turno.
+
+OJO — `bench new-site` crea una base de datos nueva: en S0.6 el clasificador
+de auto-mode bloqueó a Claude corriéndolo directo (nodo con un banco en
+producción). Prepara el comando exacto y pídele a Yedin que lo corra él por
+SSH, como se hizo en S0.6.
+
+🟡 DEUDA DE S0.7: `bench new-site --install-app` headless NO siembra
+`Warehouse Type`, UOM, Item Groups ni Market Segments (eso solo lo hace el
+Setup Wizard de la UI). Si en este slice o el siguiente creas una Company en
+`demo.korvexdev.cc`, vas a pegar con el mismo `LinkValidationError: Could
+not find Warehouse Type: Transit` que ya se resolvió en S0.7 — la solución
+completa está documentada en `PROGRESO.md`, entrada "S0.7: COMPLETADO".
 
 Verificación con la que se cierra:
-  frappe.get_all("Company", fields=["name","tax_id","default_currency"])
-    -> devuelve VAPELAND y Cafetería
-  Un ítem/almacén creado en una Company NO aparece en el almacén de la otra
+  curl -H "Host: demo.korvexdev.cc" http://127.0.0.1:8080/api/method/ping
+    -> {"message":"pong"}
+  Dos DBs distintas en `SHOW DATABASES` (korvexcio.korvexdev.cc y demo.korvexdev.cc)
   systemctl status korvex-api && curl -s http://127.0.0.1:4000/health
   df -h /
-
-OJO CON D19: esto NO es aislamiento físico (eso ya lo da el site). Es lógico
-— dos Companies en la misma base. La barrera real de verdad
-(permission_query_conditions + has_permission + company congelada) es S1.8,
-más adelante. Por ahora S0.7 solo crea los registros; no inventes controles de
-acceso que no pediste todavía.
 
 EL NODO NO ESTÁ VACÍO. korvex-node1 corre KORVIS en producción: un banco (ADAP)
 y dos bots de WhatsApp EN VIVO. Lo que rompas ahí le cuesta credibilidad a Yedin
@@ -106,11 +111,13 @@ entrada de PROGRESO.md y docs/08-BLUEPRINT.md antes de proponer nada.
 ERP+POS multi-tenant sobre ERPNext/Frappe v16 para retail y food en RD.
 Deadline duro: e-CF de la DGII obligatorio el 15/11/2026.
 
-El bench v16 y el site korvexcio.korvexdev.cc ya están de pie en korvex-node1
-(ssh korvex-host). No los reconstruyas.
-Tu slice es S0.7: crear las dos Company (VAPELAND, Cafetería) con su tax_id,
-almacén, cost center y naming series, y nada más. Se cierra con:
-  frappe.get_all("Company", fields=["name","tax_id"]) -> las dos
+El bench v16, el site korvexcio.korvexdev.cc y sus dos Company reales
+(VAPERIA LA J Y EL JALAPEÑO, EL SABOR DE LAS 5 ESQUINAS) ya están de pie en
+korvex-node1 (ssh korvex-host). No los reconstruyas.
+Tu slice es S0.7b: crear el site demo.korvexdev.cc, y nada más. bench
+new-site crea DB nueva -> el clasificador bloquea a Claude corriéndolo
+directo, pídeselo a Yedin por SSH. Se cierra con:
+  curl -H "Host: demo.korvexdev.cc" http://127.0.0.1:8080/api/method/ping
 
 Un slice a la vez. Sin la salida real del comando, no se declara nada cerrado.
 En ese nodo corre KORVIS en producción con un banco en vivo: no se toca su
