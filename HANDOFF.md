@@ -1,5 +1,24 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
+> **Actualización 2026-09-01 (4) — Fase 4 iniciada: S4.1 (POS Profile por
+> Company) CERRADO.** Yedin dio el OK para tratar D16 (POSNext) como
+> confirmado por la evidencia de S0.8 y avanzar. **No se forkeó POSNext ni
+> se creó repo nuevo** — S4.1 se construyó sobre `POS Profile`, el DocType
+> nativo de ERPNext que comparten ambos frontends candidatos, dejando el
+> fork real (acción de infraestructura, difícil de revertir) para S4.2.
+> `sync_pos_profiles()` (opt-in, apagado por default) crea un perfil por
+> Company con `currency`/`write_off_account`/`cost_center` derivados, y
+> puebla `applicable_for_users` para que `erpnext...get_pos_profile()`
+> resuelva el del cajero sin que este escoja nada. `POS Profile` entró a
+> `COMPANY_SCOPED_DOCTYPES` (D19) y a los DocPerm de `roles.py` (Dueño
+> read/write/create, Cajero solo lectura). Nodo en `8de0749`, **111/111
+> tests verdes** (81 integration + 1 skip, 30 unit), ruff limpio, sin
+> `ignore_permissions`/SQL crudo, KORVIS intacto (41% disco). Detalle con
+> evidencia real en `PROGRESO.md`. **Siguiente: S4.2 bloqueado hasta
+> decidir/forkear el frontend real — considerar saltar a S4.5 (turno de
+> caja / POS Closing Entry), que es 100% backend y no depende de esa
+> decisión.**
+>
 > **Actualización 2026-09-01 (3) — Fase 3 (S3.1-S3.6) CERRADA. Se
 > encontraron y corrigieron 2 bugs CRÍTICOS reales escribiendo los tests
 > que faltaban.** Nodo en `5a34ec3`, 108 tests verdes (78 integration +

@@ -2699,6 +2699,85 @@ git rev-parse HEAD (nodo) == 5a34ec3 == origin/feat/ecf (SHA verificado)
 decisión de Yedin sobre si la verificación de edad necesita persistir
 evidencia auditable (cédula/fecha cifrada) o el token efímero basta.
 
-**Siguiente:** Fase 4 (POS + hardware) sigue bloqueada por D16 (POSNext
-vs nativo, pendiente OK explícito de Yedin). Sin esa decisión, no hay
-slice de código nuevo que abrir ahí todavía.
+---
+
+## 2026-09-01 — S4.1: POS Profile por Company, el cajero cae en el suyo sin escoger
+
+**Estado:** COMPLETADO. Yedin dio el OK ("dale, continua") para tratar D16
+(POSNext) como confirmado por la evidencia del propio blueprint (S0.8) y
+seguir a Fase 4. **No se forkeó POSNext ni se creó un repo nuevo** — es
+una acción de infraestructura compartida difícil de revertir, y S4.1 se
+puede construir sobre `POS Profile`, el DocType nativo de ERPNext que
+ambos frontends candidatos (nativo y POSNext) comparten. Forkear queda
+para S4.2, cuando de verdad haya que tocar la pantalla de caja.
+
+**Qué se escribió:**
+- `korvexcio/retail/pos_profile.py` — `sync_pos_profiles()` opt-in
+  (apagado por default, regla 2), un `POS Profile` por entrada de config
+  con `currency`/`write_off_account`/`write_off_cost_center` derivados
+  de la `Company` (ya provistos por ERPNext al crear la Company).
+  `_sync_cajero_assignments()` puebla `applicable_for_users` — la tabla
+  hija que la propia `erpnext.stock.get_item_details.get_pos_profile()`
+  usa para resolver el perfil del cajero sin que este escoja nada.
+- `korvexcio/install.py` — `sync_retail_pos_profiles()`, wireado en
+  `hooks.py::after_migrate` (último de la cadena).
+- `korvexcio/isolation.py` — `"POS Profile"` entra a
+  `COMPANY_SCOPED_DOCTYPES`: D19 congela su `company` tras crear el doc.
+- `korvexcio/roles.py` — `DUENO_POS_PROFILE_PERMS` (create/read/write);
+  los dos roles Cajero reciben solo lectura. Configurar el POS Profile
+  (almacén, métodos de pago, usuarios asignados) es tarea de Dueño.
+- `korvexcio/retail/test_pos_profile.py` — tres tests reales: la
+  creación deriva bien los campos de la Company; `get_pos_profile()` de
+  ERPNext resuelve el perfil correcto para el cajero por su asignación;
+  y un Cajero de la Company A recibe `frappe.PermissionError` leyendo el
+  POS Profile de B vía `frappe.client.get` (la lección de S1.8 — nunca
+  `get_doc()` para probar lectura).
+
+**GREEN y operación, salida real:**
+
+```text
+bench --site korvexcio.korvexdev.cc migrate
+... Executing `after_migrate` hooks... (sync_pos_profiles incluido)
+exit 0
+
+docker compose -p korvexcio restart backend queue-short queue-long scheduler websocket
+Todos Started
+
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Running 81 integration tests for korvexcio
+  korvexcio.retail.test_pos_profile.TestPosProfileCompanyIsolation
+    test_cajero_can_read_own_companys_profile ... ok
+    test_cajero_cannot_read_other_companys_profile ... ok
+    test_cajero_resolves_own_company_profile_without_choosing ... ok
+Ran 81 tests in 24.5-24.8s
+OK (skipped=1)
+Running 30 unspecified-category tests for korvexcio
+Ran 30 tests in 0.7s
+OK
+
+ruff check (S4.1 files) -> All checks passed! (2 I001 propios encontrados y
+  arreglados antes del deploy final -- imports sin ordenar en pos_profile.py
+  y test_pos_profile.py, no eran deuda heredada)
+grep "ignore_permissions=True|frappe.db.sql(" -> sin coincidencias
+
+curl http://127.0.0.1:4000/health -> {"status":"ok","checks":{"postgres":"ok","redis":"ok"}}
+df -h / -> 98G total, 38G used, 56G avail, 41%
+
+git push origin feat/ecf -> 29da6fc..8de0749
+nodo: git fetch && git reset --hard origin/feat/ecf -> HEAD 8de0749
+bench migrate + run-tests sobre el checkout git real -> mismo resultado, 111/111 verde
+```
+
+**Deuda que no cambió:** D16 tratado como confirmado por el "dale" de
+Yedin, pero el spike de contingencia con red cortada de S0.8 sigue sin
+re-correrse contra el frontend real todavía (no hay frontend real
+todavía — S4.1 es infraestructura de datos, no pantalla). S4.2 en
+adelante necesita el fork de POSNext (o confirmar nativo), que sigue
+siendo una decisión que Yedin debe dar explícita antes de crear el repo.
+
+**Siguiente:** S4.2 (campos fiscales en la pantalla de caja + aviso del
+umbral RD$250,000) — bloqueado hasta decidir/forkear el frontend real.
+S4.3/S4.4 necesitan hardware físico o un frontend real para probar
+contra. Revisar con Yedin si conviene saltar a S4.5 (turno de caja /
+POS Closing Entry), que sí es 100% backend y no depende del frontend
+ganador.
