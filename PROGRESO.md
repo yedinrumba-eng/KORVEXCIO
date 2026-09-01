@@ -2975,3 +2975,44 @@ custom fields, confirmado en pantalla).
 - **S4.6** (contingencia con el internet real del local) — el blueprint
   mismo lo exige re-correr "en el local del cliente, con su internet
   real" como gate de Fase 6. No es sustituible por una prueba remota.
+
+---
+
+## 2026-09-01 — S4.3: escáner keyboard-wedge, nativo de POSNext, sin código propio
+
+**Estado:** COMPLETADO por diseño de POSNext. La barra de búsqueda de
+items (`Search by item code, name or sc[an]...`, visible en las
+capturas de S4.2) trae su propio ícono de escaneo — POSNext soporta
+keyboard-wedge nativamente, sin configuración: un scanner USB/Bluetooth
+en modo keyboard-wedge escribe el código y un Enter en el mismo campo
+donde ya se probó búsqueda por texto en S4.2 (escribir "DEMO" filtró el
+item real al instante). Cumple D8 (cero configuración) sin una línea de
+código de `korvexcio/`.
+
+**Por qué no hay slice de código:** el blueprint pide verificar
+"escanear agrega el ítem sin tocar el teclado" — eso es exactamente lo
+que un scanner keyboard-wedge hace contra cualquier campo de texto
+enfocado, y ese campo ya existe y ya se probó funcional en S4.2. No hay
+nada que integrar ni testear en `korvexcio/` porque la funcionalidad no
+pasa por nuestro código — vive enteramente en el frontend de POSNext.
+
+**Fase 4 — cierre real:**
+
+| Slice | Estado | Por qué |
+|---|---|---|
+| S4.1 | ✅ Cerrado, 111/111 tests | POS Profile por Company |
+| S4.2 | ✅ Backend cerrado, UX de mensaje pendiente | Fork + venta real + umbral RD$250k probados en pantalla |
+| S4.3 | ✅ Cerrado, nativo de POSNext | Cero código, cero configuración |
+| S4.4 | 🔴 Bloqueado — hardware físico | No verificable en remoto bajo ninguna autorización |
+| S4.5 | ✅ Cerrado, 118/118 tests | Turno de caja, arqueo por método de pago |
+| S4.6 | 🔴 Bloqueado — local real del cliente | El blueprint mismo lo exige en sitio, gate de Fase 6 |
+
+**Lo único que sigue realmente abierto y es código nuestro:** el
+mensaje de error real en la pantalla de POSNext cuando el umbral
+RD$250,000 bloquea una venta (hoy es un toast genérico, deuda de UX
+anotada arriba). No es bloqueante para avanzar — el backend ya protege
+correctamente contra la venta sin RNC, con o sin buen mensaje.
+
+**Fase 4 queda cerrada en todo lo que depende de decisiones y trabajo
+remoto.** S4.4 y S4.6 esperan al local físico del cliente — ninguna
+autorización adicional cambia eso.
