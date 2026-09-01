@@ -51,7 +51,8 @@ class TestRetailItemAttributes(IntegrationTestCase):
             item_attributes.sync_item_attributes()
             sabor = frappe.get_doc("Item Attribute", "Test Sabor")
             self.assertEqual([row.attribute_value for row in sabor.item_attribute_values], ["Red", "Mint"])
-            self.assertEqual(frappe.get_doc("Item Attribute", "Test Nicotina").numeric_values, 1)
+            nicotina = frappe.get_doc("Item Attribute", "Test Nicotina")
+            self.assertEqual([row.attribute_value for row in nicotina.item_attribute_values], ["20"])
         finally:
             frappe.conf.korvexcio_retail = original
 
