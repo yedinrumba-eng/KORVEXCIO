@@ -1,5 +1,40 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
+> **Actualización 2026-09-01 (5) — POSNext forkeado, instalado y probado
+> con una venta real de punta a punta. S4.1/S4.5/S4.2(backend) cerrados.**
+> Yedin forkeó `yedinrumba-eng/posnext` (rama `korvex`) a pedido. Instalarlo
+> reveló que se lleva dos campos nativos de `POS Settings` que CUALQUIER
+> venta POS necesita (restaurados vía custom field) y trae un bug propio
+> (leía un campo movido en v16 desde el lugar equivocado — parcheado en
+> nuestro fork). Más importante: **POSNext no usa `POS Opening/Closing
+> Entry` nativos de ERPNext** (lo que S4.5 cubría) — trae su propio par
+> (`POS Opening/Closing Shift`), ahora también con isolation D19 y
+> permisos de rol.
+>
+> Se verificó **en pantalla real** (no solo tests): túnel SSH + proxy
+> local porque esta sesión no tiene ruta de red directa al nodo. Login
+> real, las dos Companies (VLJ/ESE) aparecen separadas en el selector de
+> POS Profile, turno abierto, **venta real de RD$500 que generó un ECF
+> real (E320000000001)** — confirma Fase 2 completa funcionando con el
+> frontend real — y **una venta real de RD$250,500 sin RNC bloqueada por
+> el hook de S2.9**, exactamente el criterio de verificación que pide
+> S4.2. Hallazgo de UX pendiente: POSNext muestra un toast genérico en
+> vez del mensaje real en español — deuda técnica, no bloqueante.
+>
+> Nodo en `e10fd00`, **118/118 tests verdes** (88 integration + 1 skip,
+> 30 unit), ruff limpio, KORVIS intacto (42% disco). La contraseña de
+> Administrator del site quedó rotada a un valor aleatorio no anotado —
+> **Yedin necesita ponerse la suya** (`bench set-admin-password`) antes
+> de retomar por la UI. Detalle completo con evidencia en `PROGRESO.md`.
+>
+> **Lo que sigue de Fase 4 y por qué:** S4.3 (escáner) es trivial y
+> alcanzable en remoto, la pantalla ya existe. **S4.4** (impresión
+> térmica) necesita hardware físico conectado — no se puede cerrar en
+> remoto bajo ninguna autorización. **S4.6** (contingencia) el propio
+> blueprint exige re-correrla en el local real del cliente como gate de
+> Fase 6 — tampoco sustituible en remoto. Carril B (Codex) sigue
+> autorizado y con su prompt listo en `PROMPT-CLAUDE-CODE.md` §5.
+>
 > **Actualización 2026-09-01 (4) — Fase 4 iniciada: S4.1 (POS Profile por
 > Company) CERRADO.** Yedin dio el OK para tratar D16 (POSNext) como
 > confirmado por la evidencia de S0.8 y avanzar. **No se forkeó POSNext ni

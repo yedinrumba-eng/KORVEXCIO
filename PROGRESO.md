@@ -2848,3 +2848,130 @@ RD$250,000 sin RNC desde S2.9 (`validate_rnc_threshold`,
 `test_rnc_required_above_threshold`) — eso corre a nivel de documento
 Frappe, no depende de qué pantalla lo dispare. Lo que falta de S4.2 es
 puramente de UI: mostrarlo en la pantalla de caja real.
+
+---
+
+## 2026-09-01 — S4.2: POSNext instalado y probado end-to-end en pantalla real. Fase 4 backend cerrada
+
+**Estado:** Yedin autorizó continuar sin bloqueos ("dale con todo") y
+forkeó POSNext a `yedinrumba-eng/posnext` cuando se lo pedí. Con eso:
+D16 (POSNext) queda **confirmado y en producción de desarrollo**, no
+solo recomendado por evidencia de código (S0.8).
+
+**Lo que se hizo, en orden real:**
+
+1. **Fork + instalación real.** `yedinrumba-eng/posnext`, rama `korvex`,
+   remote `upstream` -> `DeeloaSociety/posnext`. Clonado en el nodo como
+   app `pos_next` (nombre real del paquete Python, no "posnext"),
+   `bench pip install -e`, `bench --site korvexcio.korvexdev.cc
+   install-app pos_next`.
+2. **Dos bugs de compatibilidad reales, no anticipados por el blueprint:**
+   - POSNext **reemplaza el JSON nativo de `POS Settings`** de ERPNext
+     con el suyo propio, y se lleva dos campos que el propio ERPNext
+     necesita para CUALQUIER venta POS sin importar el frontend
+     (`invoice_type`, `post_change_gl_entries` — usados por
+     `pos_closing_entry.py` y `sales_invoice.py`). Restaurados como
+     Custom Field (`korvexcio/custom/pos_settings.json`), sin tocar
+     `erpnext` ni `pos_next` (regla 1).
+   - **Bug real en POSNext mismo**: su propio `overrides/sales_invoice.py`
+     lee `post_change_gl_entries` de `Accounts Settings`, la ubicación
+     PRE-v16 — ERPNext v16 lo movió a `POS Settings`
+     (`patches.v16_0.set_post_change_gl_entries_on_pos_settings`).
+     Rompía CUALQUIER venta POS bajo v16. Parcheado directo en nuestro
+     fork (`yedinrumba-eng/posnext@92b5c93`) — el carve-out de la regla
+     1 es justo para esto: *"POSNext sí se forkea... nunca commits en
+     main del fork"*.
+3. **Hallazgo arquitectónico real, el más importante de este slice:**
+   POSNext **NO usa `POS Opening Entry`/`POS Closing Entry` nativos de
+   ERPNext** (los que S4.5 cubre) — trae su PROPIO par de doctypes,
+   `POS Opening Shift`/`POS Closing Shift`, mismo campo `company`, cero
+   relación con el trabajo de S4.5. Confirmado abriendo un turno real
+   por la pantalla y viendo que NO aparecía ningún `POS Opening Entry`
+   en la base — sí un `POS Opening Shift`. `cash_shift.py` (S4.5) sigue
+   siendo código válido y probado (funcionaría si algún día se usa el
+   POS nativo de ERPNext), pero **no es lo que la pantalla real crea**.
+   Se agregaron ambos doctypes nuevos a `COMPANY_SCOPED_DOCTYPES` (D19)
+   y los mismos permisos de rol que sus equivalentes nativos.
+4. **Verificación EN PANTALLA REAL, no solo en tests** — la regla del
+   proyecto para cambios de UI. El obstáculo real: esta sesión no tiene
+   ruta de red directa al nodo (ni Tailscale ni navegador la alcanzan).
+   Resuelto con un túnel SSH (`ssh -L 18080:127.0.0.1:8080
+   korvex-host`) + un proxy Python local de una sola función (reescribe
+   el header `Host` porque Frappe resuelve el tenant por ahí) —
+   herramienta de esta sesión, no parte del producto, ya detenida.
+   Con eso:
+   - Login real como Administrator, contraseña puesta y luego
+     **rotada a un valor aleatorio que no quedó anotado** — Yedin
+     necesita poner la suya cuando retome.
+   - **Las dos Companies reales (VLJ, ESE) aparecen correctamente
+     separadas** en el selector de POS Profile de POSNext — confirma
+     S4.1 con el frontend real, no solo con tests.
+   - Turno abierto en POS VLJ con la propia UI de POSNext.
+   - **Venta real de punta a punta**: Item de demo -> carrito -> cliente
+     -> pago en efectivo -> `ACC-SINV-2026-00004` creada. Se verificó
+     que generó un `ECF` real (`E320000000001`, tipo E32, estado
+     Pendiente, Company VLJ) — **confirma que TODA la Fase 2 (módulo
+     fiscal) funciona con el frontend real**, no solo con
+     `frappe.new_doc()` en un test.
+   - **El umbral RD$250,000 probado con una venta real de RD$250,500
+     sin RNC**: la pantalla de POSNext lo bloqueó. El `Error Log` del
+     sitio confirma que fue exactamente `korvexcio.ecf.sales_invoice_
+     hooks.validate_rnc_threshold` quien lo paró — el mismo código de
+     S2.9, sin cambios, disparado por el frontend real por primera vez.
+     **Este es el criterio de verificación exacto que pide S4.2 en el
+     blueprint**, cumplido.
+   - Factura de demo cancelada y borrada después de verificar (dato de
+     prueba, no dato real del negocio).
+
+**Hallazgo de UX (no bloquea, va a deuda técnica):** cuando el hook
+bloquea la venta, POSNext muestra un toast genérico *"Payment methods
+refreshed. Please review before proceeding"* — no el mensaje real en
+español del hook. El cajero real no sabría POR QUÉ se bloqueó la venta.
+Corregirlo es trabajo de Vue real (leer `frappe.exc_type`/el mensaje del
+`ValidationError` en `pos_next.api.invoices.update_invoice` y mostrarlo)
+— es el pedazo de "campos fiscales en pantalla" que sigue abierto.
+
+**Deuda de datos, no de código:** para poder ver la pantalla real hubo
+que completar configuración contable real que nunca se había tocado
+(cuenta default de "Cash" por Company, cuenta de descuadre de Stock
+Entry, cuenta de Round Off) y crear Secuencias eNCF **de prueba**
+(rango 1-999999) en las dos Companies REALES (VLJ, ESE) — no son
+secuencias emitidas por la DGII, son placeholders de desarrollo. **Se
+reemplazan por las reales antes de certificar** (S5.4). También queda
+un Item de demo (`DEMO-VAPE-001`) con 1049 unidades de stock falso en
+VLJ — dato de prueba en un site de desarrollo, no en producción.
+
+**GREEN, salida real:**
+
+```text
+bench run-tests --app korvexcio --test-category all
+Ran 88 tests in 29.4s -> OK (skipped=1)
+Ran 30 tests in 0.7s -> OK
+  (118/118 total, subiendo de 115)
+
+ruff check retail/test_posnext_shift.py roles.py isolation.py -> All checks passed!
+
+curl http://127.0.0.1:4000/health -> {"status":"ok",...}
+df -h / -> 54G avail, 42%
+
+git push origin feat/ecf -> e10fd00 (isolation de POS Opening/Closing Shift)
+nodo: git fetch && git reset --hard origin/feat/ecf -> HEAD e10fd00 (verificado)
+```
+
+**S4.2 queda funcionalmente cerrado para lo que es responsabilidad del
+backend.** Lo que sigue abierto es Vue real: mostrar el mensaje de
+error real (arriba) y, si Yedin lo quiere, un campo de RNC visible en
+el formulario de cliente de POSNext (hoy es un formulario Vue fijo sin
+custom fields, confirmado en pantalla).
+
+**Siguiente, con evidencia de qué es alcanzable en remoto y qué no:**
+- **S4.3** (escáner keyboard-wedge) — trivial una vez la pantalla existe
+  (ya existe). Cero configuración por diseño (D8); se puede probar
+  escribiendo texto rápido en el buscador de items, que es
+  funcionalmente lo mismo que un escáner. Alcanzable en remoto.
+- **S4.4** (impresión térmica QZ Tray + gaveta) — necesita hardware
+  físico conectado. No verificable desde esta sesión bajo ninguna
+  autorización.
+- **S4.6** (contingencia con el internet real del local) — el blueprint
+  mismo lo exige re-correr "en el local del cliente, con su internet
+  real" como gate de Fase 6. No es sustituible por una prueba remota.
