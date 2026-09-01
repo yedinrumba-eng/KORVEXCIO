@@ -46,6 +46,12 @@ def _safe_message(message: str | None) -> str | None:
     return sanitized[:2000]
 
 
+def _submit_internal(ecf) -> None:
+    """Submit an ECF from the trusted background worker."""
+    ecf.flags.ignore_permissions = True
+    ecf.submit()
+
+
 def _claim_ecf(ecf_name: str) -> bool:
     """Atomically claim a pending ECF for one worker only."""
     frappe.db.sql(
@@ -185,7 +191,7 @@ def emitir_ecf(ecf_name: str) -> None:
     ecf.validation_messages = _safe_message(result.message)
     if not result.retryable or ecf.attempt_count >= MAX_ATTEMPTS:
         ecf.estado = "Rechazado"
-        ecf.submit(ignore_permissions=True)
+        _submit_internal(ecf)
     else:
         ecf.estado = "Pendiente"
         ecf.save(ignore_permissions=True)
@@ -232,7 +238,7 @@ def poll_pending_status() -> None:
         ecf.estado = result.value.estado
         ecf.validation_messages = _safe_message(result.value.validation_messages)
         if ecf.estado in _TERMINAL_ESTADOS:
-            ecf.submit(ignore_permissions=True)
+            _submit_internal(ecf)
         else:
             ecf.save(ignore_permissions=True)
 
