@@ -1,5 +1,39 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
+> **Actualización 2026-09-01 (2) — Fase 3 (S3.1-S3.3 de Codex) auditada,
+> APROBADA con un bug real corregido.** Nodo re-clonado limpio en
+> `ed325d9` (el checkout perdió su `.git` en el rebuild de imagen de
+> Codex — se desplegó por tar desde `origin/feat/ecf` verificado, nunca
+> se asumió que la imagen reconstruida tuviera el SHA correcto, y al
+> final se re-clonó como repo git real). 102 tests verdes (74
+> integration + 28 unit, subiendo de 91), ruff/Semgrep sin hallazgos
+> nuevos, KORVIS sano.
+>
+> Código revisado: `item_attributes.py`, `fefo.py`, `cafe.py`,
+> `age_verification.py`, `reports.py`, `dashboard.py` + 4 reports + la
+> Page del dashboard consolidado — cero `ignore_permissions`/SQL crudo,
+> todo apagado por defecto (regla 2), reportes con `company_filter()`
+> explícito (regla 12b). Bug real encontrado corriendo la suite en
+> Frappe (lo que Codex no pudo hacer en Windows): un mock mal configurado
+> en `test_age_verification.py` hacía que el test de "item sin regular"
+> nunca simulara eso de verdad. Corregido, junto con 5 hallazgos de lint
+> (timezone) y una inconsistencia real de correctitud (`expiring_stock()`
+> construía su rango de fechas con dos relojes distintos). También se
+> encontró y arregló un problema operacional sin relación al código: el
+> disco había subido a 77% por build cache de Docker sin limpiar — bajó
+> a 41% con `docker builder prune -f`.
+>
+> **Pendiente de decisión de Yedin, no de código:** `age_verification.py`
+> trae funciones de cifrado AES-256-GCM completas y testeadas, pero el
+> diseño real implementado (token efímero en Redis, 15 min, nunca
+> persiste la fecha de nacimiento) no las usa — es una desviación
+> razonable de lo que pedía el `CLAUDE.md` original, pero depende de si
+> hace falta guardar evidencia auditable de la verificación de edad o no.
+> Detalle completo en `PROGRESO.md`.
+>
+> Pendiente: S3.4-S3.6 (código ya presente y verificado en esta misma
+> corrida) no tienen todavía su entrada formal de cierre en `PROGRESO.md`.
+
 > **Actualización 2026-09-01 — Fase 2 (S2.1→S2.15) CERRADA como
 > estructura; el gate real sigue sin cumplirse por D20, no por falta de
 > trabajo.** El nodo está en `e138fa3`. 91 tests verdes (71 integration +

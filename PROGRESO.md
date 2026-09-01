@@ -2514,3 +2514,101 @@ unit en 0.445s (`OK`). `systemctl is-active korvex-api` devolvió `active`,
 
 S2.10 queda cerrado para estructura y cola. La emisión DGII real no se simuló y
 permanece condicionada al proveedor real de S2.7.
+
+---
+
+## 2026-09-01 — Auditoría de Fase 3 (S3.1-S3.3) de Codex — APROBADO, con un bug real corregido
+
+**Estado:** Codex entregó S3.1 (atributos retail), S3.2 (FEFO), S3.3
+(verificación de edad server-side con PII cifrada opcional) y, sin
+documentarlo todavía con su propio número de slice, también el código de
+S3.4 (cafetería mostrador, BOM), S3.5 (4 reportes: venta del día, stock
+muerto, rotación, margen por categoría) y S3.6 (dashboard consolidado del
+dueño). Handoff pedía explícitamente verificar S3.3 en el nodo antes de
+seguir — no se había podido correr en Windows (sin Frappe local).
+
+**Revisión de código, antes de tocar el nodo:** `item_attributes.py`,
+`fefo.py`, `cafe.py`, `age_verification.py`, `reports.py`, `dashboard.py`,
+los 4 reports y la Page del dashboard. Cero `ignore_permissions=True`,
+cero `frappe.db.sql()` crudo en todo `korvexcio/retail/`. Todos los
+reportes pasan por `reports.company_filter()` — explícito, no confía
+solo en User Permission (regla 12b). Retail apagado por defecto en los
+tres niveles (`is_vertical_enabled()`, `cafe.enabled`, custom field
+`requiere_verificacion_edad` con `default: 0`) — regla 2 del `CLAUDE.md`.
+
+**Hallazgo de diseño, no de bug:** `age_verification.py` trae
+`encrypt_pii()`/`decrypt_pii()` con AES-256-GCM real (IV único por
+llamada + AAD atado al `record_id`, buen diseño) — pero **no se usan en
+ningún flujo real todavía**. El diseño real implementado es un token
+efímero en Redis (15 min, atado a usuario + hash de los Items regulados,
+nunca persiste la fecha de nacimiento en ningún doctype). Es una
+desviación razonable del texto original de CLAUDE.md ("si se guarda
+cédula... AES-256-GCM") — de hecho reduce la superficie de PII
+persistida a cero — pero es una decisión de producto (¿hace falta guardar
+evidencia auditable de la verificación?) que no está confirmada con
+Yedin. Se deja anotada, no se asume ninguna respuesta.
+
+**Redeploy:** el checkout `apps/korvexcio` del nodo perdió su `.git`
+durante el rebuild de imagen que hizo Codex (cambio de `apps.json` de
+`main` a `feat/ecf`, horneado en `korvexcio:16`). Se desplegó por tar
+desde el `origin/feat/ecf` verificado localmente (no se asumió que la
+imagen reconstruida tuviera el SHA correcto), y al final se re-clonó
+`apps/korvexcio` como repo git real para volver al flujo normal de
+verificación por SHA.
+
+**Bug real encontrado corriendo la suite en Frappe de verdad — exactamente
+lo que Codex no pudo probar en Windows:**
+`test_unregulated_invoice_without_token_is_allowed` mockeaba
+`frappe.db.get_value` con `return_value = "Coffee"` para las DOS llamadas
+distintas dentro de `validate_invoice_age()` (la de `item_group` y la de
+`requiere_verificacion_edad`). `bool("Coffee")` es `True`, así que el
+mock nunca simulaba de verdad "item no regulado" y el test tronaba.
+Corregido con `side_effect=["Coffee", 0]`, igual que ya hacía el test
+hermano.
+
+**Deuda de lint real arreglada de paso** (no solo lint — una encontrada
+al arreglar fue una inconsistencia de correctitud real):
+`expiring_stock()` construía el rango de fechas con DOS relojes distintos
+— `frappe.utils.today()` (fecha del site) para el límite inferior y
+`date.today()` (sin timezone) para el superior — podían desalinearse un
+día cerca de medianoche si el timezone del servidor no coincide con el
+del site. Unificado a un solo `_rd_today()` (mismo patrón
+`America/Santo_Domingo` de S2.8/S2.11). Los otros 4 `assertRaises(Exception)`
+en tests se precisaron a la excepción real que cada uno lanza
+(`frappe.PermissionError`, `frappe.ValidationError`,
+`cryptography.exceptions.InvalidTag`).
+
+**Hallazgo operacional real, sin relación con el código:** el disco había
+saltado de 39% a **77%** (71G/98G) — Build Cache de Docker acumulado por
+los rebuilds de imagen de Codex, 37.2GB reclamables confirmados con
+`docker system df`. Se corrió `docker builder prune -f` (comando ya
+autorizado, distinto del prohibido `docker system prune -a`); disco
+volvió a 41%. KORVIS y el stack de `korvexcio` verificados sanos antes y
+después.
+
+**Verificación final, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Ran 74 tests in 18.002s -> OK (skipped=1)
+Ran 28 tests in 0.718s -> OK
+(102 tests totales, subiendo de 91 antes de Fase 3)
+
+ruff check korvexcio/ (arbol completo) -> 6 hallazgos, los mismos de
+  siempre (S2.2/S1.8), ninguno nuevo en retail/ tras los fixes
+semgrep (regla propia) -> Findings: 2 (los mismos ya justificados desde
+  S2.10), ninguno nuevo
+
+KORVIS: {"status":"ok",...}   df -h /: 56G libres, 41%
+git rev-parse HEAD (nodo, re-clonado) == ed325d9 == origin/feat/ecf (SHA verificado)
+```
+
+**Veredicto: APROBADO.** S3.1, S3.2 y S3.3 quedan cerrados con evidencia
+real. S3.4-S3.6 (código ya presente y verificado en esta misma corrida,
+aunque Codex no los había documentado con su propio slice todavía)
+también pasan la suite — quedan pendientes de que alguien (Codex o
+Claude) les escriba su entrada formal en `PROGRESO.md` cuando toque.
+
+**Siguiente:** confirmar con Yedin la decisión de producto sobre PII
+persistida en verificación de edad (arriba), y seguir con lo que quede
+de Fase 3 sin cerrar formalmente, o Fase 4 si Fase 3 ya se considera
+completa.
