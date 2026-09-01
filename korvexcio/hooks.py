@@ -175,23 +175,17 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"korvexcio.tasks.all"
-# 	],
-# 	"daily": [
-# 		"korvexcio.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"korvexcio.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"korvexcio.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"korvexcio.tasks.monthly"
-# 	],
-# }
+# S2.10 - cola asincrona de e-CF. Sin proveedor real todavia (S2.7,
+# bloqueado por D20) estos crons no tienen a quien llamar y no hacen
+# nada (korvexcio.ecf.tasks._resolve_provider_for_company devuelve None);
+# quedan corriendo para que S2.7 no tenga que inventarlos.
+scheduler_events = {
+    "cron": {
+        "*/5 * * * *": ["korvexcio.ecf.tasks.retry_pending_ecf"],
+        "*/15 * * * *": ["korvexcio.ecf.tasks.poll_pending_status"],
+        "0 */6 * * *": ["korvexcio.ecf.tasks.refresh_provider_tokens"],
+    }
+}
 
 # Testing
 # -------

@@ -6,6 +6,8 @@ con un nombre inventado. Crear una Company provisiona un Chart of
 Accounts completo por default (verificado en el nodo, no asumido), asi
 que solo hacen falta un Customer y un Item de prueba."""
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -72,20 +74,18 @@ class TestSalesInvoiceHooks(IntegrationTestCase):
             ).insert()
 
         if not frappe.db.exists("Customer", CUSTOMER_WITH_RNC):
-            # Sales Invoice.tax_id tiene fetch_from=customer.tax_id y es
-            # read_only -- ERPNext lo re-fetchea en validate() y pisa
-            # cualquier valor puesto a mano en la factura. Para probar el
-            # camino E31 hay que ponerle el RNC al Customer, no a la
-            # factura.
+            # El RNC fiscal de Korvex vive en Customer.rnc, no en la factura.
             frappe.get_doc(
                 {
                     "doctype": "Customer",
                     "customer_name": CUSTOMER_WITH_RNC,
                     "customer_group": "Commercial",
                     "territory": "All Territories",
-                    "tax_id": "131234567",
+                    "rnc": "131234567",
                 }
             ).insert()
+        else:
+            frappe.db.set_value("Customer", CUSTOMER_WITH_RNC, "rnc", "131234567")
 
         if not frappe.db.exists("Item", ITEM):
             frappe.get_doc(
@@ -175,3 +175,28 @@ class TestSalesInvoiceHooks(IntegrationTestCase):
         si = self._new_invoice(rate=1500)
         self._submit_and_get_ecf(si)
         si.cancel()
+
+    def test_cancel_blocked_while_ecf_is_being_sent(self):
+        si = self._new_invoice(rate=1500)
+        ecf = self._submit_and_get_ecf(si)
+        frappe.db.set_value("ECF", ecf.name, "estado", "Enviando")
+        with self.assertRaises(frappe.ValidationError):
+            si.cancel()
+
+    def test_submit_enqueues_after_commit_without_calling_provider(self):
+        si = self._new_invoice(rate=1500)
+        with patch("frappe.enqueue") as enqueue:
+            ecf = self._submit_and_get_ecf(si)
+        enqueue.assert_called_once()
+        kwargs = enqueue.call_args.kwargs
+        self.assertTrue(kwargs["enqueue_after_commit"])
+        self.assertEqual(kwargs["queue"], "short")
+        self.assertEqual(kwargs["ecf_name"], ecf.name)
+
+    def test_rollback_does_not_enqueue_ecf(self):
+        si = self._new_invoice(rate=1500)
+        with patch("frappe.enqueue") as enqueue:
+            si.insert()
+            si.submit()
+            frappe.db.rollback()
+        enqueue.assert_not_called()

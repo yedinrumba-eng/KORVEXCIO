@@ -22,7 +22,7 @@ from __future__ import annotations
 import frappe
 
 RNC_REQUIRED_THRESHOLD = 250_000
-FINAL_ECF_STATES = {"Aceptado"}
+FINAL_ECF_STATES = {"Aceptado", "Enviando"}
 
 _ENCF_FLAG = "_korvexcio_reserved_encf"
 _TIPO_ECF_FLAG = "_korvexcio_tipo_ecf"
@@ -33,18 +33,33 @@ def _tipo_ecf_for(doc) -> str:
     (consumo). Norma 05-19 exige el RNC a partir de RD$250,000; por debajo
     de eso es el cliente quien decide si lo da. "E31"/"E32" (con prefijo)
     para calzar con el Select de Secuencia eNCF y de ECF."""
-    return "E31" if doc.tax_id else "E32"
+    return "E31" if _buyer_rnc(doc) else "E32"
+
+
+def _buyer_rnc(doc) -> str:
+    """Return the buyer identifier from Korvex's custom Customer field.
+
+    ``tax_id`` is retained as a migration fallback for existing ERPNext data;
+    new fiscal data is stored in the agreed ``Customer.rnc`` field.
+    """
+    if not doc.get("customer"):
+        return ""
+    values = frappe.db.get_value("Customer", doc.customer, ["rnc", "tax_id"], as_dict=True)
+    if not values:
+        return ""
+    return values.get("rnc") or values.get("tax_id") or ""
 
 
 def validate_rnc_threshold(doc, method=None) -> None:
     """Regla 9 de CLAUDE.md: el RNC se exige a partir de RD$250,000 --
     lo hace el sistema, no el criterio del cajero (Norma 05-19)."""
-    if doc.grand_total >= RNC_REQUIRED_THRESHOLD and not doc.tax_id:
+    amount_dop = getattr(doc, "base_grand_total", 0) or doc.grand_total
+    if amount_dop >= RNC_REQUIRED_THRESHOLD and not _buyer_rnc(doc):
         frappe.throw(
             frappe._(
                 "Ventas de RD${0} o más necesitan el RNC del comprador (Norma 05-19). "
                 "Esta factura es de RD${1}."
-            ).format(f"{RNC_REQUIRED_THRESHOLD:,}", f"{doc.grand_total:,.2f}"),
+            ).format(f"{RNC_REQUIRED_THRESHOLD:,}", f"{amount_dop:,.2f}"),
             frappe.ValidationError,
         )
 
@@ -96,7 +111,19 @@ def create_ecf_record(doc, method=None) -> None:
             "estado": "Pendiente",
         }
     )
-    ecf.insert()
+    # This is an internal record created by the trusted Sales Invoice hook;
+    # POS cashiers must not need direct ECF create permission.
+    ecf.insert(ignore_permissions=True)
+
+    # S2.10: el POS nunca espera a la DGII (CLAUDE.md regla 3). El job
+    # real corre despues del commit, en un worker aparte -- si la venta
+    # se revierte por cualquier razon, el job ni se encola.
+    frappe.enqueue(
+        "korvexcio.ecf.tasks.emitir_ecf",
+        queue="short",
+        enqueue_after_commit=True,
+        ecf_name=ecf.name,
+    )
 
 
 def block_cancel_if_accepted(doc, method=None) -> None:
@@ -107,7 +134,12 @@ def block_cancel_if_accepted(doc, method=None) -> None:
         {"reference_doctype": "Sales Invoice", "reference_name": doc.name},
         "estado",
     )
-    if estado in FINAL_ECF_STATES:
+    if estado == "Enviando":
+        frappe.throw(
+            frappe._("Esta factura tiene una emisión e-CF en curso. Espere el resultado antes de cancelar."),
+            frappe.ValidationError,
+        )
+    if estado == "Aceptado":
         frappe.throw(
             frappe._(
                 "Esta factura ya tiene un e-CF aceptado por la DGII. No se cancela: se anula (S2.11)."

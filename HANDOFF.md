@@ -1,5 +1,13 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
+> **Actualización 2026-08-31 — auditoría de continuación.** El nodo está en
+> S2.9 (`bb9d006`). S2.10 existe solo como cambios sin commit en DEV y queda
+> pausado. S2.9 fue devuelto por dos bloqueantes: el RNC se leía de la fuente
+> equivocada (`tax_id` en vez de `Customer.rnc`) y la creación de ECF exigía
+> permisos directos que un Cajero no tiene. Se corrigieron ambos en DEV, pero
+> falta desplegar y correr la suite en el nodo. S2.7 sigue siendo el próximo
+> gate formal: proveedor real, RNC y certificado. No avanzar a S2.11.
+
 > **Lo primero que se lee al retomar.** Escrito el 2026-08-31 en sesión de
 > descubrimiento (Cowork). Estado: **🟢 Fase 2 en curso: S2.1 COMPLETADO y
 > auditado (code-review + security-review, APROBADO, cero críticos/altos).**

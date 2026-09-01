@@ -66,7 +66,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Estado",
-   "options": "Pendiente\nAceptado\nRechazado\nContingencia\nAnulado",
+   "options": "Pendiente\nEnviando\nAceptado\nRechazado\nContingencia\nAnulado",
    "read_only": 1,
    "reqd": 1
   },

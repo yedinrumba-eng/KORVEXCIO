@@ -1955,8 +1955,8 @@ está resuelto — está anotado como abierto y sigue así.**
 - [x] S2.5 `ECF Integration Log` — secretos enmascarados de verdad (bug real de regex atrapado por el test)
 - [x] S2.6 `providers/base.py` — interfaz `FiscalProvider`, Result/Ok/Err, test con fake provider
 - [ ] S2.7 🔴 bloqueado por D20 (S0.9/S0.3) — el proveedor real
-- [x] S2.8 plantillas Jinja2 `ecf_32.xml`/`rfce.xml` — traducidas de laravel-dgii (MIT), SIN validar contra el XSD oficial (no lo tenemos, D20)
-- [x] S2.9 `hooks.py` de Sales Invoice — RNC ≥ RD$250,000, reserva eNCF, crea ECF, bloquea cancelar si Aceptado (D21: tipo por tax_id)
+- [~] S2.8 plantillas Jinja2 `ecf_32.xml`/`rfce.xml` — traducidas de laravel-dgii (MIT), SIN validar contra el XSD oficial (no lo tenemos, D20)
+- [~] S2.9 `hooks.py` de Sales Invoice — implementación auditada; correcciones de fuente RNC, permisos POS y moneda base escritas en DEV, pendientes de deploy y verificación
 - [ ] S2.10 → S2.15 (`docs/08-BLUEPRINT.md` §6)
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
@@ -1985,6 +1985,26 @@ KORVIS · sincronizar catálogo → base de conocimiento · planes y precios val
 contra el mercado RD · publicar los XSD + XML golden como repo público.
 
 ---
+
+### Auditoría y corrección S2.9 — 2026-08-31
+
+La auditoría independiente confirmó la suite existente (38 integration + 13
+unit, verde en el nodo `bb9d006`) y encontró dos bloqueantes en S2.9: la lógica
+leía `Customer.tax_id` en vez del campo acordado `Customer.rnc`, y `on_submit`
+creaba `ECF` con permisos del usuario POS aunque el Cajero no tiene create.
+El parche está escrito en DEV pero **SIN verificar en el nodo**: usa
+`Customer.rnc` con fallback de migración, compara el umbral contra
+`base_grand_total` y crea el registro interno con `ignore_permissions=True`.
+
+S2.10 queda pausado, sin commit ni deploy. En DEV se escribió el primer
+microslice (estado `Enviando` + claim atómico, TrackID conservado como
+`Pendiente`, guard de XML, validación de factura origen, redacción de errores,
+resolver por `company`, throttle Redis y cron de tokens), todavía **SIN
+verificar en Frappe**. La auditoría también dejó abiertos
+XML vacío, cancelación durante cola, idempotencia, aceptación prematura,
+rate-limit y pruebas reales de `enqueue_after_commit`; no se deben cerrar como
+resueltos hasta corregirlos. S2.8 permanece **PARCIAL** porque falta la
+validación contra el XSD oficial. S2.7 continúa bloqueado por D20/S0.9.
 
 ## Deuda técnica abierta
 
