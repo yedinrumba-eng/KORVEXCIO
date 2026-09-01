@@ -1,0 +1,25 @@
+[
+  {
+    "doctype": "Custom Field",
+    "name": "POS Settings-invoice_type",
+    "dt": "POS Settings",
+    "fieldname": "invoice_type",
+    "label": "Invoice Type",
+    "fieldtype": "Select",
+    "insert_after": "pos_profile",
+    "options": "POS Invoice\nSales Invoice",
+    "default": "Sales Invoice",
+    "description": "S4.2 -- POSNext (pos_next app) reemplaza el JSON nativo de POS Settings y se lleva este campo. erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry.fetch_invoice_type() lo lee via frappe.db.get_single_value() al someter CUALQUIER POS Closing Entry (S4.5, korvexcio/retail/cash_shift.py); sin el, ERPNext arroja ValidationError. Se restaura como Custom Field en vez de tocar pos_next o erpnext (regla 1)."
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "POS Settings-post_change_gl_entries",
+    "dt": "POS Settings",
+    "fieldname": "post_change_gl_entries",
+    "label": "Create Ledger Entries for Change Amount",
+    "fieldtype": "Check",
+    "insert_after": "invoice_type",
+    "default": "0",
+    "description": "S4.2 -- mismo problema que invoice_type: POSNext se lleva este campo tambien. erpnext...sales_invoice.py lo lee via frappe.get_single_value('POS Settings', 'post_change_gl_entries') al someter CUALQUIER Sales Invoice con is_pos=1, sin importar el frontend. Restaurado, no tocado erpnext/pos_next (regla 1)."
+  }
+]
