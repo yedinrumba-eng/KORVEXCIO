@@ -46,9 +46,9 @@
 
 **Deliverable:** selección de lotes por fecha de vencimiento ascendente, ignorando lotes agotados y vencidos según la política configurada, más alertas 90/60/30 días.
 
-- [ ] Test con dos lotes verifica que se elige primero el que vence antes.
+- [x] Test con dos lotes verifica que se elige primero el que vence antes.
 - [ ] Test de agotado/vencido verifica que no se recomiende inventario inválido.
-- [ ] Test de alertas verifica exactamente los umbrales 90, 60 y 30.
+- [x] Test de alertas verifica exactamente los umbrales 90, 60 y 30.
 - [ ] Ejecutar tests y lint; documentar y commit `feat: add FEFO batch selection and expiry alerts`.
 
 ### Task 3: S3.3 — verificación de edad y protección de PII

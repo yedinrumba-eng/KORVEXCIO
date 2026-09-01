@@ -2433,6 +2433,22 @@ la rama `feat/ecf` declarada en `apps.json`, no `main`.
 
 Siguiente slice: S3.2 — FEFO y alertas de vencimiento.
 
+## 2026-09-01 — S3.2: COMPLETADO Y VERIFICADO
+
+FEFO filtra lotes agotados y vencidos, ordena por vencimiento y usa el nombre
+como desempate estable. Las alertas asignan cada lote a una sola banda entre
+90, 60 y 30 días.
+
+Evidencia real:
+
+```text
+uvx pytest korvexcio/retail/test_fefo.py -q
+...                                                                      [100%]
+3 passed in 0.01s
+```
+
+Siguiente slice: S3.3 — verificación de edad y protección de PII.
+
 ## Deuda técnica abierta
 
 Ordenada por lo que más duele.

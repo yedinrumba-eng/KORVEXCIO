@@ -562,6 +562,11 @@ solo `docker builder prune -f` cuando no haya otro build activo. No usar
 nodo. La última limpieza dejó 36% de uso, 60 GB libres y KORVIS respondió con
 PostgreSQL y Redis en `ok`.
 
+**S3.2 cerrado el 2026-09-01.** `korvexcio/retail/fefo.py` filtra y ordena
+lotes FEFO y agrupa alertas sin duplicar lotes entre bandas. Prueba real:
+`uvx pytest korvexcio/retail/test_fefo.py -q` → `3 passed in 0.01s`.
+Siguiente: S3.3.
+
 ## Nivel de confianza de este documento
 
 Regla de `_KORVEX-OPS`: **cero datos inventados.** Lo que no se pudo verificar
