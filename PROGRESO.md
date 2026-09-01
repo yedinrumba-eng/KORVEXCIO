@@ -1957,7 +1957,7 @@ está resuelto — está anotado como abierto y sigue así.**
 - [ ] S2.7 🔴 bloqueado por D20 (S0.9/S0.3) — el proveedor real
 - [~] S2.8 plantillas Jinja2 `ecf_32.xml`/`rfce.xml` — traducidas de laravel-dgii (MIT), SIN validar contra el XSD oficial (no lo tenemos, D20)
 - [~] S2.9 `hooks.py` de Sales Invoice — implementación auditada; correcciones de fuente RNC, permisos POS y moneda base escritas en DEV, pendientes de deploy y verificación
-- [ ] S2.10 → S2.15 (`docs/08-BLUEPRINT.md` §6)
+- [x] S2.10 `frappe.enqueue` after commit + retry/poll/token crons — claim atómico, estado Enviando, XML obligatorio, factura origen validada, throttle Redis, redacción de errores y pruebas de commit/rollback; verificado en nodo `bc52c49`
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
 sites, con cola asíncrona y contingencia probadas cortando la red. Más `/secure-vibe`
@@ -2026,3 +2026,13 @@ Ordenada por lo que más duele.
 | ⚪ | Warnings de Vite en el build de POSNext/URY | No producen fallo observable | Se revisan solo si rompen algo observable |
 | 🟡 | **`ecf_32.xml`/`rfce.xml` (S2.8) NO están validados contra el XSD oficial de la DGII** — solo confirmado bien-formado y fiel a la estructura de una referencia MIT en producción (laravel-dgii), no al schema real | `validate_well_formed()` confirma que parsea; la fidelidad de tags/orden viene de una implementación real, no inventada | Bajar el XSD oficial del portal de la DGII y re-validar en cuanto S0.9/S2.7 se desbloqueen (D20) — antes de S5.4 |
 | ⚪ | **6 hallazgos de `ruff` en código de S2.2/S1.8** (`DTZ011` ×5 en `dgii_digital_certificate.py`/su test, `BLE001` ×1 en `test_isolation.py:231`) — aparecieron entre S2.5 y S2.6 sin cambiar ese código, probablemente por `ruff:latest` sin fijar por SHA | Ninguna — el código funciona, es solo lint | Fijar la imagen de ruff por digest y limpiar los 6 hallazgos en un slice de mantenimiento, no mezclado con fiscal |
+
+### S2.10 — cierre verificado 2026-09-01
+
+Se desplegó `bc52c49ec888079a22f41c0d8e54abe8be03e46f` en el nodo. La suite
+completa pasó: 54 integration tests en 14.460s (`OK (skipped=1)`) y 13 tests
+unit en 0.445s (`OK`). `systemctl is-active korvex-api` devolvió `active`,
+`/health` confirmó PostgreSQL y Redis en `ok`, y `/` quedó en 39% de uso.
+
+S2.10 queda cerrado para estructura y cola. La emisión DGII real no se simuló y
+permanece condicionada al proveedor real de S2.7.
