@@ -2781,3 +2781,70 @@ S4.3/S4.4 necesitan hardware físico o un frontend real para probar
 contra. Revisar con Yedin si conviene saltar a S4.5 (turno de caja /
 POS Closing Entry), que sí es 100% backend y no depende del frontend
 ganador.
+
+---
+
+## 2026-09-01 — S4.5: turno de caja / POS Closing Entry, arqueo por método de pago
+
+**Estado:** COMPLETADO. Yedin autorizó continuar sin bloqueos ("dale con
+todo") y completar Fase 4 entera. S4.5 es 100% backend — no depende de
+la decisión de frontend pendiente en S4.2.
+
+**Qué se escribió:**
+- `korvexcio/retail/cash_shift.py` — `open_shift()`/`close_shift()`,
+  envoltorios de `POS Opening Entry`/`POS Closing Entry` nativos de
+  ERPNext. El arqueo por método de pago usa la propia
+  `erpnext...pos_closing_entry.make_closing_entry_from_opening()` (suma
+  facturas reales del período); este módulo solo llena el saldo inicial
+  y lo que el cajero contó al cerrar, y calcula `difference` de forma
+  explícita.
+- `korvexcio/isolation.py` — `"POS Opening Entry"`/`"POS Closing Entry"`
+  entran a `COMPANY_SCOPED_DOCTYPES`.
+- `korvexcio/roles.py` — permisos de turno (Cajero create/read/write/
+  submit, Dueño +cancel, Contador solo lectura).
+- `korvexcio/retail/test_cash_shift.py` — reconciliación exacta, faltante
+  real detectado (`difference` negativo), y aislamiento entre Companies.
+
+**Hallazgo real escribiendo el test (no de seguridad, de permisos):**
+al someter la PRIMERA venta de todo el proyecto como un Cajero real (no
+Administrator), ERPNext rechazó por falta de permiso de lectura sobre
+`Account`, `Customer` e `Item` — ningún rol propio los tenía. Corregido
+en `roles.py`. Mismo patrón que el hallazgo de Fase 3 con `Sales
+Invoice`: nadie lo había notado porque todo se probaba como
+Administrator.
+
+**`/security-review` (obligatorio por blueprint), 1 hallazgo real:**
+`open_shift()`/`close_shift()` usaban `frappe.get_doc()` sobre nombres
+que el llamante controla (`pos_profile`, `pos_opening_entry`) —
+`get_doc()` no chequea permiso de lectura (la lección de S1.8). Frappe
+sí bloqueaba la inserción final por Company ajena, pero
+`make_closing_entry_from_opening()` ya había consultado las facturas
+reales de la otra Company en memoria antes de ese punto. Arreglado con
+`doc.has_permission("read")` explícito antes de tocar el documento —
+mismo patrón que el fix de `reports.py` en Fase 3 (regla 12b: no
+confiar en la capa de abajo para aislamiento entre Companies).
+
+**GREEN y operación, salida real:**
+
+```text
+bench run-tests --app korvexcio --test-category all
+Ran 85 tests in 27.5s -> OK (skipped=1)
+Ran 30 tests in 0.7s -> OK
+  (115/115 total, subiendo de 111)
+
+ruff check retail/cash_shift.py retail/test_cash_shift.py -> All checks passed!
+grep "ignore_permissions=True|frappe.db.sql(" -> sin coincidencias reales
+
+curl http://127.0.0.1:4000/health -> {"status":"ok",...}
+df -h / -> 56G avail, 41%
+
+git push origin feat/ecf -> fbe9828..b6e8359 (feat + fix del security-review)
+nodo: git fetch && git reset --hard origin/feat/ecf -> HEAD b6e8359 (verificado)
+```
+
+**Siguiente:** S4.2 (campos fiscales en pantalla de caja). Requiere
+decidir el frontend real. El backend YA bloquea una venta ≥
+RD$250,000 sin RNC desde S2.9 (`validate_rnc_threshold`,
+`test_rnc_required_above_threshold`) — eso corre a nivel de documento
+Frappe, no depende de qué pantalla lo dispare. Lo que falta de S4.2 es
+puramente de UI: mostrarlo en la pantalla de caja real.
