@@ -77,10 +77,15 @@ app_license = "gpl-3.0"
 # ----------
 
 # add methods and filters to jinja environment
-# jinja = {
-# 	"methods": "korvexcio.utils.jinja_methods",
-# 	"filters": "korvexcio.utils.jinja_filters"
-# }
+# S2.12 - korvexcio_ecf_for_invoice/korvexcio_qr_data_uri, para el print
+# format "Representacion Impresa" (korvexcio_qr_data_uri usa PyQRCode,
+# ya presente en el bench para el 2FA de Frappe -- sin dependencia nueva).
+jinja = {
+    "methods": [
+        "korvexcio.ecf.jinja_methods.korvexcio_ecf_for_invoice",
+        "korvexcio.ecf.jinja_methods.korvexcio_qr_data_uri",
+    ]
+}
 
 # Installation
 # ------------
