@@ -56,6 +56,19 @@ class TestECF(IntegrationTestCase):
         ecf.reload()
         self.assertEqual(ecf.docstatus, 1)
 
+    def test_signed_xml_is_preserved_byte_for_byte(self):
+        """Hallazgo real de S2.11 aplicado retroactivamente aqui: sin
+        ignore_xss_filter=1, Frappe sanitiza signed_xml como si fuera
+        HTML (bs4), corrompiendo en silencio un XML firmado -- invalida
+        la firma digital sin ningun error visible mientras el resultado
+        no quede vacio del todo."""
+        original = '<ECF><Encabezado><IdDoc><eNCF>E320000001234</eNCF></IdDoc></Encabezado></ECF>'
+        ecf = self._make_ecf(estado="Pendiente")
+        ecf.signed_xml = original
+        ecf.save()
+        ecf.reload()
+        self.assertEqual(ecf.signed_xml, original)
+
     def test_delete_aceptado_ecf_blocked_even_forced(self):
         ecf = self._make_ecf(estado="Pendiente")
         ecf.submit()

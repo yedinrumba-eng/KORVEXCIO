@@ -31,6 +31,7 @@ COMPANY_SCOPED_DOCTYPES = {
     "Secuencia eNCF",
     "ECF",
     "ECF Integration Log",
+    "ECF Contingencia",
 }
 
 
