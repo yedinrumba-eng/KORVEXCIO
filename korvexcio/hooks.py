@@ -159,7 +159,17 @@ doc_events = {
         # korvexcio.isolation.freeze_company filtra por doctype adentro,
         # asi que "*" es seguro: no hace nada en doctypes sin `company`.
         "validate": "korvexcio.isolation.freeze_company",
-    }
+    },
+    # S2.9 - Sales Invoice es de ERPNext, no se toca (regla 1). Todo entra
+    # por aqui, nunca por override_doctype_class. El POS nunca espera a la
+    # DGII para cerrar una venta: estos hooks son 100% locales, la llamada
+    # real al proveedor la dispara la cola asincrona de S2.10.
+    "Sales Invoice": {
+        "validate": "korvexcio.ecf.sales_invoice_hooks.validate_rnc_threshold",
+        "before_submit": "korvexcio.ecf.sales_invoice_hooks.reserve_encf",
+        "on_submit": "korvexcio.ecf.sales_invoice_hooks.create_ecf_record",
+        "before_cancel": "korvexcio.ecf.sales_invoice_hooks.block_cancel_if_accepted",
+    },
 }
 
 # Scheduled Tasks
