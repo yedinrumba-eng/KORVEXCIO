@@ -52,6 +52,11 @@ def create_item_template_and_variants(
     if not is_vertical_enabled():
         frappe.throw("Retail vertical is disabled for this site")
     template_name = _clean_text(template.get("item_code"), "template item_code", 140)
+    configured_attributes = _attribute_configs(get_retail_config())
+    attribute_rows = [
+        {"attribute": _clean_text(config.get("name"), "attribute name", 140)}
+        for config in configured_attributes
+    ]
     if frappe.db.exists("Item", template_name):
         item_template = frappe.get_doc("Item", template_name)
     else:
@@ -65,17 +70,11 @@ def create_item_template_and_variants(
                 "is_stock_item": 0,
                 "has_variants": 1,
                 "variant_based_on": "Item Attribute",
+                "attributes": attribute_rows,
             }
         ).insert()
 
-    configured_attributes = _attribute_configs(get_retail_config())
-    item_template.set(
-        "attributes",
-        [
-            {"attribute": _clean_text(config.get("name"), "attribute name", 140)}
-            for config in configured_attributes
-        ],
-    )
+    item_template.set("attributes", attribute_rows)
     item_template.save()
 
     from erpnext.controllers.item_variant import create_variant
