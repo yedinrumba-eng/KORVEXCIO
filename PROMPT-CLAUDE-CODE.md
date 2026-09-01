@@ -1,9 +1,9 @@
 # Prompt para arrancar una sesión nueva
 
 > Copiar y pegar tal cual al abrir **Claude Code** o **Codex** en esta carpeta.
-> Actualizado el 2026-08-31 al cerrar **S2.1 (`DGII Settings`)**. El próximo
-> slice es **S2.2 (`DGII Digital Certificate`)**; S2.7 sigue siendo donde
-> S0.9/S0.3 paran de verdad si continúan sin resolver.
+> Actualizado el 2026-09-01 al cerrar **S2.10 (cola asíncrona)**. El próximo
+> paso formal es **S2.7 (proveedor real)**, bloqueado hasta resolver S0.9/S0.3
+> con proveedor, RNC y certificado. No comenzar S2.11.
 >
 > **Este archivo se actualiza al cerrar cada slice.** Si el prompt de abajo
 > ya no coincide con `PROGRESO.md`, gana `PROGRESO.md` — y hay que corregir
@@ -36,16 +36,10 @@ LEE EN ESTE ORDEN, completo, antes de proponer nada:
 EL RELOJ: 15/11/2026, e-CF obligatorio para pequeños/micro/no clasificados
 (Ley 32-23). Multa 5-50 salarios mínimos. Todo lo demás se difiere; esto no.
 
-TU SLICE: S2.2 — DocType `DGII Digital Certificate`: `certificate`
-(**Attach**), `password` (**Password**, nunca `Data`), `company` (Link) y
-`valid_until`, con aviso de vencimiento en `validate()`. NADA MÁS — no
-adelantes S2.3 (Secuencia eNCF).
-
-EL CHECKOUT YA TIENE TRABAJO NO COMMITTEADO DE S2.2 dejado por la sesión
-anterior: `korvexcio/isolation.py` modificado y
-`korvexcio/ecf/doctype/dgii_digital_certificate/` sin trackear. Esos cambios
-son de S2.2: revísalos y continúa desde ahí. NO hagas reset, stash, clean ni
-cambio de rama que los borre. S2.1 está empujado en `origin/feat/ecf`.
+TU ESTADO: S2.10 está cerrado y desplegado en `bc52c49` (suite 54 integration
++ 13 unit verde). S2.7 sigue bloqueado: no inventes proveedor ni emisión de
+prueba. Si el proveedor/RNC/certificado todavía no están disponibles, trabaja
+solo en documentación o deuda técnica aprobada; no avances a S2.11.
 
 ANTES DE ESCRIBIR CÓDIGO FISCAL: revisa si S0.9/S0.3 se resolvieron
 (¿respondió algún proveedor? ¿hay RNC+certificado?). Si NO, sigue de todos
@@ -148,13 +142,11 @@ backup, la app korvexcio (GPLv3, roles, custom fields) y la barrera de
 aislamiento (freeze_company + 9 escenarios verdes) ya están de pie. No los
 reconstruyas.
 
-Fase 0, Fase 1 y S2.1 cerradas. Tu slice es S2.2: DGII Digital Certificate
-con certificate=Attach, password=Password, company y valid_until + aviso en
-validate(). El checkout ya contiene trabajo no committeado de S2.2: no lo
-borres. Prueba que la clave no sale en texto plano por REST y que Company A
-no puede leer/descargar el .p12 de B. frappe.get_doc() no chequea permisos
-de lectura: usa doc.check_permission("read") o frappe.client.get() en todo
-método whitelisted.
+S2.10 está cerrado y desplegado en `bc52c49`; la suite pasó 54 integration +
+13 unit. El siguiente paso formal es S2.7, bloqueado hasta tener proveedor
+real, RNC y certificado. No avances a S2.11 ni inventes una emisión de prueba.
+frappe.get_doc() no chequea permisos de lectura: usa doc.check_permission("read")
+o frappe.client.get() en todo método whitelisted.
 
 Un slice a la vez. Sin la salida real del comando, no se declara nada cerrado.
 En ese nodo corre KORVIS en producción con un banco en vivo: no se toca su
