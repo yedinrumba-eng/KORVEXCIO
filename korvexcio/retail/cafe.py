@@ -15,17 +15,26 @@ def sync_cafe_catalog() -> list[str]:
     if not is_vertical_enabled() or config.get("cafe", {}).get("enabled") is not True:
         return []
     cafe = config.get("cafe", {})
+    # Bug real (2026-09-01, encontrado corriendo esto en Frappe de verdad,
+    # no en revision): un site tiene DOS Companies (D19/D14 -- la
+    # cafeteria es una de las dos, no las dos), y BOM exige `company`.
+    # sync_cafe_catalog() nunca lo pasaba -- ERPNext lo rechazaba con
+    # "Please select a Company first." en cuanto se creaba un BOM real.
+    company = cafe.get("company")
+    if not company:
+        frappe.throw("korvexcio_retail.cafe.company is required when cafe is enabled")
     created: list[str] = []
     for product in cafe.get("products", []):
         finished = _ensure_item(product["item_code"], product["item_name"], product.get("item_group", "Products"))
         for ingredient in product.get("ingredients", []):
             _ensure_item(ingredient["item_code"], ingredient["item_name"], ingredient.get("item_group", "Raw Material"))
-        bom_name = frappe.db.exists("BOM", {"item": finished, "is_active": 1, "is_default": 1})
+        bom_name = frappe.db.exists("BOM", {"item": finished, "company": company, "is_active": 1, "is_default": 1})
         if not bom_name:
             bom = frappe.get_doc(
                 {
                     "doctype": "BOM",
                     "item": finished,
+                    "company": company,
                     "quantity": product.get("quantity", 1),
                     "is_active": 1,
                     "is_default": 1,

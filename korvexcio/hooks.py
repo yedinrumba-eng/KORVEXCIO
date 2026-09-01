@@ -178,7 +178,9 @@ doc_events = {
         ],
         "before_submit": [
             "korvexcio.ecf.sales_invoice_hooks.reserve_encf",
-            "korvexcio.retail.age_verification.consume_invoice_age_token",
+            # S3.3 security-review (2026-09-01): el claim atomico (Redis
+            # GETDEL) es la barrera real, no el peek de validate() arriba.
+            "korvexcio.retail.age_verification.claim_invoice_age_token",
         ],
         "on_submit": "korvexcio.ecf.sales_invoice_hooks.create_ecf_record",
         "before_cancel": "korvexcio.ecf.sales_invoice_hooks.block_cancel_if_accepted",

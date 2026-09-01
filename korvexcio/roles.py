@@ -22,6 +22,17 @@ DUENO_USER_PERMS = {
 
 BASIC_READ = {"read": 1}
 
+CAJERO_ROLES = ["Cajero VLJ", "Cajero ESE"]
+
+# Hallazgo real (2026-09-01): ningun rol propio tenia NINGUN permiso sobre
+# Sales Invoice -- ni siquiera leer. Paso desapercibido porque S2.9 en
+# adelante siempre probo como Administrator. Un Cajero real no podia ni
+# ver el formulario de venta. Un Cajero somete la venta (S2.9) pero nunca
+# la cancela libremente -- eso es control de caja, va a Dueño.
+CAJERO_SALES_INVOICE_PERMS = {"create": 1, "read": 1, "write": 1, "submit": 1}
+DUENO_SALES_INVOICE_PERMS = {"create": 1, "read": 1, "write": 1, "submit": 1, "cancel": 1}
+CONTADOR_SALES_INVOICE_PERMS = {"read": 1}
+
 
 def sync_roles():
     for role in ROLES:
@@ -35,6 +46,11 @@ def sync_roles():
 
     for role in ROLES:
         ensure_doc_perm("Company", role, BASIC_READ)
+
+    for role in CAJERO_ROLES:
+        ensure_doc_perm("Sales Invoice", role, CAJERO_SALES_INVOICE_PERMS)
+    ensure_doc_perm("Sales Invoice", "Dueño", DUENO_SALES_INVOICE_PERMS)
+    ensure_doc_perm("Sales Invoice", "Contador", CONTADOR_SALES_INVOICE_PERMS)
 
     frappe.db.commit()
 

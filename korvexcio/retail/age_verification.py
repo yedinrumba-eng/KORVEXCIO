@@ -6,7 +6,7 @@ import base64
 import hashlib
 import json
 import os
-import re
+import pickle
 import secrets
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
@@ -16,7 +16,6 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 MINIMUM_AGE = 18
 _RD_TZ = ZoneInfo("America/Santo_Domingo")
-MASKED_ID = re.compile(r"^\*\*\*-\*\*(?P<tail>\d{2})$")
 
 
 def requires_age_verification(item_group: str) -> bool:
@@ -29,7 +28,14 @@ def issue_age_token(item_codes: list[str], birth_date: str) -> str:
     """Issue a short-lived token bound to the current user and regulated Items."""
     if not isinstance(item_codes, list) or not item_codes:
         frappe.throw("At least one Item is required for age verification")
-    parsed_date = date.fromisoformat(birth_date)
+    try:
+        parsed_date = date.fromisoformat(birth_date)
+    except (TypeError, ValueError):
+        # Security-review finding (2026-09-01): an unhandled ValueError here
+        # echoes the raw birth_date string -- PII -- into the exception
+        # message, which Frappe's Error Log stores unmasked. Never let the
+        # raw input reach a log; always throw a generic message instead.
+        frappe.throw("Fecha de nacimiento invalida")
     if not verify_age(parsed_date):
         frappe.throw("La persona no cumple la edad minima")
     regulated_codes = []
@@ -48,13 +54,21 @@ def issue_age_token(item_codes: list[str], birth_date: str) -> str:
     return token
 
 
-def validate_invoice_age(invoice) -> None:
-    """Reject regulated sales without a server-issued token for these Items."""
+def _regulated_item_codes(invoice) -> list[str]:
     regulated_codes = []
     for row in invoice.items:
         item_group = frappe.db.get_value("Item", row.item_code, "item_group")
         if item_group and requires_age_verification(item_group):
             regulated_codes.append(row.item_code)
+    return regulated_codes
+
+
+def validate_invoice_age(invoice) -> None:
+    """Early, non-destructive check for fast feedback on save -- NOT the
+    security boundary. Two documents can share a copied token value and
+    both pass this peek; claim_invoice_age_token() (before_submit) is what
+    actually enforces one-time use."""
+    regulated_codes = _regulated_item_codes(invoice)
     if not regulated_codes:
         return
     token = getattr(invoice, "age_verification_token", "")
@@ -65,10 +79,35 @@ def validate_invoice_age(invoice) -> None:
         frappe.throw("La verificacion de edad no corresponde a los Items de la venta")
 
 
-def consume_invoice_age_token(invoice) -> None:
-    """Consume a verified token when a regulated invoice is submitted."""
-    if getattr(invoice, "age_verification_token", ""):
-        frappe.cache().delete_value(_token_key(invoice.age_verification_token))
+def claim_invoice_age_token(invoice) -> None:
+    """Atomically check-and-consume the token at the moment the sale
+    actually becomes final. Security-review finding (2026-09-01): the
+    previous design split the check (validate) from the consume
+    (before_submit) as two separate steps -- a duplicated draft carrying
+    the same token value could pass the check on both copies before
+    either one deleted it. Redis GETDEL makes this one atomic server-side
+    operation: whichever submit reaches it first wins the token; every
+    other document with the same value finds nothing left, same pattern
+    as tasks.py::_claim_ecf (S2.10)."""
+    regulated_codes = _regulated_item_codes(invoice)
+    if not regulated_codes:
+        return
+    token = getattr(invoice, "age_verification_token", "")
+    payload = _claim_token(token)
+    if not isinstance(payload, dict) or payload.get("user") != frappe.session.user:
+        frappe.throw("Verificacion de edad requerida antes de vender este Item")
+    if payload.get("items") != _items_digest(regulated_codes):
+        frappe.throw("La verificacion de edad no corresponde a los Items de la venta")
+
+
+def _claim_token(token: str) -> dict | None:
+    if not token:
+        return None
+    cache = frappe.cache()
+    raw = cache.getdel(cache.make_key(_token_key(token)))
+    if raw is None:
+        return None
+    return pickle.loads(raw)
 
 
 def verify_age(birth_date: date, today: date | None = None, minimum_age: int = MINIMUM_AGE) -> bool:

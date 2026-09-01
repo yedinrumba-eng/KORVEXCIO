@@ -17,10 +17,39 @@ def _rd_today() -> date:
 
 
 def company_filter(filters: dict[str, Any]) -> str:
+    """Real bug found by an isolation test, not by review (2026-09-01):
+    every function below uses frappe.get_all(), which -- unlike
+    frappe.get_list() -- IGNORES PERMISSIONS BY DEFAULT. The explicit
+    `company` filter was never a real barrier: a Cajero restricted to
+    Company A could just type Company B into the report's own filter and
+    see B's real sales. Regla 12b exists for exactly this: never trust
+    the ORM's own filtering, check explicitly. This is the one place
+    every report and the dashboard funnel through, so the check lives
+    here once, not duplicated four times."""
     company = filters.get("company")
     if not isinstance(company, str) or not company.strip():
         frappe.throw("Company is required")
-    return company.strip()
+    company = company.strip()
+    _assert_user_may_view_company(company)
+    return company
+
+
+def _assert_user_may_view_company(company: str) -> None:
+    if "System Manager" in frappe.get_roles():
+        return
+    allowed_companies = frappe.get_all(
+        "User Permission",
+        filters={"user": frappe.session.user, "allow": "Company"},
+        pluck="for_value",
+    )
+    # Sin ninguna fila de User Permission sobre Company, el usuario no
+    # esta acotado por diseno (p.ej. sesiones de servicio) -- no negar
+    # por ausencia, solo cuando SI esta acotado a otra cosa distinta.
+    if allowed_companies and company not in allowed_companies:
+        frappe.throw(
+            frappe._("No tienes acceso a los datos de {0}.").format(company),
+            frappe.PermissionError,
+        )
 
 
 def sold_invoice_names(company: str, from_date: str | None = None) -> list[str]:
@@ -31,6 +60,7 @@ def sold_invoice_names(company: str, from_date: str | None = None) -> list[str]:
 
 
 def daily_sales(company: str, target_date: str | None = None) -> dict[str, float]:
+    _assert_user_may_view_company(company)
     posting_date = target_date or today()
     rows = frappe.get_all(
         "Sales Invoice",
@@ -45,6 +75,7 @@ def daily_sales(company: str, target_date: str | None = None) -> dict[str, float
 
 
 def stock_dead(company: str, days: int = 90) -> list[dict[str, Any]]:
+    _assert_user_may_view_company(company)
     cutoff = (_rd_today() - timedelta(days=days)).isoformat()
     invoice_names = sold_invoice_names(company, cutoff)
     sold_codes = {
@@ -68,6 +99,7 @@ def stock_dead(company: str, days: int = 90) -> list[dict[str, Any]]:
 
 
 def margin_by_category(company: str, from_date: str | None = None) -> list[dict[str, Any]]:
+    _assert_user_may_view_company(company)
     names = sold_invoice_names(company, from_date)
     if not names:
         return []
@@ -88,6 +120,7 @@ def margin_by_category(company: str, from_date: str | None = None) -> list[dict[
 
 
 def turnover(company: str, from_date: str | None = None) -> list[dict[str, Any]]:
+    _assert_user_may_view_company(company)
     names = sold_invoice_names(company, from_date)
     if not names:
         return []
@@ -105,6 +138,7 @@ def turnover(company: str, from_date: str | None = None) -> list[dict[str, Any]]
 
 
 def expiring_stock(company: str, days: int = 90) -> list[dict[str, Any]]:
+    _assert_user_may_view_company(company)
     warehouses = {
         row.name
         for row in frappe.get_all("Warehouse", filters={"company": company}, fields=["name"])
