@@ -2149,6 +2149,42 @@ venta se pierde en silencio).
 
 ---
 
+## 2026-09-01 — S2.14: COMPLETADO — reporte "e-CF Pendientes"
+
+**Estado:** COMPLETADO. Script Report (no Query Report — sin SQL crudo,
+regla 12b) que junta `ECF` en `Pendiente`/`Enviando` (S2.10) y
+`ECF Contingencia` en cualquier estado que no sea `Aceptado` (S2.11) en
+una sola vista, ordenada por antigüedad (lo más viejo primero). Es la
+regla 4 del `CLAUDE.md` global hecha reporte: "ninguna venta se pierde
+en silencio, y lo pendiente vive en un panel visible, nunca solo en un
+log".
+
+`frappe.get_all()` respeta permisos/User Permission nativos, y **además**
+el reporte filtra por `company` explícito cuando se pasa como filtro —
+defensa en profundidad, exactamente lo que pide la regla 12b ("los
+reportes propios filtran por company explícitamente, no se confía en que
+User Permission lo haga solo") y exactamente el hueco que explotó el PR
+`frappe/erpnext#44695` en los estados financieros de ERPNext.
+
+**Verificación, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Ran 71 tests in 17.251s -> OK (skipped=1)
+Ran 20 tests in 0.709s -> OK
+(91 tests totales, subiendo de 87)
+
+ruff check -> All checks passed!
+semgrep (regla propia) -> Findings: 2 (los mismos ya justificados desde S2.10, ninguno nuevo)
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, 39%, sin cambio
+git rev-parse HEAD (nodo) == 8e01285 == origin/feat/ecf (SHA verificado)
+```
+
+**Siguiente:** S2.15 — suite completa de tests estilo India
+(`IntegrationTestCase` + `responses` + `time_machine` + `@change_settings`),
+el cierre de Fase 2.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -2208,6 +2244,8 @@ está resuelto — está anotado como abierto y sigue así.**
 - [x] S2.11 `ECF Contingencia` — patrón ZATCA Precomputed Invoice, on_trash/before_cancel siempre bloqueados; 2 bugs reales de Frappe con XML en Long Text encontrados y corregidos (también en ECF de S2.4)
 - [x] S2.12 Print format "Representación Impresa e-CF" con QR (PyQRCode, ya instalado) — QR real cuando hay `qr_url`, placeholder claro mientras S2.7 siga bloqueado
 - [x] S2.13 E31/E34 sobre la misma plantilla que E32 (`ecf.xml`) — D21 ampliada: `is_return` → E34 siempre
+- [x] S2.14 Reporte "e-CF Pendientes" — ECF + ECF Contingencia sin resolver, ordenado por antigüedad, filtro de company explícito
+- [ ] S2.15 — suite completa estilo India, cierre de Fase 2
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
 sites, con cola asíncrona y contingencia probadas cortando la red. Más `/secure-vibe`
