@@ -567,6 +567,41 @@ lotes FEFO y agrupa alertas sin duplicar lotes entre bandas. Prueba real:
 `uvx pytest korvexcio/retail/test_fefo.py -q` → `3 passed in 0.01s`.
 Siguiente: S3.3.
 
+### Punto exacto para continuar en Claude Code — 2026-09-01
+
+S3.3 tiene el código de cobertura server-side en
+`korvexcio/retail/test_age_verification.py`. El commit `3959791` (`test: cover
+server-side age invoice gate`) ya está empujado a `origin/feat/ecf`.
+
+El build remoto de `korvexcio:16` terminó correctamente:
+
+```text
+#19 naming to docker.io/library/korvexcio:16 done
+#19 unpacking to docker.io/library/korvexcio:16 37.1s done
+#19 DONE 116.3s
+```
+
+S3.3 sigue **SIN verificar**. No se redeployó: el intento de
+`up -d --force-recreate` fue detenido porque reinicia todo el stack compartido.
+Claude Code debe pedir autorización explícita antes de tocar el nodo. Si Yedin
+autoriza, recrear solo `backend` con `up -d --no-deps backend` y ejecutar:
+
+```bash
+docker compose -p korvexcio --project-directory . -f compose.yaml -f overrides/compose.mariadb.yaml -f overrides/compose.redis.yaml -f compose.s05.yaml exec -T backend bench --site korvexcio.korvexdev.cc run-tests --module korvexcio.retail.test_age_verification
+```
+
+No cerrar S3.3 sin la salida real de Bench. La prueba local no aplica en
+Windows porque falta Frappe (`ModuleNotFoundError: No module named 'frappe'`).
+
+La limpieza del nodo ya se hizo solo con `docker builder prune -f`: `/` quedó
+en 36%, con `34G` usados y `60G` libres; Build Cache `9.14GB`, `0B` reclamable;
+los cuatro servicios de KORVIS quedaron `active`; `/health` devolvió
+`{"status":"ok","checks":{"postgres":"ok","redis":"ok"}}`. Prohibido
+usar `docker system prune -a`.
+
+Después de verificar S3.3, documentar la salida aquí y en `PROGRESO.md`, hacer
+commit/push de esa documentación y continuar con S3.4, un slice a la vez.
+
 ## Nivel de confianza de este documento
 
 Regla de `_KORVEX-OPS`: **cero datos inventados.** Lo que no se pudo verificar
