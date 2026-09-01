@@ -1,12 +1,13 @@
-{
-  "Item Group": [
-    {
+[
+  {
+    "doctype": "Custom Field",
+    "name": "Item Group-requiere_verificacion_edad",
+    "dt": "Item Group",
       "fieldname": "requiere_verificacion_edad",
       "label": "Requiere verificacion de edad",
       "fieldtype": "Check",
       "insert_after": "is_group",
       "default": "0",
       "description": "El servidor exige comprobacion de edad para vender Items de este grupo."
-    }
-  ]
-}
+  }
+]

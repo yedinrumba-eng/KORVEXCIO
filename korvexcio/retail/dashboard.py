@@ -11,7 +11,7 @@ from korvexcio.retail.reports import daily_sales, expiring_stock
 @frappe.whitelist()
 def get_dashboard_data() -> dict[str, object]:
     """Return dashboard data only for the logged-in owner's permitted Companies."""
-    if not frappe.has_role("Dueño"):
+    if "Dueño" not in frappe.get_roles():
         frappe.throw("Only Dueño can open the consolidated dashboard", frappe.PermissionError)
     companies = [
         row.for_value

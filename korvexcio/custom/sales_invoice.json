@@ -1,6 +1,8 @@
-{
-  "Sales Invoice": [
-    {
+[
+  {
+    "doctype": "Custom Field",
+    "name": "Sales Invoice-age_verification_token",
+    "dt": "Sales Invoice",
       "fieldname": "age_verification_token",
       "label": "Age Verification Token",
       "fieldtype": "Data",
@@ -8,6 +10,5 @@
       "read_only": 1,
       "no_copy": 1,
       "insert_after": "customer"
-    }
-  ]
-}
+  }
+]

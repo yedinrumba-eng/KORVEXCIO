@@ -15,6 +15,12 @@ def sync_custom_fields():
     for path in sorted(CUSTOM_DIR.glob("*.json")):
         with open(path, encoding="utf-8") as f:
             fields = json.load(f)
-        create_custom_fields(fields)
+        if isinstance(fields, list):
+            grouped = {}
+            for field in fields:
+                grouped.setdefault(field["dt"], []).append(field)
+            create_custom_fields(grouped)
+        else:
+            create_custom_fields(fields)
 
     frappe.db.commit()

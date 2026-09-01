@@ -1,6 +1,8 @@
-{
-  "Customer": [
-    {
+[
+  {
+    "doctype": "Custom Field",
+    "name": "Customer-tipo_identificacion",
+    "dt": "Customer",
       "fieldname": "tipo_identificacion",
       "label": "Tipo de identificacion",
       "fieldtype": "Select",
@@ -8,13 +10,15 @@
       "insert_after": "tax_id",
       "default": "RNC",
       "reqd": 0
-    },
-    {
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Customer-rnc",
+    "dt": "Customer",
       "fieldname": "rnc",
       "label": "RNC / Cedula",
       "fieldtype": "Data",
       "insert_after": "tipo_identificacion",
       "description": "Requerido por la DGII cuando la venta es >= RD$250,000 (Norma 05-19)."
-    }
-  ]
-}
+  }
+]
