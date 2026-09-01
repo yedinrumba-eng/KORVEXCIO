@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import frappe
 from frappe.utils import today
+
+_RD_TZ = ZoneInfo("America/Santo_Domingo")
+
+
+def _rd_today() -> date:
+    return datetime.now(tz=_RD_TZ).date()
 
 
 def company_filter(filters: dict[str, Any]) -> str:
@@ -38,7 +45,7 @@ def daily_sales(company: str, target_date: str | None = None) -> dict[str, float
 
 
 def stock_dead(company: str, days: int = 90) -> list[dict[str, Any]]:
-    cutoff = (date.today() - timedelta(days=days)).isoformat()
+    cutoff = (_rd_today() - timedelta(days=days)).isoformat()
     invoice_names = sold_invoice_names(company, cutoff)
     sold_codes = {
         row.item_code
@@ -114,11 +121,16 @@ def expiring_stock(company: str, days: int = 90) -> list[dict[str, Any]]:
     }
     if not batch_names:
         return []
+    # Bug real de paso: el limite inferior usaba frappe.utils.today() (fecha
+    # del site) y el superior date.today() sin tz -- podian desalinearse un
+    # dia cerca de medianoche si el timezone del servidor no coincide con el
+    # del site. Un solo _rd_today() para los dos limites.
+    start = _rd_today()
     return frappe.get_all(
         "Batch",
         filters={
             "name": ["in", list(batch_names)],
-            "expiry_date": ["between", [today(), (date.today() + timedelta(days=days)).isoformat()]],
+            "expiry_date": ["between", [start.isoformat(), (start + timedelta(days=days)).isoformat()]],
         },
         fields=["name", "item", "expiry_date"],
     )

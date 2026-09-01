@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
+_RD_TZ = ZoneInfo("America/Santo_Domingo")
 
 
 @dataclass(frozen=True)
@@ -16,7 +19,7 @@ class BatchStock:
 
 def select_batches(batches: Iterable[BatchStock], today: date | None = None) -> list[BatchStock]:
     """Return usable batches in first-expiring-first-out order."""
-    current = today or date.today()
+    current = today or datetime.now(tz=_RD_TZ).date()
     return sorted(
         (batch for batch in batches if batch.actual_qty > 0 and (batch.expiry_date is None or batch.expiry_date >= current)),
         key=lambda batch: (batch.expiry_date is None, batch.expiry_date or date.max, batch.name),

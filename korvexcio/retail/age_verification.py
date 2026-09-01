@@ -8,12 +8,14 @@ import json
 import os
 import re
 import secrets
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 import frappe
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 MINIMUM_AGE = 18
+_RD_TZ = ZoneInfo("America/Santo_Domingo")
 MASKED_ID = re.compile(r"^\*\*\*-\*\*(?P<tail>\d{2})$")
 
 
@@ -71,7 +73,7 @@ def consume_invoice_age_token(invoice) -> None:
 
 def verify_age(birth_date: date, today: date | None = None, minimum_age: int = MINIMUM_AGE) -> bool:
     """Return whether a birth date meets the configured minimum age."""
-    current = today or date.today()
+    current = today or datetime.now(tz=_RD_TZ).date()
     age = current.year - birth_date.year - ((current.month, current.day) < (birth_date.month, birth_date.day))
     return age >= minimum_age
 

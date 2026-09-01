@@ -6,6 +6,7 @@ from unittest import TestCase
 from unittest.mock import patch
 
 import frappe
+from cryptography.exceptions import InvalidTag
 
 from korvexcio.retail.age_verification import (
     decrypt_pii,
@@ -32,7 +33,7 @@ class TestAgeVerification(TestCase):
             second = encrypt_pii("001-1234567-8", "record-a")
             self.assertNotEqual(first, second)
             self.assertEqual(decrypt_pii(first, "record-a"), "001-1234567-8")
-            with self.assertRaises(Exception):
+            with self.assertRaises(InvalidTag):
                 decrypt_pii(first, "record-b")
         finally:
             if original is None:
@@ -52,6 +53,14 @@ class TestAgeVerification(TestCase):
 
     @patch("korvexcio.retail.age_verification.frappe.db.get_value")
     def test_unregulated_invoice_without_token_is_allowed(self, get_value):
-        get_value.return_value = "Coffee"
+        # Bug real encontrado corriendo esto en Frappe de verdad, no en
+        # revision: return_value="Coffee" contesta IGUAL a las dos
+        # llamadas de get_value dentro de validate_invoice_age (la de
+        # item_group y la de requiere_verificacion_edad), y bool("Coffee")
+        # es True -- el mock nunca simulaba "no regulado" de verdad, asi
+        # que el item de cafe se trataba como regulado y el test tronaba.
+        # side_effect ordena las dos respuestas por separado, como ya
+        # hacia el test hermano de arriba.
+        get_value.side_effect = ["Coffee", 0]
         invoice = SimpleNamespace(items=[SimpleNamespace(item_code="COFFEE-001")])
         validate_invoice_age(invoice)
