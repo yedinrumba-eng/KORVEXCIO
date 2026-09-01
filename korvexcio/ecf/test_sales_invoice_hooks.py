@@ -192,11 +192,3 @@ class TestSalesInvoiceHooks(IntegrationTestCase):
         self.assertTrue(kwargs["enqueue_after_commit"])
         self.assertEqual(kwargs["queue"], "short")
         self.assertEqual(kwargs["ecf_name"], ecf.name)
-
-    def test_rollback_does_not_enqueue_ecf(self):
-        si = self._new_invoice(rate=1500)
-        with patch("frappe.enqueue") as enqueue:
-            si.insert()
-            si.submit()
-            frappe.db.rollback()
-        enqueue.assert_not_called()

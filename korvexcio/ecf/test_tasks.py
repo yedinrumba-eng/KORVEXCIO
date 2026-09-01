@@ -64,10 +64,11 @@ def _make_ecf(estado="Pendiente", track_id=None, attempt_count=0):
             "estado": estado,
             "track_id": track_id,
             "attempt_count": attempt_count,
-            "signed_xml": "<ECF />",
         }
     )
     ecf.insert()
+    ecf.db_set("signed_xml", "<ECF />")
+    ecf.reload()
     return ecf
 
 
