@@ -1,0 +1,146 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-08-31 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "is_submittable": 1,
+ "field_order": [
+  "company",
+  "reference_doctype",
+  "reference_name",
+  "tipo_ecf",
+  "encf",
+  "estado",
+  "column_break_1",
+  "track_id",
+  "codigo_seguridad",
+  "qr_url",
+  "attempt_count",
+  "section_break_1",
+  "signed_xml",
+  "validation_messages"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Tipo de documento origen",
+   "options": "DocType",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Documento origen",
+   "options": "reference_doctype",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tipo_ecf",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Tipo de e-CF",
+   "options": "E31\nE32\nE34",
+   "reqd": 1
+  },
+  {
+   "fieldname": "encf",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "e-NCF",
+   "read_only": 1
+  },
+  {
+   "default": "Pendiente",
+   "fieldname": "estado",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Estado",
+   "options": "Pendiente\nAceptado\nRechazado\nContingencia\nAnulado",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "track_id",
+   "fieldtype": "Data",
+   "label": "TrackID del proveedor",
+   "read_only": 1
+  },
+  {
+   "fieldname": "codigo_seguridad",
+   "fieldtype": "Data",
+   "label": "Codigo de seguridad",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qr_url",
+   "fieldtype": "Data",
+   "label": "URL del QR",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "attempt_count",
+   "fieldtype": "Int",
+   "label": "Intentos de envio",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "signed_xml",
+   "fieldtype": "Long Text",
+   "label": "XML firmado",
+   "read_only": 1
+  },
+  {
+   "fieldname": "validation_messages",
+   "fieldtype": "Long Text",
+   "label": "Mensajes de validacion del proveedor",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-31 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ECF",
+ "name": "ECF",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Dueño",
+   "submit": 1
+  },
+  {
+   "read": 1,
+   "role": "Contador"
+  }
+ ]
+}

@@ -29,6 +29,7 @@ COMPANY_SCOPED_DOCTYPES = {
     "DGII Settings",
     "DGII Digital Certificate",
     "Secuencia eNCF",
+    "ECF",
 }
 
 

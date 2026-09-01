@@ -1659,6 +1659,35 @@ parciales.
 
 ---
 
+## 2026-08-31 — S2.4: COMPLETADO — DocType ECF, submittable, "se anula no se cancela"
+
+**Estado:** COMPLETADO, primer intento sin bugs (aprendida la lección de S2.3
+sobre desplegar el árbol completo). `ECF`: submittable (`docstatus` como
+máquina de estados de emisión), `reference_doctype`/`reference_name`
+(Dynamic Link genérico — no atado a `Sales Invoice` todavía, cualquier
+documento origen sirve), `tipo_ecf`, `encf`, `estado` (Pendiente/Aceptado/
+Rechazado/Contingencia/Anulado — la respuesta real de la DGII, distinta del
+docstatus), `track_id`, `codigo_seguridad`, `qr_url`, `signed_xml`,
+`validation_messages`, `attempt_count`. Sin lógica de emisión (S2.6/S2.7
+siguen sin existir) — este slice modela el documento y dos reglas de
+negocio: **un e-CF Aceptado no se cancela ni se borra, se anula** (regla 3
+del blueprint), verificado incluso contra un `delete_doc(force=True)`.
+
+**Verificación, salida real:**
+```
+bench --site korvexcio.korvexdev.cc migrate -> limpio
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio
+Ran 28 tests in 2.001s -> OK (skipped=1)
+
+ruff check korvexcio/ -> All checks passed!
+semgrep (regla propia) -> FINDINGS: 0
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, sin cambio
+```
+
+**Siguiente:** S2.5 — `ECF Integration Log` con secretos enmascarados.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
