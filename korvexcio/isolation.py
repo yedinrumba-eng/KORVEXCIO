@@ -30,6 +30,7 @@ COMPANY_SCOPED_DOCTYPES = {
     "DGII Digital Certificate",
     "Secuencia eNCF",
     "ECF",
+    "ECF Integration Log",
 }
 
 

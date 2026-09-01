@@ -1,0 +1,1 @@
+"""ECF Integration Log DocType."""

@@ -1688,6 +1688,39 @@ KORVIS: {"status":"ok",...}   df -h /: 58G libres, sin cambio
 
 ---
 
+## 2026-08-31 — S2.5: COMPLETADO — ECF Integration Log, enmascarado real (con un bug real de regex)
+
+**Estado:** COMPLETADO. `ECF Integration Log` (patrón KSA): registra cada
+llamada a un proveedor (`emitir`/`consultar`/`anular`/`token`), con
+`mask_sensitive_info()` — función pública, reusable desde `providers/`
+cuando existan (S2.6/S2.7) — que enmascara `password`/`token`/`secret`/
+`api_key`/`authorization`/etc. tanto en JSON (`"token": "..."`) como en
+headers HTTP (`Authorization: Bearer ...`). Se aplica siempre en
+`validate()`, sin depender de que el caller se acuerde de enmascarar antes.
+
+**Bug real encontrado por el propio test, no por revisión:** la regex de
+headers usaba `\S+` para capturar el valor — que solo agarra UNA palabra.
+`"Authorization: Bearer xyz789"` son DOS palabras después de los dos
+puntos; el resultado enmascaraba "Bearer" y **dejaba el token real
+intacto**. Se corrigió a `[^\n]+` (el resto de la línea). El test que lo
+atrapó es exactamente el que pide el blueprint: "forzar una llamada y
+confirmar que el token no aparece en el log" — si no se hubiera escrito
+ese test específico, el bug se habría ido a producción.
+
+**Verificación, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio
+Ran 31 tests in 2.012s -> OK (skipped=1)
+
+ruff check korvexcio/ -> All checks passed!
+semgrep (regla propia) -> FINDINGS: 0
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, sin cambio
+```
+
+**Siguiente:** S2.6 — `providers/base.py`, la interfaz.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en

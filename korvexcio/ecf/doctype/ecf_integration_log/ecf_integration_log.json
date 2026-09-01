@@ -1,0 +1,107 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-08-31 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "ecf",
+  "provider",
+  "operation",
+  "column_break_1",
+  "request_url",
+  "response_status",
+  "section_break_1",
+  "request_payload",
+  "response_payload",
+  "error_message"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "ecf",
+   "fieldtype": "Link",
+   "label": "ECF",
+   "options": "ECF"
+  },
+  {
+   "fieldname": "provider",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Proveedor",
+   "options": "Alanube\nECF SSD",
+   "reqd": 1
+  },
+  {
+   "fieldname": "operation",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Operacion",
+   "options": "emitir\nconsultar\nanular\ntoken",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "request_url",
+   "fieldtype": "Data",
+   "label": "URL"
+  },
+  {
+   "fieldname": "response_status",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "HTTP status"
+  },
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "request_payload",
+   "fieldtype": "Long Text",
+   "label": "Request (enmascarado)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "response_payload",
+   "fieldtype": "Long Text",
+   "label": "Response (enmascarado)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Long Text",
+   "label": "Error"
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-31 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ECF",
+ "name": "ECF Integration Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Dueño"
+  }
+ ]
+}
