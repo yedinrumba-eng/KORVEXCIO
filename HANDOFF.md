@@ -1,5 +1,38 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
+> **Actualización 2026-09-01 (3) — Fase 3 (S3.1-S3.6) CERRADA. Se
+> encontraron y corrigieron 2 bugs CRÍTICOS reales escribiendo los tests
+> que faltaban.** Nodo en `5a34ec3`, 108 tests verdes (78 integration +
+> 30 unit, subiendo de 102). Los tests anteriores de S3.4-S3.6 solo
+> probaban casos superficiales (apagado por default, un mock aislado) —
+> nunca los criterios reales que el blueprint pide. Escribirlos encontró:
+>
+> 1. 🔴 **Ningún rol tenía NINGÚN permiso sobre `Sales Invoice`.**
+>    Confirmado con `frappe.has_permission()` como Cajero real:
+>    create/read/submit, los tres `False`. Todos los tests desde S2.9
+>    corrían como `Administrator`, nunca se notó — **un cajero real no
+>    podía usar el POS en absoluto.** Corregido en `roles.py`.
+> 2. 🔴 **Fuga real de datos entre las dos Companies en los reportes de
+>    S3.5.** `reports.py` usa `frappe.get_all()`, que a diferencia de
+>    `frappe.get_list()` ignora permisos por default — el filtro
+>    explícito de `company` nunca fue una barrera real. Un Cajero de A
+>    podía pedir los datos de B y recibirlos. Confirmado con un test real
+>    (`gross_total` de B visible desde una sesión de Cajero de A antes
+>    del fix). Corregido con un chequeo explícito de User Permission en
+>    cada función de datos, no solo en el punto de entrada del reporte.
+> 3. `cafe.py` nunca pasaba `company` al crear el BOM — ERPNext lo
+>    rechazaba. El test anterior nunca había creado un BOM real.
+>
+> También se corrió el `/security-review` que S3.3 pedía y quedó
+> pendiente del cierre anterior — veredicto DEVUELTO (2 altos, 0
+> críticos), ambos corregidos: un TOCTOU real en el token de verificación
+> de edad (claim atómico con Redis GETDEL ahora, mismo patrón que
+> `tasks.py::_claim_ecf`), y una fuga de PII cruda en logs si la fecha de
+> nacimiento venía mal formada.
+>
+> Detalle completo con evidencia en `PROGRESO.md`. **Fase 3 queda
+> cerrada.** Fase 4 sigue bloqueada por D16 (POS, pendiente OK de Yedin).
+
 > **Actualización 2026-09-01 (2) — Fase 3 (S3.1-S3.3 de Codex) auditada,
 > APROBADA con un bug real corregido.** Nodo re-clonado limpio en
 > `ed325d9` (el checkout perdió su `.git` en el rebuild de imagen de

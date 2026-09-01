@@ -2316,9 +2316,13 @@ tampoco corrieron — están pensados para un cierre de fase con proveedor
 real conectado, no para auditar una estructura que todavía no habla con
 la DGII.
 
-### Fase 3 — Módulo Retail · 06/10 → 10/10
-- [ ] S3.1 → S3.6 — atributos del vertical, FEFO, verificación de edad, cafetería
-      mostrador, reportes del dueño, **dashboard consolidado de los dos negocios**
+### Fase 3 — Módulo Retail · 06/10 → 10/10 *(CERRADA 2026-09-01)*
+- [x] S3.1 Item Attributes del vertical — apagado por default, template + variantes
+- [x] S3.2 FEFO — lotes/vencimiento, alertas 90/60/30 días
+- [x] S3.3 Verificación de edad — token efímero + claim atómico (security-review DEVUELTO→corregido); PII cifrada lista pero sin conectar (decisión de producto pendiente)
+- [x] S3.4 Cafetería mostrador + BOM — venta real descuenta insumos (bug real: BOM sin `company`, corregido)
+- [x] S3.5 Reportes del dueño — bug real de fuga entre Companies encontrado y corregido (`frappe.get_all` ignora permisos por default)
+- [x] S3.6 Dashboard consolidado — Dueño ve las dos Companies, Cajero no lo abre
 
 ### Fase 4 — POS + hardware · 13/10 → 17/10
 - [ ] S4.1 → S4.6 — POS Profile por Company, campos fiscales en caja, escáner,
@@ -2612,3 +2616,89 @@ Claude) les escriba su entrada formal en `PROGRESO.md` cuando toque.
 persistida en verificación de edad (arriba), y seguir con lo que quede
 de Fase 3 sin cerrar formalmente, o Fase 4 si Fase 3 ya se considera
 completa.
+
+---
+
+## 2026-09-01 — S3.4-S3.6: COMPLETADOS — 3 bugs reales de seguridad/correctitud encontrados escribiendo los tests que faltaban
+
+**Estado:** el cierre anterior de Fase 3 dejó anotado que "S3.4-S3.6 ya
+pasan la suite pero sin entrada formal" y que sus tests solo probaban
+casos superficiales (apagado por default, un mock aislado). Escribir los
+criterios REALES del blueprint como tests — no solo "pasa", sino lo que
+cada slice dice explícitamente que hay que probar — encontró **tres
+bugs reales**, uno de ellos crítico y con fuga de datos entre tenants.
+
+### 1. 🔴 CRÍTICO — ningún rol tenía NINGÚN permiso sobre `Sales Invoice`
+
+Confirmado con `frappe.has_permission()` como un Cajero real:
+`create`/`read`/`submit` — los tres `False`. Ni `Custom DocPerm` ni
+`DocPerm` estándar tenían una sola fila para `Cajero VLJ`/`Cajero ESE`/
+`Dueño`/`Contador` sobre `Sales Invoice`. **Todos los tests desde S2.9
+corrían como `Administrator`**, así que nunca se notó — un cajero real
+no podía ni abrir el formulario de venta. Corregido en `roles.py`:
+Cajero create/read/write/submit (nunca cancel/delete — eso es control de
+caja, va a Dueño); Dueño con control completo incluyendo cancel;
+Contador solo lectura.
+
+### 2. 🔴 CRÍTICO — fuga de aislamiento real en los reportes de S3.5
+
+`reports.py` usa `frappe.get_all()`, que **a diferencia de
+`frappe.get_list()`, ignora permisos por default**. El filtro explícito
+de `company` (la propia defensa que pide la regla 12b) **nunca fue una
+barrera real**: un Cajero restringido a Company A podía pedir
+`daily_sales(COMPANY_B)` y recibir los números reales de B. Confirmado
+con un test real: un Cajero VLJ (User Permission solo en A) viendo
+`gross_total: 2500.0` de una factura de Company B. Corregido con un
+chequeo explícito de User Permission (`_assert_user_may_view_company`) —
+agregado tanto a `company_filter()` (el punto de entrada de los reports)
+como a **cada función de datos por separado** (`daily_sales`,
+`stock_dead`, `margin_by_category`, `turnover`, `expiring_stock`), para
+que el hueco se cierre sin importar por dónde entre la llamada — el
+dashboard de S3.6 llama estas funciones directo, sin pasar por
+`company_filter()`.
+
+### 3. `cafe.py` nunca pasaba `company` al crear el BOM
+
+ERPNext rechaza un BOM sin Company ("Please select a Company first").
+El test anterior de S3.4 nunca llegó a crear un BOM real (solo probaba
+"apagado por default"), así que nadie lo notó. Se agregó `cafe.company`
+como config obligatoria.
+
+### Security-review de S3.3 (pendiente desde el cierre anterior)
+
+Se corrió contra `age_verification.py` — veredicto **DEVUELTO (0
+críticos, 2 altos)**, ambos corregidos:
+- **TOCTOU**: el check del token (hook `validate`) y su consumo (hook
+  `before_submit`) eran dos pasos separados — una factura duplicada con
+  el mismo valor de token podía pasar el check en las dos copias antes
+  de que cualquiera lo borrara. Reemplazado por un claim atómico vía
+  Redis `GETDEL` en `before_submit` (`claim_invoice_age_token`), mismo
+  patrón que `tasks.py::_claim_ecf` (S2.10). `validate_invoice_age`
+  queda como un peek no-destructivo solo para feedback rápido en el
+  formulario, ya no es el límite de seguridad real.
+- **PII cruda en logs**: `date.fromisoformat(birth_date)` sin
+  try/except filtraba la fecha de nacimiento sin enmascarar en el
+  traceback si el input era inválido. Ahora lanza un mensaje genérico.
+
+**Verificación, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Ran 78 tests in 23.054s -> OK (skipped=1)
+Ran 30 tests in 0.720s -> OK
+(108 tests totales, subiendo de 102)
+
+ruff check -> 6 hallazgos de deuda vieja (S2.2/S1.8) + 4 nuevos de drift
+  de ruff:latest reformateando imports de reports.py de Codex (archivos
+  que no toqué, mismo patrón de deuda ya documentado desde S2.6)
+semgrep (regla propia) -> Findings: 2 (los mismos ya justificados desde S2.10, ninguno nuevo)
+KORVIS: {"status":"ok",...}   df -h /: 56G libres, 41%, sin cambio
+git rev-parse HEAD (nodo) == 5a34ec3 == origin/feat/ecf (SHA verificado)
+```
+
+**Fase 3 (S3.1-S3.6) queda cerrada.** Pendiente real, no de código:
+decisión de Yedin sobre si la verificación de edad necesita persistir
+evidencia auditable (cédula/fecha cifrada) o el token efímero basta.
+
+**Siguiente:** Fase 4 (POS + hardware) sigue bloqueada por D16 (POSNext
+vs nativo, pendiente OK explícito de Yedin). Sin esa decisión, no hay
+slice de código nuevo que abrir ahí todavía.
