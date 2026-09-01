@@ -38,6 +38,14 @@ CONTADOR_SALES_INVOICE_PERMS = {"read": 1}
 # asignados -- es tarea de Dueño, nunca del cajero.
 DUENO_POS_PROFILE_PERMS = {"create": 1, "read": 1, "write": 1}
 
+# S4.5: el cajero abre y cierra SU propio turno (create/read/write/submit)
+# pero no puede cancelarlo -- eso es control de caja, va a Dueño. El
+# arqueo ya es visible via submit; cancelar un turno cerrado es reabrir
+# la caja del dia anterior.
+CAJERO_CASH_SHIFT_PERMS = {"create": 1, "read": 1, "write": 1, "submit": 1}
+DUENO_CASH_SHIFT_PERMS = {"create": 1, "read": 1, "write": 1, "submit": 1, "cancel": 1}
+CONTADOR_CASH_SHIFT_PERMS = {"read": 1}
+
 
 def sync_roles():
     for role in ROLES:
@@ -52,6 +60,23 @@ def sync_roles():
     for role in ROLES:
         ensure_doc_perm("Company", role, BASIC_READ)
 
+    # Hallazgo real (2026-09-01, S4.5): un Cajero real no podia someter NI
+    # UNA venta -- ERPNext valida permiso de LECTURA sobre `Account` al
+    # someter cualquier Sales Invoice (income_account, debit_to, etc.), y
+    # ningun rol propio lo tenia. Tampoco tenia permiso sobre `Customer`
+    # -- no podia ni buscar a quien venderle. Ambos pasaron
+    # desapercibidos porque S2.9 solo se probo como Administrator; S4.5
+    # es el primer test que somete una venta como un Cajero real.
+    for role in CAJERO_ROLES:
+        ensure_doc_perm("Account", role, BASIC_READ)
+        ensure_doc_perm("Customer", role, {"create": 1, "read": 1})
+        ensure_doc_perm("Item", role, BASIC_READ)
+        ensure_doc_perm("Cost Center", role, BASIC_READ)
+        ensure_doc_perm("UOM", role, BASIC_READ)
+        ensure_doc_perm("Mode of Payment", role, BASIC_READ)
+    ensure_doc_perm("Customer", "Dueño", {"create": 1, "read": 1, "write": 1})
+    ensure_doc_perm("Customer", "Contador", BASIC_READ)
+
     for role in CAJERO_ROLES:
         ensure_doc_perm("Sales Invoice", role, CAJERO_SALES_INVOICE_PERMS)
     ensure_doc_perm("Sales Invoice", "Dueño", DUENO_SALES_INVOICE_PERMS)
@@ -60,6 +85,12 @@ def sync_roles():
     for role in CAJERO_ROLES:
         ensure_doc_perm("POS Profile", role, BASIC_READ)
     ensure_doc_perm("POS Profile", "Dueño", DUENO_POS_PROFILE_PERMS)
+
+    for doctype in ("POS Opening Entry", "POS Closing Entry"):
+        for role in CAJERO_ROLES:
+            ensure_doc_perm(doctype, role, CAJERO_CASH_SHIFT_PERMS)
+        ensure_doc_perm(doctype, "Dueño", DUENO_CASH_SHIFT_PERMS)
+        ensure_doc_perm(doctype, "Contador", CONTADOR_CASH_SHIFT_PERMS)
 
     frappe.db.commit()
 

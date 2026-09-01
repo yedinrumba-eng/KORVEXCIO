@@ -33,6 +33,8 @@ COMPANY_SCOPED_DOCTYPES = {
     "ECF Integration Log",
     "ECF Contingencia",
     "POS Profile",
+    "POS Opening Entry",
+    "POS Closing Entry",
 }
 
 
