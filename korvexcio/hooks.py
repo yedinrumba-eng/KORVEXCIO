@@ -102,6 +102,7 @@ after_migrate = [
     "korvexcio.roles.sync_roles",
     "korvexcio.install.sync_retail_item_attributes",
     "korvexcio.install.sync_retail_cafe_catalog",
+    "korvexcio.install.sync_retail_pos_profiles",
 ]
 
 # Uninstallation

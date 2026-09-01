@@ -33,6 +33,11 @@ CAJERO_SALES_INVOICE_PERMS = {"create": 1, "read": 1, "write": 1, "submit": 1}
 DUENO_SALES_INVOICE_PERMS = {"create": 1, "read": 1, "write": 1, "submit": 1, "cancel": 1}
 CONTADOR_SALES_INVOICE_PERMS = {"read": 1}
 
+# S4.1: el cajero solo LEE su POS Profile (get_pos_profile() de ERPNext lo
+# resuelve solo). Configurarlo -- warehouse, metodos de pago, usuarios
+# asignados -- es tarea de Dueño, nunca del cajero.
+DUENO_POS_PROFILE_PERMS = {"create": 1, "read": 1, "write": 1}
+
 
 def sync_roles():
     for role in ROLES:
@@ -51,6 +56,10 @@ def sync_roles():
         ensure_doc_perm("Sales Invoice", role, CAJERO_SALES_INVOICE_PERMS)
     ensure_doc_perm("Sales Invoice", "Dueño", DUENO_SALES_INVOICE_PERMS)
     ensure_doc_perm("Sales Invoice", "Contador", CONTADOR_SALES_INVOICE_PERMS)
+
+    for role in CAJERO_ROLES:
+        ensure_doc_perm("POS Profile", role, BASIC_READ)
+    ensure_doc_perm("POS Profile", "Dueño", DUENO_POS_PROFILE_PERMS)
 
     frappe.db.commit()
 

@@ -51,6 +51,13 @@ def sync_retail_cafe_catalog() -> None:
     sync_cafe_catalog()
 
 
+def sync_retail_pos_profiles() -> None:
+    """Sync opt-in POS Profile per Company during migration (S4.1)."""
+    from korvexcio.retail.pos_profile import sync_pos_profiles
+
+    sync_pos_profiles()
+
+
 def ensure_test_company(company_name: str, abbr: str, tax_id: str) -> None:
     if frappe.db.exists("Company", company_name):
         return

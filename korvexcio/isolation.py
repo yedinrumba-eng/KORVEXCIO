@@ -32,6 +32,7 @@ COMPANY_SCOPED_DOCTYPES = {
     "ECF",
     "ECF Integration Log",
     "ECF Contingencia",
+    "POS Profile",
 }
 
 
