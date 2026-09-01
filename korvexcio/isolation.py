@@ -35,6 +35,12 @@ COMPANY_SCOPED_DOCTYPES = {
     "POS Profile",
     "POS Opening Entry",
     "POS Closing Entry",
+    # S4.2: POSNext (pos_next app) no usa POS Opening/Closing Entry
+    # nativos de ERPNext -- trae su propio par de doctypes con el mismo
+    # campo `company`. La pantalla real de caja crea estos, no los de
+    # arriba (ver PROGRESO.md, entrada de cierre de S4.2).
+    "POS Opening Shift",
+    "POS Closing Shift",
 }
 
 

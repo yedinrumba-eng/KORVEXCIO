@@ -86,7 +86,11 @@ def sync_roles():
         ensure_doc_perm("POS Profile", role, BASIC_READ)
     ensure_doc_perm("POS Profile", "Dueño", DUENO_POS_PROFILE_PERMS)
 
-    for doctype in ("POS Opening Entry", "POS Closing Entry"):
+    # "... Entry" son los nativos de ERPNext (S4.5); "... Shift" son los
+    # propios de POSNext (S4.2) -- la pantalla real crea estos ultimos,
+    # no los de ERPNext. Se dan los mismos permisos a los dos pares
+    # porque no sabemos cual va a quedar en pie a largo plazo.
+    for doctype in ("POS Opening Entry", "POS Closing Entry", "POS Opening Shift", "POS Closing Shift"):
         for role in CAJERO_ROLES:
             ensure_doc_perm(doctype, role, CAJERO_CASH_SHIFT_PERMS)
         ensure_doc_perm(doctype, "Dueño", DUENO_CASH_SHIFT_PERMS)
