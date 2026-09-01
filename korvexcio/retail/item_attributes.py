@@ -18,23 +18,26 @@ def sync_item_attributes() -> list[str]:
     for config in _attribute_configs(get_retail_config()):
         name = _clean_text(config.get("name"), "attribute name", 140)
         values = config.get("values", [])
-        if not isinstance(values, list) or not values:
+        is_numeric = config.get("numeric") is True
+        if not isinstance(values, list) or (not is_numeric and not values):
             frappe.throw(f"Retail attribute {name} must define at least one value")
 
         attribute = frappe.db.exists("Item Attribute", name)
         doc = frappe.get_doc("Item Attribute", attribute) if attribute else frappe.new_doc("Item Attribute")
         doc.attribute_name = name
-        doc.numeric_values = 1 if config.get("numeric") is True else 0
-        if doc.numeric_values:
+        doc.numeric_values = 1 if is_numeric else 0
+        if is_numeric:
             doc.from_range = config.get("from_range", 0)
             doc.to_range = config.get("to_range", 100)
             doc.increment = config.get("increment", 1)
-        existing_values = {row.attribute_value for row in doc.item_attribute_values}
-        for raw_value in values:
-            value, abbr = _attribute_value(raw_value)
-            if value not in existing_values:
-                doc.append("item_attribute_values", {"attribute_value": value, "abbr": abbr})
-                existing_values.add(value)
+            doc.set("item_attribute_values", [])
+        else:
+            existing_values = {row.attribute_value for row in doc.item_attribute_values}
+            for raw_value in values:
+                value, abbr = _attribute_value(raw_value)
+                if value not in existing_values:
+                    doc.append("item_attribute_values", {"attribute_value": value, "abbr": abbr})
+                    existing_values.add(value)
 
         if doc.is_new():
             doc.insert()

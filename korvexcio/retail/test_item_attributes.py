@@ -43,7 +43,13 @@ class TestRetailItemAttributes(IntegrationTestCase):
             "enabled": True,
             "attributes": [
                 {"name": "Test Sabor", "values": ["Red", "Mint"]},
-                {"name": "Test Nicotina", "numeric": True, "from_range": 0, "to_range": 100, "increment": 1, "values": ["20"]},
+                {
+                    "name": "Test Nicotina",
+                    "numeric": True,
+                    "from_range": 0,
+                    "to_range": 100,
+                    "increment": 1,
+                },
             ],
         }
         try:
@@ -63,7 +69,13 @@ class TestRetailItemAttributes(IntegrationTestCase):
             "enabled": True,
             "attributes": [
                 {"name": "Test Sabor", "values": ["Red"]},
-                {"name": "Test Nicotina", "numeric": True, "from_range": 0, "to_range": 100, "increment": 1, "values": ["20"]},
+                {
+                    "name": "Test Nicotina",
+                    "numeric": True,
+                    "from_range": 0,
+                    "to_range": 100,
+                    "increment": 1,
+                },
             ],
         }
         try:
