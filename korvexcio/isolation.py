@@ -27,6 +27,7 @@ COMPANY_SCOPED_DOCTYPES = {
     "Payment Entry",
     "Item Price",
     "DGII Settings",
+    "DGII Digital Certificate",
 }
 
 

@@ -1,0 +1,72 @@
+{
+ "actions": [],
+ "autoname": "field:company",
+ "creation": "2026-08-31 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "certificate",
+  "password",
+  "valid_until",
+  "expiry_warning_days"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "certificate",
+   "fieldtype": "Attach",
+   "label": "Certificado (.p12)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "password",
+   "fieldtype": "Password",
+   "label": "Contrasena del certificado",
+   "reqd": 1
+  },
+  {
+   "fieldname": "valid_until",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Valido hasta",
+   "reqd": 1
+  },
+  {
+   "default": "30",
+   "fieldname": "expiry_warning_days",
+   "fieldtype": "Int",
+   "label": "Avisar N dias antes de vencer",
+   "reqd": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-31 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ECF",
+ "name": "DGII Digital Certificate",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Dueño",
+   "write": 1
+  }
+ ]
+}

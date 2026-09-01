@@ -1563,6 +1563,44 @@ el commit de S2.1. `PROMPT-CLAUDE-CODE.md` quedó actualizado para retomarlo.
 
 ---
 
+## 2026-08-31 — S2.2: COMPLETADO — DGII Digital Certificate, password nunca en texto plano
+
+**Estado:** COMPLETADO, verificado. `DGII Digital Certificate`: `certificate`
+(Attach), `password` (**Password**, nunca Data), `company` (único), `valid_until`
++ aviso configurable (`expiry_warning_days`). Un registro por Company.
+Agregado a `COMPANY_SCOPED_DOCTYPES`. Permisos: solo `System Manager` y
+`Dueño` — ni `Contador` ni ningún `Cajero` lo ven, a propósito (más sensible
+que `DGII Settings`).
+
+**Hallazgo real corrigiendo el propio test:** el primer intento del
+escenario 10 de aislamiento usó un usuario `Cajero` y reventó — no por bug
+de la barrera, sino porque `Cajero` no tiene *ningún* `DocPerm` en este
+doctype (correcto: un cajero no debe ver el certificado). Se corrigió
+usando un `Dueño` acotado a una sola Company vía `User Permission` — el
+único rol, aparte de System Manager, con acceso real.
+
+**Verificación, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio
+Ran 18 tests in 1.258s -> OK (skipped=1)
+
+# password nunca en texto plano — probado dos veces, distinto:
+frappe.db.get_value(...,"password") != valor real puesto
+frappe.client.get(...)["password"] no contiene el valor real
+
+ruff check korvexcio/ -> All checks passed!
+semgrep (regla propia) -> FINDINGS: 0
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, sin cambio
+```
+
+**Deuda:** ningún `.p12` real cargado — el cliente no está registrado
+todavía (S0.9/S0.3). El campo `certificate` acepta el Attach; probarlo con
+un archivo real es cuando haya certificado de verdad.
+
+**Siguiente:** S2.3 — Secuencia eNCF.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en

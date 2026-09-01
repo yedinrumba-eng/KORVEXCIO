@@ -27,6 +27,7 @@ COMPANY_B = "_Test Company KORVEXCIO B"
 USER_A = "_test.isolation.a@korvexdev.cc"
 USER_B = "_test.isolation.b@korvexdev.cc"
 ACCOUNTANT_A = "_test.isolation.accountant.a@korvexdev.cc"
+OWNER_A = "_test.isolation.owner.a@korvexdev.cc"
 
 
 class TestIsolation(IntegrationTestCase):
@@ -45,14 +46,18 @@ class TestIsolation(IntegrationTestCase):
         cls.user_a = cls._ensure_scoped_user(USER_A, COMPANY_A)
         cls.user_b = cls._ensure_scoped_user(USER_B, COMPANY_B)
         cls.accountant_a = cls._ensure_accountant(ACCOUNTANT_A)
+        cls.owner_a = cls._ensure_owner_scoped_to_one(OWNER_A)
         assign_company_user_permission(cls.user_a, COMPANY_A)
         assign_company_user_permission(cls.user_b, COMPANY_B)
         assign_company_user_permission(cls.accountant_a, COMPANY_A)
+        assign_company_user_permission(cls.owner_a, COMPANY_A)
 
         cls.warehouse_a = cls._ensure_warehouse("_Test WH Isolation A", COMPANY_A)
         cls.warehouse_b = cls._ensure_warehouse("_Test WH Isolation B", COMPANY_B)
         cls.dgii_settings_a = cls._ensure_dgii_settings(COMPANY_A, "TesteCF", "Alanube")
         cls.dgii_settings_b = cls._ensure_dgii_settings(COMPANY_B, "CerteCF", "ECF SSD")
+        cls.cert_a = cls._ensure_certificate(COMPANY_A)
+        cls.cert_b = cls._ensure_certificate(COMPANY_B)
 
     @staticmethod
     def _ensure_scoped_user(email: str, company: str) -> str:
@@ -88,6 +93,28 @@ class TestIsolation(IntegrationTestCase):
         return email
 
     @staticmethod
+    def _ensure_owner_scoped_to_one(email: str) -> str:
+        """Dueño real ve las dos Companies (escenario 8). Para probar
+        aislamiento en doctypes donde Contador/Cajero no tienen acceso
+        (DGII Digital Certificate), hace falta un Dueño restringido a UNA
+        sola Company via User Permission -- no es el caso de uso real
+        (el dueño del negocio ve sus dos empresas), es la unica forma de
+        probar la denegacion cruzada con el modelo de permisos actual."""
+        if frappe.db.exists("User", email):
+            return email
+        frappe.get_doc(
+            {
+                "doctype": "User",
+                "email": email,
+                "first_name": "Owner Scoped Isolation Test",
+                "user_type": "System User",
+                "send_welcome_email": 0,
+                "roles": [{"role": "Dueño"}],
+            }
+        ).insert()
+        return email
+
+    @staticmethod
     def _ensure_warehouse(name: str, company: str):
         wh_name = f"{name} - {'_TCKA' if company == COMPANY_A else '_TCKB'}"
         if frappe.db.exists("Warehouse", wh_name):
@@ -114,6 +141,23 @@ class TestIsolation(IntegrationTestCase):
                 "connect_timeout_seconds": 10,
                 "read_timeout_seconds": 30,
                 "live_sync": 0,
+            }
+        ).insert()
+        return company
+
+    @staticmethod
+    def _ensure_certificate(company: str) -> str:
+        if frappe.db.exists("DGII Digital Certificate", company):
+            return company
+        from frappe.utils import add_days
+
+        frappe.get_doc(
+            {
+                "doctype": "DGII Digital Certificate",
+                "company": company,
+                "certificate": "/private/files/isolation-test-cert.p12",
+                "password": "dummy-cert-password-isolation",
+                "valid_until": add_days(frappe.utils.today(), 365),
             }
         ).insert()
         return company
@@ -244,13 +288,27 @@ class TestIsolation(IntegrationTestCase):
         with self.assertRaises(frappe.PermissionError):
             settings.save()
 
-    # --- 10-12: dependen de infraestructura que no existe todavia ------
-    def test_scenario_10_to_12_deferred_to_s2_2_and_s2_7(self):
-        """Escenarios que necesitan certificado, provider y endpoints futuros:
-        - descargar el .p12 de la otra Company (no hay certificados aun, S0.9/S2.2)
+    # --- 10. certificado digital: acotado, password nunca sale por API --
+    # Cajero/Contador no tienen NINGUN permiso sobre este doctype (a
+    # proposito -- ni deberian ver el .p12). Se prueba con Dueño acotado
+    # a una sola Company, el unico rol con acceso ademas de System Manager.
+    def test_scenario_10_certificate_scoped_and_password_never_exposed(self):
+        frappe.set_user(self.owner_a)
+        with self.assertRaises(frappe.PermissionError):
+            frappe.client.get("DGII Digital Certificate", self.cert_b)
+
+        own = frappe.client.get("DGII Digital Certificate", self.cert_a)
+        self.assertEqual(own["company"], COMPANY_A)
+        self.assertNotIn("dummy-cert-password-isolation", str(own.get("password", "")))
+
+        frappe.set_user("Administrator")
+        stored = frappe.db.get_value("DGII Digital Certificate", self.cert_a, "password")
+        self.assertNotEqual(stored, "dummy-cert-password-isolation")
+
+    # --- 11-12: dependen de un provider real, todavia no existe ---------
+    def test_scenario_11_to_12_deferred_to_s2_7(self):
+        """Escenarios que necesitan un provider real conectado (S2.7):
         - emitir e-CF y confirmar que credencial se uso (no hay providers, S2.7)
-        - metodos @frappe.whitelist propios de korvexcio (no existen aun)
+        - metodos @frappe.whitelist propios de korvexcio/ecf (no existen aun)
         Se marcan como skip explicito, no como pasados de mentira."""
-        self.skipTest(
-            "Requiere certificado, provider y endpoints futuros - S2.2/S2.7"
-        )
+        self.skipTest("Requiere un provider real conectado - S2.7")
