@@ -100,6 +100,8 @@ jinja = {
 after_migrate = [
     "korvexcio.custom_fields.sync_custom_fields",
     "korvexcio.roles.sync_roles",
+    "korvexcio.install.sync_retail_item_attributes",
+    "korvexcio.install.sync_retail_cafe_catalog",
 ]
 
 # Uninstallation
@@ -170,8 +172,14 @@ doc_events = {
     # DGII para cerrar una venta: estos hooks son 100% locales, la llamada
     # real al proveedor la dispara la cola asincrona de S2.10.
     "Sales Invoice": {
-        "validate": "korvexcio.ecf.sales_invoice_hooks.validate_rnc_threshold",
-        "before_submit": "korvexcio.ecf.sales_invoice_hooks.reserve_encf",
+        "validate": [
+            "korvexcio.ecf.sales_invoice_hooks.validate_rnc_threshold",
+            "korvexcio.retail.age_verification.validate_invoice_age",
+        ],
+        "before_submit": [
+            "korvexcio.ecf.sales_invoice_hooks.reserve_encf",
+            "korvexcio.retail.age_verification.consume_invoice_age_token",
+        ],
         "on_submit": "korvexcio.ecf.sales_invoice_hooks.create_ecf_record",
         "before_cancel": "korvexcio.ecf.sales_invoice_hooks.block_cancel_if_accepted",
     },

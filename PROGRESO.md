@@ -2359,6 +2359,50 @@ rate-limit y pruebas reales de `enqueue_after_commit`; no se deben cerrar como
 resueltos hasta corregirlos. S2.8 permanece **PARCIAL** porque falta la
 validación contra el XSD oficial. S2.7 continúa bloqueado por D20/S0.9.
 
+## 2026-09-01 — S3.1: PARCIAL — atributos Retail opt-in escritos, sin verificar
+
+Se escribió `korvexcio/retail/site_config.py` y `item_attributes.py` para
+sincronizar `Item Attribute` y crear variantes únicamente cuando el site tiene
+`korvexcio_retail.enabled: true`. Se agregaron tests de integración y el hook
+`after_migrate`. `git diff --check` pasó sin salida; Python/ruff no arrancaron
+en este Windows y no se desplegó al nodo, así que el slice queda escrito pero
+SIN verificar. No se hizo commit ni push. Siguiente: desplegar/verificar S3.1,
+corregir la API real de variantes si aplica, y luego S3.2.
+
+## 2026-09-01 — Fase 3: implementación escrita, verificación de bench pendiente
+
+Se implementaron los seis slices de Retail en `korvexcio/retail/`:
+
+- **S3.1:** atributos y variantes opt-in desde `site_config`.
+- **S3.2:** selección FEFO y alertas únicas de 90/60/30 días. El test detectó
+  que un lote aparecía en varias bandas; se corrigió y quedó `3 passed`.
+- **S3.3:** Item Group regulado, token de edad corto y ligado al usuario/Items,
+  AES-256-GCM con IV por registro y máscara de identidad.
+- **S3.4:** catálogo de cafetería opt-in y BOM estándar de ERPNext.
+- **S3.5:** stock muerto, margen por categoría, rotación y venta del día,
+  todos con Company obligatoria y filtro explícito.
+- **S3.6:** página server-backed para Dueño, limitada a sus User Permissions,
+  con ventas, vencimientos y e-CF pendientes.
+
+**Verificación disponible:**
+
+```text
+uvx pytest korvexcio/retail/test_fefo.py -q
+...                                                                      [100%]
+3 passed in 0.02s
+
+uvx ruff check korvexcio/retail
+All checks passed!
+
+uv run --no-project python -m compileall -q korvexcio/retail
+compileall: PASS
+```
+
+**Pendiente para cerrar de verdad:** la suite Frappe en el nodo, migración de
+custom fields, integración Item/BOM/Sales Invoice, permisos de reportes y
+dashboard. No se hizo push ni copia de código al servidor, así que la Fase 3
+queda PARCIAL hasta obtener esa evidencia real.
+
 ## Deuda técnica abierta
 
 Ordenada por lo que más duele.

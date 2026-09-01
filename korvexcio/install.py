@@ -37,6 +37,20 @@ def before_tests():
     frappe.db.commit()
 
 
+def sync_retail_item_attributes() -> None:
+    """Sync opt-in retail attributes during migration for configured sites."""
+    from korvexcio.retail.item_attributes import sync_item_attributes
+
+    sync_item_attributes()
+
+
+def sync_retail_cafe_catalog() -> None:
+    """Sync opt-in counter-service cafe products during migration."""
+    from korvexcio.retail.cafe import sync_cafe_catalog
+
+    sync_cafe_catalog()
+
+
 def ensure_test_company(company_name: str, abbr: str, tax_id: str) -> None:
     if frappe.db.exists("Company", company_name):
         return

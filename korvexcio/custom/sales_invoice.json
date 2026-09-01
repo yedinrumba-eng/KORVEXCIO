@@ -1,0 +1,13 @@
+{
+  "Sales Invoice": [
+    {
+      "fieldname": "age_verification_token",
+      "label": "Age Verification Token",
+      "fieldtype": "Data",
+      "hidden": 1,
+      "read_only": 1,
+      "no_copy": 1,
+      "insert_after": "customer"
+    }
+  ]
+}
