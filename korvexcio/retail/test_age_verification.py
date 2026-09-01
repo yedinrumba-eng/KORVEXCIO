@@ -1,9 +1,19 @@
 """Unit tests for age rules and encrypted identity values."""
 
 from datetime import date
+from types import SimpleNamespace
 from unittest import TestCase
+from unittest.mock import patch
 
-from korvexcio.retail.age_verification import decrypt_pii, encrypt_pii, mask_identity, verify_age
+import frappe
+
+from korvexcio.retail.age_verification import (
+    decrypt_pii,
+    encrypt_pii,
+    mask_identity,
+    validate_invoice_age,
+    verify_age,
+)
 
 
 class TestAgeVerification(TestCase):
@@ -32,3 +42,16 @@ class TestAgeVerification(TestCase):
 
     def test_identity_log_mask_has_only_last_two_digits(self):
         self.assertEqual(mask_identity("001-1234567-89"), "***-**89")
+
+    @patch("korvexcio.retail.age_verification.frappe.db.get_value")
+    def test_regulated_invoice_without_token_is_rejected(self, get_value):
+        get_value.side_effect = ["Regulated", 1]
+        invoice = SimpleNamespace(items=[SimpleNamespace(item_code="VAPE-001")])
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            validate_invoice_age(invoice)
+
+    @patch("korvexcio.retail.age_verification.frappe.db.get_value")
+    def test_unregulated_invoice_without_token_is_allowed(self, get_value):
+        get_value.return_value = "Coffee"
+        invoice = SimpleNamespace(items=[SimpleNamespace(item_code="COFFEE-001")])
+        validate_invoice_age(invoice)
