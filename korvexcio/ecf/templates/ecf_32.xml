@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ECF>
+    <Encabezado>
+        <Version>1.0</Version>
+        <IdDoc>
+            {% if 'TipoeCF' in IdDoc %}<TipoeCF>{{ IdDoc.TipoeCF }}</TipoeCF>{% endif %}
+            {% if 'eNCF' in IdDoc %}<eNCF>{{ IdDoc.eNCF }}</eNCF>{% endif %}
+            {% if 'IndicadorEnvioDiferido' in IdDoc %}<IndicadorEnvioDiferido>{{ IdDoc.IndicadorEnvioDiferido }}</IndicadorEnvioDiferido>{% endif %}
+            {% if 'IndicadorMontoGravado' in IdDoc %}<IndicadorMontoGravado>{{ IdDoc.IndicadorMontoGravado }}</IndicadorMontoGravado>{% endif %}
+            {% if 'IndicadorServicioTodoIncluido' in IdDoc %}<IndicadorServicioTodoIncluido>{{ IdDoc.IndicadorServicioTodoIncluido }}</IndicadorServicioTodoIncluido>{% endif %}
+            {% if 'TipoIngresos' in IdDoc %}<TipoIngresos>{{ IdDoc.TipoIngresos }}</TipoIngresos>{% endif %}
+            {% if 'TipoPago' in IdDoc %}<TipoPago>{{ IdDoc.TipoPago }}</TipoPago>{% endif %}
+            {% if 'FechaLimitePago' in IdDoc %}<FechaLimitePago>{{ IdDoc.FechaLimitePago }}</FechaLimitePago>{% endif %}
+            {% if 'TerminoPago' in IdDoc %}<TerminoPago>{{ IdDoc.TerminoPago }}</TerminoPago>{% endif %}
+            {% if IdDoc.TablaFormasPago %}
+            <TablaFormasPago>
+                {% for formaPago in IdDoc.TablaFormasPago %}
+                <FormaDePago>
+                    {% if 'FormaPago' in formaPago %}<FormaPago>{{ formaPago.FormaPago }}</FormaPago>{% endif %}
+                    {% if 'MontoPago' in formaPago %}<MontoPago>{{ formaPago.MontoPago }}</MontoPago>{% endif %}
+                </FormaDePago>
+                {% endfor %}
+            </TablaFormasPago>
+            {% endif %}
+            {% if 'TipoCuentaPago' in IdDoc %}<TipoCuentaPago>{{ IdDoc.TipoCuentaPago }}</TipoCuentaPago>{% endif %}
+            {% if 'NumeroCuentaPago' in IdDoc %}<NumeroCuentaPago>{{ IdDoc.NumeroCuentaPago }}</NumeroCuentaPago>{% endif %}
+            {% if 'BancoPago' in IdDoc %}<BancoPago>{{ IdDoc.BancoPago }}</BancoPago>{% endif %}
+            {% if 'FechaDesde' in IdDoc %}<FechaDesde>{{ IdDoc.FechaDesde }}</FechaDesde>{% endif %}
+            {% if 'FechaHasta' in IdDoc %}<FechaHasta>{{ IdDoc.FechaHasta }}</FechaHasta>{% endif %}
+            {% if 'TotalPaginas' in IdDoc %}<TotalPaginas>{{ IdDoc.TotalPaginas }}</TotalPaginas>{% endif %}
+        </IdDoc>
+        <Emisor>
+            {% if 'RNCEmisor' in Emisor %}<RNCEmisor>{{ Emisor.RNCEmisor }}</RNCEmisor>{% endif %}
+            {% if 'RazonSocialEmisor' in Emisor %}<RazonSocialEmisor>{{ Emisor.RazonSocialEmisor }}</RazonSocialEmisor>{% endif %}
+            {% if 'NombreComercial' in Emisor %}<NombreComercial>{{ Emisor.NombreComercial }}</NombreComercial>{% endif %}
+            {% if 'Sucursal' in Emisor %}<Sucursal>{{ Emisor.Sucursal }}</Sucursal>{% endif %}
+            {% if 'DireccionEmisor' in Emisor %}<DireccionEmisor>{{ Emisor.DireccionEmisor }}</DireccionEmisor>{% endif %}
+            {% if 'Municipio' in Emisor %}<Municipio>{{ Emisor.Municipio }}</Municipio>{% endif %}
+            {% if 'Provincia' in Emisor %}<Provincia>{{ Emisor.Provincia }}</Provincia>{% endif %}
+            {% if Emisor.TablaTelefonoEmisor %}
+            <TablaTelefonoEmisor>
+                {% for telefono in Emisor.TablaTelefonoEmisor %}
+                <TelefonoEmisor>{{ telefono.TelefonoEmisor }}</TelefonoEmisor>
+                {% endfor %}
+            </TablaTelefonoEmisor>
+            {% endif %}
+            {% if 'CorreoEmisor' in Emisor %}<CorreoEmisor>{{ Emisor.CorreoEmisor }}</CorreoEmisor>{% endif %}
+            {% if 'WebSite' in Emisor %}<WebSite>{{ Emisor.WebSite }}</WebSite>{% endif %}
+            {% if 'ActividadEconomica' in Emisor %}<ActividadEconomica>{{ Emisor.ActividadEconomica }}</ActividadEconomica>{% endif %}
+            {% if 'CodigoVendedor' in Emisor %}<CodigoVendedor>{{ Emisor.CodigoVendedor }}</CodigoVendedor>{% endif %}
+            {% if 'NumeroFacturaInterna' in Emisor %}<NumeroFacturaInterna>{{ Emisor.NumeroFacturaInterna }}</NumeroFacturaInterna>{% endif %}
+            {% if 'NumeroPedidoInterno' in Emisor %}<NumeroPedidoInterno>{{ Emisor.NumeroPedidoInterno }}</NumeroPedidoInterno>{% endif %}
+            {% if 'ZonaVenta' in Emisor %}<ZonaVenta>{{ Emisor.ZonaVenta }}</ZonaVenta>{% endif %}
+            {% if 'RutaVenta' in Emisor %}<RutaVenta>{{ Emisor.RutaVenta }}</RutaVenta>{% endif %}
+            {% if 'InformacionAdicionalEmisor' in Emisor %}<InformacionAdicionalEmisor>{{ Emisor.InformacionAdicionalEmisor }}</InformacionAdicionalEmisor>{% endif %}
+            {% if 'FechaEmision' in Emisor %}<FechaEmision>{{ Emisor.FechaEmision }}</FechaEmision>{% endif %}
+        </Emisor>
+        {% if Comprador is defined and Comprador %}
+        <Comprador>
+            {% if 'RNCComprador' in Comprador %}<RNCComprador>{{ Comprador.RNCComprador }}</RNCComprador>{% endif %}
+            {% if 'IdentificadorExtranjero' in Comprador %}<IdentificadorExtranjero>{{ Comprador.IdentificadorExtranjero }}</IdentificadorExtranjero>{% endif %}
+            {% if 'RazonSocialComprador' in Comprador %}<RazonSocialComprador>{{ Comprador.RazonSocialComprador }}</RazonSocialComprador>{% endif %}
+            {% if 'ContactoComprador' in Comprador %}<ContactoComprador>{{ Comprador.ContactoComprador }}</ContactoComprador>{% endif %}
+            {% if 'CorreoComprador' in Comprador %}<CorreoComprador>{{ Comprador.CorreoComprador }}</CorreoComprador>{% endif %}
+            {% if 'DireccionComprador' in Comprador %}<DireccionComprador>{{ Comprador.DireccionComprador }}</DireccionComprador>{% endif %}
+            {% if 'MunicipioComprador' in Comprador %}<MunicipioComprador>{{ Comprador.MunicipioComprador }}</MunicipioComprador>{% endif %}
+            {% if 'ProvinciaComprador' in Comprador %}<ProvinciaComprador>{{ Comprador.ProvinciaComprador }}</ProvinciaComprador>{% endif %}
+            {% if 'FechaEntrega' in Comprador %}<FechaEntrega>{{ Comprador.FechaEntrega }}</FechaEntrega>{% endif %}
+            {% if 'ContactoEntrega' in Comprador %}<ContactoEntrega>{{ Comprador.ContactoEntrega }}</ContactoEntrega>{% endif %}
+            {% if 'DireccionEntrega' in Comprador %}<DireccionEntrega>{{ Comprador.DireccionEntrega }}</DireccionEntrega>{% endif %}
+            {% if 'TelefonoAdicional' in Comprador %}<TelefonoAdicional>{{ Comprador.TelefonoAdicional }}</TelefonoAdicional>{% endif %}
+            {% if 'FechaOrdenCompra' in Comprador %}<FechaOrdenCompra>{{ Comprador.FechaOrdenCompra }}</FechaOrdenCompra>{% endif %}
+            {% if 'NumeroOrdenCompra' in Comprador %}<NumeroOrdenCompra>{{ Comprador.NumeroOrdenCompra }}</NumeroOrdenCompra>{% endif %}
+            {% if 'CodigoInternoComprador' in Comprador %}<CodigoInternoComprador>{{ Comprador.CodigoInternoComprador }}</CodigoInternoComprador>{% endif %}
+            {% if 'ResponsablePago' in Comprador %}<ResponsablePago>{{ Comprador.ResponsablePago }}</ResponsablePago>{% endif %}
+            {% if 'InformacionAdicionalComprador' in Comprador %}<InformacionAdicionalComprador>{{ Comprador.InformacionAdicionalComprador }}</InformacionAdicionalComprador>{% endif %}
+        </Comprador>
+        {% endif %}
+        {% if InformacionesAdicionales is defined and InformacionesAdicionales %}
+        <InformacionesAdicionales>
+            {% if 'FechaEmbarque' in InformacionesAdicionales %}<FechaEmbarque>{{ InformacionesAdicionales.FechaEmbarque }}</FechaEmbarque>{% endif %}
+            {% if 'NumeroEmbarque' in InformacionesAdicionales %}<NumeroEmbarque>{{ InformacionesAdicionales.NumeroEmbarque }}</NumeroEmbarque>{% endif %}
+            {% if 'NumeroContenedor' in InformacionesAdicionales %}<NumeroContenedor>{{ InformacionesAdicionales.NumeroContenedor }}</NumeroContenedor>{% endif %}
+            {% if 'NumeroReferencia' in InformacionesAdicionales %}<NumeroReferencia>{{ InformacionesAdicionales.NumeroReferencia }}</NumeroReferencia>{% endif %}
+            {% if 'PesoBruto' in InformacionesAdicionales %}<PesoBruto>{{ InformacionesAdicionales.PesoBruto }}</PesoBruto>{% endif %}
+            {% if 'PesoNeto' in InformacionesAdicionales %}<PesoNeto>{{ InformacionesAdicionales.PesoNeto }}</PesoNeto>{% endif %}
+            {% if 'UnidadPesoBruto' in InformacionesAdicionales %}<UnidadPesoBruto>{{ InformacionesAdicionales.UnidadPesoBruto }}</UnidadPesoBruto>{% endif %}
+            {% if 'UnidadPesoNeto' in InformacionesAdicionales %}<UnidadPesoNeto>{{ InformacionesAdicionales.UnidadPesoNeto }}</UnidadPesoNeto>{% endif %}
+            {% if 'CantidadBulto' in InformacionesAdicionales %}<CantidadBulto>{{ InformacionesAdicionales.CantidadBulto }}</CantidadBulto>{% endif %}
+            {% if 'UnidadBulto' in InformacionesAdicionales %}<UnidadBulto>{{ InformacionesAdicionales.UnidadBulto }}</UnidadBulto>{% endif %}
+            {% if 'VolumenBulto' in InformacionesAdicionales %}<VolumenBulto>{{ InformacionesAdicionales.VolumenBulto }}</VolumenBulto>{% endif %}
+            {% if 'UnidadVolumen' in InformacionesAdicionales %}<UnidadVolumen>{{ InformacionesAdicionales.UnidadVolumen }}</UnidadVolumen>{% endif %}
+        </InformacionesAdicionales>
+        {% endif %}
+        {% if Transporte is defined and Transporte %}
+        <Transporte>
+            {% if 'Conductor' in Transporte %}<Conductor>{{ Transporte.Conductor }}</Conductor>{% endif %}
+            {% if 'DocumentoTransporte' in Transporte %}<DocumentoTransporte>{{ Transporte.DocumentoTransporte }}</DocumentoTransporte>{% endif %}
+            {% if 'Ficha' in Transporte %}<Ficha>{{ Transporte.Ficha }}</Ficha>{% endif %}
+            {% if 'Placa' in Transporte %}<Placa>{{ Transporte.Placa }}</Placa>{% endif %}
+            {% if 'RutaTransporte' in Transporte %}<RutaTransporte>{{ Transporte.RutaTransporte }}</RutaTransporte>{% endif %}
+            {% if 'ZonaTransporte' in Transporte %}<ZonaTransporte>{{ Transporte.ZonaTransporte }}</ZonaTransporte>{% endif %}
+            {% if 'NumeroAlbaran' in Transporte %}<NumeroAlbaran>{{ Transporte.NumeroAlbaran }}</NumeroAlbaran>{% endif %}
+        </Transporte>
+        {% endif %}
+        <Totales>
+            {% if 'MontoGravadoTotal' in Totales %}<MontoGravadoTotal>{{ Totales.MontoGravadoTotal }}</MontoGravadoTotal>{% endif %}
+            {% if 'MontoGravadoI1' in Totales %}<MontoGravadoI1>{{ Totales.MontoGravadoI1 }}</MontoGravadoI1>{% endif %}
+            {% if 'MontoGravadoI2' in Totales %}<MontoGravadoI2>{{ Totales.MontoGravadoI2 }}</MontoGravadoI2>{% endif %}
+            {% if 'MontoGravadoI3' in Totales %}<MontoGravadoI3>{{ Totales.MontoGravadoI3 }}</MontoGravadoI3>{% endif %}
+            {% if 'MontoExento' in Totales %}<MontoExento>{{ Totales.MontoExento }}</MontoExento>{% endif %}
+            {% if 'ITBIS1' in Totales %}<ITBIS1>{{ Totales.ITBIS1 }}</ITBIS1>{% endif %}
+            {% if 'ITBIS2' in Totales %}<ITBIS2>{{ Totales.ITBIS2 }}</ITBIS2>{% endif %}
+            {% if 'ITBIS3' in Totales %}<ITBIS3>{{ Totales.ITBIS3 }}</ITBIS3>{% endif %}
+            {% if 'TotalITBIS' in Totales %}<TotalITBIS>{{ Totales.TotalITBIS }}</TotalITBIS>{% endif %}
+            {% if 'TotalITBIS1' in Totales %}<TotalITBIS1>{{ Totales.TotalITBIS1 }}</TotalITBIS1>{% endif %}
+            {% if 'TotalITBIS2' in Totales %}<TotalITBIS2>{{ Totales.TotalITBIS2 }}</TotalITBIS2>{% endif %}
+            {% if 'TotalITBIS3' in Totales %}<TotalITBIS3>{{ Totales.TotalITBIS3 }}</TotalITBIS3>{% endif %}
+            {% if 'MontoImpuestoAdicional' in Totales %}<MontoImpuestoAdicional>{{ Totales.MontoImpuestoAdicional }}</MontoImpuestoAdicional>{% endif %}
+            {% if Totales.ImpuestosAdicionales %}
+            <ImpuestosAdicionales>
+                {% for imp in Totales.ImpuestosAdicionales %}
+                <ImpuestoAdicional>
+                    {% if 'TipoImpuesto' in imp %}<TipoImpuesto>{{ imp.TipoImpuesto }}</TipoImpuesto>{% endif %}
+                    {% if 'TasaImpuestoAdicional' in imp %}<TasaImpuestoAdicional>{{ imp.TasaImpuestoAdicional }}</TasaImpuestoAdicional>{% endif %}
+                    {% if 'MontoImpuestoSelectivoConsumoEspecifico' in imp %}<MontoImpuestoSelectivoConsumoEspecifico>{{ imp.MontoImpuestoSelectivoConsumoEspecifico }}</MontoImpuestoSelectivoConsumoEspecifico>{% endif %}
+                    {% if 'MontoImpuestoSelectivoConsumoAdvalorem' in imp %}<MontoImpuestoSelectivoConsumoAdvalorem>{{ imp.MontoImpuestoSelectivoConsumoAdvalorem }}</MontoImpuestoSelectivoConsumoAdvalorem>{% endif %}
+                    {% if 'OtrosImpuestosAdicionales' in imp %}<OtrosImpuestosAdicionales>{{ imp.OtrosImpuestosAdicionales }}</OtrosImpuestosAdicionales>{% endif %}
+                </ImpuestoAdicional>
+                {% endfor %}
+            </ImpuestosAdicionales>
+            {% endif %}
+            {% if 'MontoTotal' in Totales %}<MontoTotal>{{ Totales.MontoTotal }}</MontoTotal>{% endif %}
+            {% if 'MontoNoFacturable' in Totales %}<MontoNoFacturable>{{ Totales.MontoNoFacturable }}</MontoNoFacturable>{% endif %}
+            {% if 'MontoPeriodo' in Totales %}<MontoPeriodo>{{ Totales.MontoPeriodo }}</MontoPeriodo>{% endif %}
+            {% if 'SaldoAnterior' in Totales %}<SaldoAnterior>{{ Totales.SaldoAnterior }}</SaldoAnterior>{% endif %}
+            {% if 'MontoAvancePago' in Totales %}<MontoAvancePago>{{ Totales.MontoAvancePago }}</MontoAvancePago>{% endif %}
+            {% if 'ValorPagar' in Totales %}<ValorPagar>{{ Totales.ValorPagar }}</ValorPagar>{% endif %}
+        </Totales>
+        {% if OtraMoneda is defined and OtraMoneda %}
+        <OtraMoneda>
+            {% if 'TipoMoneda' in OtraMoneda %}<TipoMoneda>{{ OtraMoneda.TipoMoneda }}</TipoMoneda>{% endif %}
+            {% if 'TipoCambio' in OtraMoneda %}<TipoCambio>{{ OtraMoneda.TipoCambio }}</TipoCambio>{% endif %}
+            {% if 'MontoGravadoTotalOtraMoneda' in OtraMoneda %}<MontoGravadoTotalOtraMoneda>{{ OtraMoneda.MontoGravadoTotalOtraMoneda }}</MontoGravadoTotalOtraMoneda>{% endif %}
+            {% if 'MontoGravado1OtraMoneda' in OtraMoneda %}<MontoGravado1OtraMoneda>{{ OtraMoneda.MontoGravado1OtraMoneda }}</MontoGravado1OtraMoneda>{% endif %}
+            {% if 'MontoGravado2OtraMoneda' in OtraMoneda %}<MontoGravado2OtraMoneda>{{ OtraMoneda.MontoGravado2OtraMoneda }}</MontoGravado2OtraMoneda>{% endif %}
+            {% if 'MontoGravado3OtraMoneda' in OtraMoneda %}<MontoGravado3OtraMoneda>{{ OtraMoneda.MontoGravado3OtraMoneda }}</MontoGravado3OtraMoneda>{% endif %}
+            {% if 'MontoExentoOtraMoneda' in OtraMoneda %}<MontoExentoOtraMoneda>{{ OtraMoneda.MontoExentoOtraMoneda }}</MontoExentoOtraMoneda>{% endif %}
+            {% if 'TotalITBISOtraMoneda' in OtraMoneda %}<TotalITBISOtraMoneda>{{ OtraMoneda.TotalITBISOtraMoneda }}</TotalITBISOtraMoneda>{% endif %}
+            {% if 'TotalITBIS1OtraMoneda' in OtraMoneda %}<TotalITBIS1OtraMoneda>{{ OtraMoneda.TotalITBIS1OtraMoneda }}</TotalITBIS1OtraMoneda>{% endif %}
+            {% if 'TotalITBIS2OtraMoneda' in OtraMoneda %}<TotalITBIS2OtraMoneda>{{ OtraMoneda.TotalITBIS2OtraMoneda }}</TotalITBIS2OtraMoneda>{% endif %}
+            {% if 'TotalITBIS3OtraMoneda' in OtraMoneda %}<TotalITBIS3OtraMoneda>{{ OtraMoneda.TotalITBIS3OtraMoneda }}</TotalITBIS3OtraMoneda>{% endif %}
+            {% if 'MontoImpuestoAdicionalOtraMoneda' in OtraMoneda %}<MontoImpuestoAdicionalOtraMoneda>{{ OtraMoneda.MontoImpuestoAdicionalOtraMoneda }}</MontoImpuestoAdicionalOtraMoneda>{% endif %}
+            {% if OtraMoneda.ImpuestosAdicionalesOtraMoneda %}
+            <ImpuestosAdicionalesOtraMoneda>
+                {% for impOm in OtraMoneda.ImpuestosAdicionalesOtraMoneda %}
+                <ImpuestoAdicionalOtraMoneda>
+                    {% if 'TipoImpuestoOtraMoneda' in impOm %}<TipoImpuestoOtraMoneda>{{ impOm.TipoImpuestoOtraMoneda }}</TipoImpuestoOtraMoneda>{% endif %}
+                    {% if 'TasaImpuestoAdicionalOtraMoneda' in impOm %}<TasaImpuestoAdicionalOtraMoneda>{{ impOm.TasaImpuestoAdicionalOtraMoneda }}</TasaImpuestoAdicionalOtraMoneda>{% endif %}
+                    {% if 'MontoImpuestoSelectivoConsumoEspecificoOtraMoneda' in impOm %}<MontoImpuestoSelectivoConsumoEspecificoOtraMoneda>{{ impOm.MontoImpuestoSelectivoConsumoEspecificoOtraMoneda }}</MontoImpuestoSelectivoConsumoEspecificoOtraMoneda>{% endif %}
+                    {% if 'MontoImpuestoSelectivoConsumoAdvaloremOtraMoneda' in impOm %}<MontoImpuestoSelectivoConsumoAdvaloremOtraMoneda>{{ impOm.MontoImpuestoSelectivoConsumoAdvaloremOtraMoneda }}</MontoImpuestoSelectivoConsumoAdvaloremOtraMoneda>{% endif %}
+                    {% if 'OtrosImpuestosAdicionalesOtraMoneda' in impOm %}<OtrosImpuestosAdicionalesOtraMoneda>{{ impOm.OtrosImpuestosAdicionalesOtraMoneda }}</OtrosImpuestosAdicionalesOtraMoneda>{% endif %}
+                </ImpuestoAdicionalOtraMoneda>
+                {% endfor %}
+            </ImpuestosAdicionalesOtraMoneda>
+            {% endif %}
+            {% if 'MontoTotalOtraMoneda' in OtraMoneda %}<MontoTotalOtraMoneda>{{ OtraMoneda.MontoTotalOtraMoneda }}</MontoTotalOtraMoneda>{% endif %}
+        </OtraMoneda>
+        {% endif %}
+    </Encabezado>
+    {% if DetallesItems %}
+    <DetallesItems>
+        {% for Item in DetallesItems %}
+        <Item>
+            {% if 'NumeroLinea' in Item %}<NumeroLinea>{{ Item.NumeroLinea }}</NumeroLinea>{% endif %}
+            {% if Item.TablaCodigosItem %}
+            <TablaCodigosItem>
+                {% for cod in Item.TablaCodigosItem %}
+                <CodigosItem>
+                    {% if 'TipoCodigo' in cod %}<TipoCodigo>{{ cod.TipoCodigo }}</TipoCodigo>{% endif %}
+                    {% if 'CodigoItem' in cod %}<CodigoItem>{{ cod.CodigoItem }}</CodigoItem>{% endif %}
+                </CodigosItem>
+                {% endfor %}
+            </TablaCodigosItem>
+            {% endif %}
+            {% if 'IndicadorFacturacion' in Item %}<IndicadorFacturacion>{{ Item.IndicadorFacturacion }}</IndicadorFacturacion>{% endif %}
+            {% if 'NombreItem' in Item %}<NombreItem>{{ Item.NombreItem }}</NombreItem>{% endif %}
+            {% if 'IndicadorBienoServicio' in Item %}<IndicadorBienoServicio>{{ Item.IndicadorBienoServicio }}</IndicadorBienoServicio>{% endif %}
+            {% if 'DescripcionItem' in Item %}<DescripcionItem>{{ Item.DescripcionItem }}</DescripcionItem>{% endif %}
+            {% if 'CantidadItem' in Item %}<CantidadItem>{{ Item.CantidadItem }}</CantidadItem>{% endif %}
+            {% if 'UnidadMedida' in Item %}<UnidadMedida>{{ Item.UnidadMedida }}</UnidadMedida>{% endif %}
+            {% if 'CantidadReferencia' in Item %}<CantidadReferencia>{{ Item.CantidadReferencia }}</CantidadReferencia>{% endif %}
+            {% if 'UnidadReferencia' in Item %}<UnidadReferencia>{{ Item.UnidadReferencia }}</UnidadReferencia>{% endif %}
+            {% if Item.TablaSubcantidad %}
+            <TablaSubcantidad>
+                {% for sub in Item.TablaSubcantidad %}
+                <SubcantidadItem>
+                    {% if 'Subcantidad' in sub %}<Subcantidad>{{ sub.Subcantidad }}</Subcantidad>{% endif %}
+                    {% if 'CodigoSubcantidad' in sub %}<CodigoSubcantidad>{{ sub.CodigoSubcantidad }}</CodigoSubcantidad>{% endif %}
+                </SubcantidadItem>
+                {% endfor %}
+            </TablaSubcantidad>
+            {% endif %}
+            {% if 'GradosAlcohol' in Item %}<GradosAlcohol>{{ Item.GradosAlcohol }}</GradosAlcohol>{% endif %}
+            {% if 'PrecioUnitarioReferencia' in Item %}<PrecioUnitarioReferencia>{{ Item.PrecioUnitarioReferencia }}</PrecioUnitarioReferencia>{% endif %}
+            {% if 'FechaElaboracion' in Item %}<FechaElaboracion>{{ Item.FechaElaboracion }}</FechaElaboracion>{% endif %}
+            {% if 'FechaVencimientoItem' in Item %}<FechaVencimientoItem>{{ Item.FechaVencimientoItem }}</FechaVencimientoItem>{% endif %}
+            {% if Item.Mineria %}
+            <Mineria>
+                {% if 'PesoNetoKilogramo' in Item.Mineria %}<PesoNetoKilogramo>{{ Item.Mineria.PesoNetoKilogramo }}</PesoNetoKilogramo>{% endif %}
+                {% if 'PesoNetoMineria' in Item.Mineria %}<PesoNetoMineria>{{ Item.Mineria.PesoNetoMineria }}</PesoNetoMineria>{% endif %}
+                {% if 'TipoAfiliacion' in Item.Mineria %}<TipoAfiliacion>{{ Item.Mineria.TipoAfiliacion }}</TipoAfiliacion>{% endif %}
+                {% if 'Liquidacion' in Item.Mineria %}<Liquidacion>{{ Item.Mineria.Liquidacion }}</Liquidacion>{% endif %}
+            </Mineria>
+            {% endif %}
+            {% if 'PrecioUnitarioItem' in Item %}<PrecioUnitarioItem>{{ Item.PrecioUnitarioItem }}</PrecioUnitarioItem>{% endif %}
+            {% if 'DescuentoMonto' in Item %}<DescuentoMonto>{{ Item.DescuentoMonto }}</DescuentoMonto>{% endif %}
+            {% if Item.TablaSubDescuento %}
+            <TablaSubDescuento>
+                {% for sd in Item.TablaSubDescuento %}
+                <SubDescuento>
+                    {% if 'TipoSubDescuento' in sd %}<TipoSubDescuento>{{ sd.TipoSubDescuento }}</TipoSubDescuento>{% endif %}
+                    {% if 'SubDescuentoPorcentaje' in sd %}<SubDescuentoPorcentaje>{{ sd.SubDescuentoPorcentaje }}</SubDescuentoPorcentaje>{% endif %}
+                    {% if 'MontoSubDescuento' in sd %}<MontoSubDescuento>{{ sd.MontoSubDescuento }}</MontoSubDescuento>{% endif %}
+                </SubDescuento>
+                {% endfor %}
+            </TablaSubDescuento>
+            {% endif %}
+            {% if 'RecargoMonto' in Item %}<RecargoMonto>{{ Item.RecargoMonto }}</RecargoMonto>{% endif %}
+            {% if Item.TablaSubRecargo %}
+            <TablaSubRecargo>
+                {% for sr in Item.TablaSubRecargo %}
+                <SubRecargo>
+                    {% if 'TipoSubRecargo' in sr %}<TipoSubRecargo>{{ sr.TipoSubRecargo }}</TipoSubRecargo>{% endif %}
+                    {% if 'SubRecargoPorcentaje' in sr %}<SubRecargoPorcentaje>{{ sr.SubRecargoPorcentaje }}</SubRecargoPorcentaje>{% endif %}
+                    {% if 'MontoSubRecargo' in sr %}<MontoSubRecargo>{{ sr.MontoSubRecargo }}</MontoSubRecargo>{% endif %}
+                </SubRecargo>
+                {% endfor %}
+            </TablaSubRecargo>
+            {% endif %}
+            {% if Item.TablaImpuestoAdicional %}
+            <TablaImpuestoAdicional>
+                {% for imp in Item.TablaImpuestoAdicional %}
+                <ImpuestoAdicional>
+                    {% if 'TipoImpuesto' in imp %}<TipoImpuesto>{{ imp.TipoImpuesto }}</TipoImpuesto>{% endif %}
+                </ImpuestoAdicional>
+                {% endfor %}
+            </TablaImpuestoAdicional>
+            {% endif %}
+            {% if Item.OtraMonedaDetalle %}
+            <OtraMonedaDetalle>
+                {% if 'PrecioOtraMoneda' in Item.OtraMonedaDetalle %}<PrecioOtraMoneda>{{ Item.OtraMonedaDetalle.PrecioOtraMoneda }}</PrecioOtraMoneda>{% endif %}
+                {% if 'DescuentoOtraMoneda' in Item.OtraMonedaDetalle %}<DescuentoOtraMoneda>{{ Item.OtraMonedaDetalle.DescuentoOtraMoneda }}</DescuentoOtraMoneda>{% endif %}
+                {% if 'RecargoOtraMoneda' in Item.OtraMonedaDetalle %}<RecargoOtraMoneda>{{ Item.OtraMonedaDetalle.RecargoOtraMoneda }}</RecargoOtraMoneda>{% endif %}
+                {% if 'MontoItemOtraMoneda' in Item.OtraMonedaDetalle %}<MontoItemOtraMoneda>{{ Item.OtraMonedaDetalle.MontoItemOtraMoneda }}</MontoItemOtraMoneda>{% endif %}
+            </OtraMonedaDetalle>
+            {% endif %}
+            {% if 'MontoItem' in Item %}<MontoItem>{{ Item.MontoItem }}</MontoItem>{% endif %}
+        </Item>
+        {% endfor %}
+    </DetallesItems>
+    {% endif %}
+    {% if Subtotales %}
+    <Subtotales>
+        {% for Subtotal in Subtotales %}
+        <Subtotal>
+            {% if 'NumeroSubTotal' in Subtotal %}<NumeroSubTotal>{{ Subtotal.NumeroSubTotal }}</NumeroSubTotal>{% endif %}
+            {% if 'DescripcionSubtotal' in Subtotal %}<DescripcionSubtotal>{{ Subtotal.DescripcionSubtotal }}</DescripcionSubtotal>{% endif %}
+            {% if 'Orden' in Subtotal %}<Orden>{{ Subtotal.Orden }}</Orden>{% endif %}
+            {% if 'SubTotalMontoGravadoTotal' in Subtotal %}<SubTotalMontoGravadoTotal>{{ Subtotal.SubTotalMontoGravadoTotal }}</SubTotalMontoGravadoTotal>{% endif %}
+            {% if 'SubTotalMontoGravadoI1' in Subtotal %}<SubTotalMontoGravadoI1>{{ Subtotal.SubTotalMontoGravadoI1 }}</SubTotalMontoGravadoI1>{% endif %}
+            {% if 'SubTotalMontoGravadoI2' in Subtotal %}<SubTotalMontoGravadoI2>{{ Subtotal.SubTotalMontoGravadoI2 }}</SubTotalMontoGravadoI2>{% endif %}
+            {% if 'SubTotalMontoGravadoI3' in Subtotal %}<SubTotalMontoGravadoI3>{{ Subtotal.SubTotalMontoGravadoI3 }}</SubTotalMontoGravadoI3>{% endif %}
+            {% if 'SubTotaITBIS' in Subtotal %}<SubTotaITBIS>{{ Subtotal.SubTotaITBIS }}</SubTotaITBIS>{% endif %}
+            {% if 'SubTotaITBIS1' in Subtotal %}<SubTotaITBIS1>{{ Subtotal.SubTotaITBIS1 }}</SubTotaITBIS1>{% endif %}
+            {% if 'SubTotaITBIS2' in Subtotal %}<SubTotaITBIS2>{{ Subtotal.SubTotaITBIS2 }}</SubTotaITBIS2>{% endif %}
+            {% if 'SubTotaITBIS3' in Subtotal %}<SubTotaITBIS3>{{ Subtotal.SubTotaITBIS3 }}</SubTotaITBIS3>{% endif %}
+            {% if 'SubTotalImpuestoAdicional' in Subtotal %}<SubTotalImpuestoAdicional>{{ Subtotal.SubTotalImpuestoAdicional }}</SubTotalImpuestoAdicional>{% endif %}
+            {% if 'SubTotalExento' in Subtotal %}<SubTotalExento>{{ Subtotal.SubTotalExento }}</SubTotalExento>{% endif %}
+            {% if 'MontoSubTotal' in Subtotal %}<MontoSubTotal>{{ Subtotal.MontoSubTotal }}</MontoSubTotal>{% endif %}
+            {% if 'Lineas' in Subtotal %}<Lineas>{{ Subtotal.Lineas }}</Lineas>{% endif %}
+        </Subtotal>
+        {% endfor %}
+    </Subtotales>
+    {% endif %}
+    {% if DescuentosORecargos %}
+    <DescuentosORecargos>
+        {% for d in DescuentosORecargos %}
+        <DescuentoORecargo>
+            {% if 'NumeroLinea' in d %}<NumeroLinea>{{ d.NumeroLinea }}</NumeroLinea>{% endif %}
+            {% if 'TipoAjuste' in d %}<TipoAjuste>{{ d.TipoAjuste }}</TipoAjuste>{% endif %}
+            {% if 'IndicadorNorma1007' in d %}<IndicadorNorma1007>{{ d.IndicadorNorma1007 }}</IndicadorNorma1007>{% endif %}
+            {% if 'DescripcionDescuentooRecargo' in d %}<DescripcionDescuentooRecargo>{{ d.DescripcionDescuentooRecargo }}</DescripcionDescuentooRecargo>{% endif %}
+            {% if 'TipoValor' in d %}<TipoValor>{{ d.TipoValor }}</TipoValor>{% endif %}
+            {% if 'ValorDescuentooRecargo' in d %}<ValorDescuentooRecargo>{{ d.ValorDescuentooRecargo }}</ValorDescuentooRecargo>{% endif %}
+            {% if 'MontoDescuentooRecargo' in d %}<MontoDescuentooRecargo>{{ d.MontoDescuentooRecargo }}</MontoDescuentooRecargo>{% endif %}
+            {% if 'MontoDescuentooRecargoOtraMoneda' in d %}<MontoDescuentooRecargoOtraMoneda>{{ d.MontoDescuentooRecargoOtraMoneda }}</MontoDescuentooRecargoOtraMoneda>{% endif %}
+            {% if 'IndicadorFacturacionDescuentooRecargo' in d %}<IndicadorFacturacionDescuentooRecargo>{{ d.IndicadorFacturacionDescuentooRecargo }}</IndicadorFacturacionDescuentooRecargo>{% endif %}
+        </DescuentoORecargo>
+        {% endfor %}
+    </DescuentosORecargos>
+    {% endif %}
+    {% if Paginacion %}
+    <Paginacion>
+        {% for Pagina in Paginacion %}
+        <Pagina>
+            {% if 'PaginaNo' in Pagina %}<PaginaNo>{{ Pagina.PaginaNo }}</PaginaNo>{% endif %}
+            {% if 'NoLineaDesde' in Pagina %}<NoLineaDesde>{{ Pagina.NoLineaDesde }}</NoLineaDesde>{% endif %}
+            {% if 'NoLineaHasta' in Pagina %}<NoLineaHasta>{{ Pagina.NoLineaHasta }}</NoLineaHasta>{% endif %}
+            {% if 'SubtotalMontoGravadoPagina' in Pagina %}<SubtotalMontoGravadoPagina>{{ Pagina.SubtotalMontoGravadoPagina }}</SubtotalMontoGravadoPagina>{% endif %}
+            {% if 'SubtotalMontoGravado1Pagina' in Pagina %}<SubtotalMontoGravado1Pagina>{{ Pagina.SubtotalMontoGravado1Pagina }}</SubtotalMontoGravado1Pagina>{% endif %}
+            {% if 'SubtotalMontoGravado2Pagina' in Pagina %}<SubtotalMontoGravado2Pagina>{{ Pagina.SubtotalMontoGravado2Pagina }}</SubtotalMontoGravado2Pagina>{% endif %}
+            {% if 'SubtotalMontoGravado3Pagina' in Pagina %}<SubtotalMontoGravado3Pagina>{{ Pagina.SubtotalMontoGravado3Pagina }}</SubtotalMontoGravado3Pagina>{% endif %}
+            {% if 'SubtotalExentoPagina' in Pagina %}<SubtotalExentoPagina>{{ Pagina.SubtotalExentoPagina }}</SubtotalExentoPagina>{% endif %}
+            {% if 'SubtotalItbisPagina' in Pagina %}<SubtotalItbisPagina>{{ Pagina.SubtotalItbisPagina }}</SubtotalItbisPagina>{% endif %}
+            {% if 'SubtotalItbis1Pagina' in Pagina %}<SubtotalItbis1Pagina>{{ Pagina.SubtotalItbis1Pagina }}</SubtotalItbis1Pagina>{% endif %}
+            {% if 'SubtotalItbis2Pagina' in Pagina %}<SubtotalItbis2Pagina>{{ Pagina.SubtotalItbis2Pagina }}</SubtotalItbis2Pagina>{% endif %}
+            {% if 'SubtotalItbis3Pagina' in Pagina %}<SubtotalItbis3Pagina>{{ Pagina.SubtotalItbis3Pagina }}</SubtotalItbis3Pagina>{% endif %}
+            {% if 'SubtotalImpuestoAdicionalPagina' in Pagina %}<SubtotalImpuestoAdicionalPagina>{{ Pagina.SubtotalImpuestoAdicionalPagina }}</SubtotalImpuestoAdicionalPagina>{% endif %}
+            {% if Pagina.SubtotalImpuestoAdicional %}
+            <SubtotalImpuestoAdicional>
+                {% if 'SubtotalImpuestoSelectivoConsumoEspecificoPagina' in Pagina.SubtotalImpuestoAdicional %}<SubtotalImpuestoSelectivoConsumoEspecificoPagina>{{ Pagina.SubtotalImpuestoAdicional.SubtotalImpuestoSelectivoConsumoEspecificoPagina }}</SubtotalImpuestoSelectivoConsumoEspecificoPagina>{% endif %}
+                {% if 'SubtotalOtrosImpuesto' in Pagina.SubtotalImpuestoAdicional %}<SubtotalOtrosImpuesto>{{ Pagina.SubtotalImpuestoAdicional.SubtotalOtrosImpuesto }}</SubtotalOtrosImpuesto>{% endif %}
+            </SubtotalImpuestoAdicional>
+            {% endif %}
+            {% if 'MontoSubtotalPagina' in Pagina %}<MontoSubtotalPagina>{{ Pagina.MontoSubtotalPagina }}</MontoSubtotalPagina>{% endif %}
+            {% if 'SubtotalMontoNoFacturablePagina' in Pagina %}<SubtotalMontoNoFacturablePagina>{{ Pagina.SubtotalMontoNoFacturablePagina }}</SubtotalMontoNoFacturablePagina>{% endif %}
+        </Pagina>
+        {% endfor %}
+    </Paginacion>
+    {% endif %}
+    {% if InformacionReferencia is defined and InformacionReferencia %}
+    <InformacionReferencia>
+        {% if 'NCFModificado' in InformacionReferencia %}<NCFModificado>{{ InformacionReferencia.NCFModificado }}</NCFModificado>{% endif %}
+        {% if 'RNCOtroContribuyente' in InformacionReferencia %}<RNCOtroContribuyente>{{ InformacionReferencia.RNCOtroContribuyente }}</RNCOtroContribuyente>{% endif %}
+        {% if 'FechaNCFModificado' in InformacionReferencia %}<FechaNCFModificado>{{ InformacionReferencia.FechaNCFModificado }}</FechaNCFModificado>{% endif %}
+        {% if 'CodigoModificacion' in InformacionReferencia %}<CodigoModificacion>{{ InformacionReferencia.CodigoModificacion }}</CodigoModificacion>{% endif %}
+    </InformacionReferencia>
+    {% endif %}
+    <FechaHoraFirma>{{ FechaHoraFirma }}</FechaHoraFirma>
+</ECF>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RFCE>
+    <Encabezado>
+        <Version>1.0</Version>
+        <IdDoc>
+            {% if 'TipoeCF' in IdDoc %}<TipoeCF>{{ IdDoc.TipoeCF }}</TipoeCF>{% endif %}
+            {% if 'eNCF' in IdDoc %}<eNCF>{{ IdDoc.eNCF }}</eNCF>{% endif %}
+            {% if 'TipoIngresos' in IdDoc %}<TipoIngresos>{{ IdDoc.TipoIngresos }}</TipoIngresos>{% endif %}
+            {% if 'TipoPago' in IdDoc %}<TipoPago>{{ IdDoc.TipoPago }}</TipoPago>{% endif %}
+            {% if IdDoc.TablaFormasPago %}
+            <TablaFormasPago>
+                {% for formaPago in IdDoc.TablaFormasPago %}
+                <FormaDePago>
+                    {% if 'FormaPago' in formaPago %}<FormaPago>{{ formaPago.FormaPago }}</FormaPago>{% endif %}
+                    {% if 'MontoPago' in formaPago %}<MontoPago>{{ formaPago.MontoPago }}</MontoPago>{% endif %}
+                </FormaDePago>
+                {% endfor %}
+            </TablaFormasPago>
+            {% endif %}
+        </IdDoc>
+        <Emisor>
+            {% if 'RNCEmisor' in Emisor %}<RNCEmisor>{{ Emisor.RNCEmisor }}</RNCEmisor>{% endif %}
+            {% if 'RazonSocialEmisor' in Emisor %}<RazonSocialEmisor>{{ Emisor.RazonSocialEmisor }}</RazonSocialEmisor>{% endif %}
+            {% if 'FechaEmision' in Emisor %}<FechaEmision>{{ Emisor.FechaEmision }}</FechaEmision>{% endif %}
+        </Emisor>
+        {% if Comprador is defined and Comprador %}
+        <Comprador>
+            {% if 'RNCComprador' in Comprador %}<RNCComprador>{{ Comprador.RNCComprador }}</RNCComprador>{% endif %}
+            {% if 'IdentificadorExtranjero' in Comprador %}<IdentificadorExtranjero>{{ Comprador.IdentificadorExtranjero }}</IdentificadorExtranjero>{% endif %}
+            {% if 'RazonSocialComprador' in Comprador %}<RazonSocialComprador>{{ Comprador.RazonSocialComprador }}</RazonSocialComprador>{% endif %}
+        </Comprador>
+        {% endif %}
+        <Totales>
+            {% if 'MontoGravadoTotal' in Totales %}<MontoGravadoTotal>{{ Totales.MontoGravadoTotal }}</MontoGravadoTotal>{% endif %}
+            {% if 'MontoGravadoI1' in Totales %}<MontoGravadoI1>{{ Totales.MontoGravadoI1 }}</MontoGravadoI1>{% endif %}
+            {% if 'MontoGravadoI2' in Totales %}<MontoGravadoI2>{{ Totales.MontoGravadoI2 }}</MontoGravadoI2>{% endif %}
+            {% if 'MontoGravadoI3' in Totales %}<MontoGravadoI3>{{ Totales.MontoGravadoI3 }}</MontoGravadoI3>{% endif %}
+            {% if 'MontoExento' in Totales %}<MontoExento>{{ Totales.MontoExento }}</MontoExento>{% endif %}
+            {% if 'TotalITBIS' in Totales %}<TotalITBIS>{{ Totales.TotalITBIS }}</TotalITBIS>{% endif %}
+            {% if 'TotalITBIS1' in Totales %}<TotalITBIS1>{{ Totales.TotalITBIS1 }}</TotalITBIS1>{% endif %}
+            {% if 'TotalITBIS2' in Totales %}<TotalITBIS2>{{ Totales.TotalITBIS2 }}</TotalITBIS2>{% endif %}
+            {% if 'TotalITBIS3' in Totales %}<TotalITBIS3>{{ Totales.TotalITBIS3 }}</TotalITBIS3>{% endif %}
+            {% if 'MontoImpuestoAdicional' in Totales %}<MontoImpuestoAdicional>{{ Totales.MontoImpuestoAdicional }}</MontoImpuestoAdicional>{% endif %}
+            {% if Totales.ImpuestosAdicionales %}
+            <ImpuestosAdicionales>
+                {% for imp in Totales.ImpuestosAdicionales %}
+                <ImpuestoAdicional>
+                    {% if 'TipoImpuesto' in imp %}<TipoImpuesto>{{ imp.TipoImpuesto }}</TipoImpuesto>{% endif %}
+                    {% if 'MontoImpuestoSelectivoConsumoEspecifico' in imp %}<MontoImpuestoSelectivoConsumoEspecifico>{{ imp.MontoImpuestoSelectivoConsumoEspecifico }}</MontoImpuestoSelectivoConsumoEspecifico>{% endif %}
+                    {% if 'MontoImpuestoSelectivoConsumoAdvalorem' in imp %}<MontoImpuestoSelectivoConsumoAdvalorem>{{ imp.MontoImpuestoSelectivoConsumoAdvalorem }}</MontoImpuestoSelectivoConsumoAdvalorem>{% endif %}
+                    {% if 'OtrosImpuestosAdicionales' in imp %}<OtrosImpuestosAdicionales>{{ imp.OtrosImpuestosAdicionales }}</OtrosImpuestosAdicionales>{% endif %}
+                </ImpuestoAdicional>
+                {% endfor %}
+            </ImpuestosAdicionales>
+            {% endif %}
+            {% if 'MontoTotal' in Totales %}<MontoTotal>{{ Totales.MontoTotal }}</MontoTotal>{% endif %}
+            {% if 'MontoNoFacturable' in Totales %}<MontoNoFacturable>{{ Totales.MontoNoFacturable }}</MontoNoFacturable>{% endif %}
+            {% if 'MontoPeriodo' in Totales %}<MontoPeriodo>{{ Totales.MontoPeriodo }}</MontoPeriodo>{% endif %}
+        </Totales>
+        <CodigoSeguridadeCF>{{ CodigoSeguridadeCF }}</CodigoSeguridadeCF>
+    </Encabezado>
+</RFCE>
