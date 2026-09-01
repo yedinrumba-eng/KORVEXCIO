@@ -31,9 +31,9 @@
 
 **Deliverable:** una configuración opt-in del site que crea `Item Attribute` para Sabor, Nicotina (mg), Tamaño (ml) y Ohmiaje, además de una utilidad para crear un Item Template y sus variantes usando APIs de Frappe. Un site limpio no crea esos atributos.
 
-- [ ] Test de site limpio: `retail_vertical_enabled` ausente o falso no crea atributos.
+- [x] Test de site limpio: `retail_vertical_enabled` ausente o falso no crea atributos.
 - [ ] Test opt-in: la configuración habilitada crea los cuatro atributos con valores permitidos y es idempotente.
-- [ ] Test de variantes: un template con dos combinaciones crea variantes y conserva los atributos.
+- [x] Test de variantes: un template con dos combinaciones crea variantes y conserva los atributos.
 - [ ] Ejecutar la suite específica y luego la suite completa del app.
 - [ ] Documentar evidencia, decisión y deuda; commit `feat: add configurable retail item attributes`.
 

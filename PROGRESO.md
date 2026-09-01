@@ -2403,6 +2403,36 @@ custom fields, integración Item/BOM/Sales Invoice, permisos de reportes y
 dashboard. No se hizo push ni copia de código al servidor, así que la Fase 3
 queda PARCIAL hasta obtener esa evidencia real.
 
+## 2026-09-01 — S3.1: COMPLETADO Y VERIFICADO
+
+S3.1 quedó cerrado. Retail permanece apagado por defecto y, al habilitarse por
+configuración del site, sincroniza atributos configurables y crea templates y
+variantes usando APIs de ERPNext. Nicotina queda como catálogo discreto (`20`),
+porque ERPNext no acepta una lista de valores en atributos numéricos al validar
+una variante.
+
+Evidencia real en el nodo:
+
+```text
+bench --site korvexcio.korvexdev.cc run-tests --module korvexcio.retail.test_item_attributes
+Running 3 integration tests for korvexcio
+✔ test_disabled_site_does_not_create_attributes
+✔ test_enabled_configuration_is_idempotent
+✔ test_template_generates_variant_with_configured_attributes
+Ran 3 tests in 1.973s
+OK
+```
+
+Validación local: `uvx ruff check korvexcio/retail` → `All checks passed!`;
+`uv run python -m compileall -q korvexcio/retail` → exit 0; `git diff --check`
+→ salida vacía y exit 0. Commit: `8b740b7 test: assert configured nicotine values`.
+
+Lección pagada: el template con variantes debe recibir su tabla de atributos
+antes de `.insert()`; ERPNext la valida durante el insert. El build debe usar
+la rama `feat/ecf` declarada en `apps.json`, no `main`.
+
+Siguiente slice: S3.2 — FEFO y alertas de vencimiento.
+
 ## Deuda técnica abierta
 
 Ordenada por lo que más duele.

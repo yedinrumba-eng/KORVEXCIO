@@ -545,6 +545,23 @@ abierto y commit aparte. **El slug `adap` se queda como está, para siempre.**
 
 ---
 
+## Fase 3 — estado de ejecución
+
+**S3.1 cerrado el 2026-09-01.** `korvexcio/retail/item_attributes.py` crea
+atributos y variantes opt-in. La prueba ejecutada en el nodo fue:
+
+```text
+bench --site korvexcio.korvexdev.cc run-tests --module korvexcio.retail.test_item_attributes
+Ran 3 tests in 1.973s
+OK
+```
+
+El siguiente slice es S3.2. Después de cada build en `korvex-node1`, ejecutar
+solo `docker builder prune -f` cuando no haya otro build activo. No usar
+`docker system prune -a`: KORVIS, OpenWA, GlitchTip y Plausible comparten el
+nodo. La última limpieza dejó 36% de uso, 60 GB libres y KORVIS respondió con
+PostgreSQL y Redis en `ok`.
+
 ## Nivel de confianza de este documento
 
 Regla de `_KORVEX-OPS`: **cero datos inventados.** Lo que no se pudo verificar
