@@ -2185,6 +2185,62 @@ el cierre de Fase 2.
 
 ---
 
+## 2026-09-01 — S2.15: CERRADO — auditoría final de Fase 2 (con el gate real sin cumplir, honestamente)
+
+**Estado:** el patrón `IntegrationTestCase` ya está aplicado
+consistentemente en los 91 tests desde S1.4 — no había que agregarlo.
+`responses` (mockear HTTP) y `time_machine` (viajar en el tiempo) **NO
+se instalaron**: no hay ninguna llamada HTTP real que mockear todavía
+(S2.7 sigue sin proveedor, D20) ni ninguna lógica de fecha sin cubrir que
+los necesite (`expiry_message()` de S2.2 ya es puro y testeable con un
+parámetro `today` inyectado, sin necesitar viajar en el tiempo de
+verdad). Instalar una dependencia sin una necesidad concreta que
+resuelva es exactamente el anti-patrón que el `CLAUDE.md` pide evitar —
+queda anotado como patrón a adoptar en S2.7, cuando exista una llamada
+HTTP real que mockear.
+
+**Auditoría final sobre TODO `korvexcio/`, no solo los archivos tocados
+hoy:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Ran 71 tests in 17.193s -> OK (skipped=1)
+Ran 20 tests in 0.710s -> OK
+(91 tests totales)
+
+ruff check korvexcio/ (arbol completo)
+Found 6 errors -- los mismos 6 de siempre (DTZ011 ×5 en S2.2, BLE001 ×1
+en S1.8), ya en la tabla de deuda técnica desde S2.6. Ninguno nuevo.
+
+semgrep (regla propia, arbol completo) -> Findings: 2 -- los mismos 2 ya
+justificados desde S2.10 (ignore_permissions=True documentado + testeado
+en tasks.py). Ninguno nuevo.
+
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, 39%, sin cambio
+git rev-parse HEAD (nodo) == e138fa3 == origin/feat/ecf (SHA verificado)
+```
+
+**El gate real de Fase 2, dicho sin adornos:** el blueprint pide "un E32
+emitido + su RFCE, con respuesta real de TesteCF, en los dos sites, con
+cola asíncrona y contingencia probadas cortando la red" para dar la Fase
+2 por cerrada de verdad. **Eso no se cumplió, y no se puede cumplir
+todavía** — depende enteramente de S2.7 (proveedor real), bloqueado por
+D20 (S0.9/S0.3: sin RNC, sin certificado, sin correspondencia de
+proveedor enviada). Lo que SÍ se cumplió, exactamente como pidió Yedin
+en el `/goal` de esta sesión ("dejamos la base hecha... solo debemos
+integrar las funciones o APIs para funcionamiento"): **toda la
+estructura de S2.1 a S2.14 existe, está probada (91 tests), auditada
+(regla 12b, aislamiento, XSS/mandatory de Frappe con XML) y desplegada**
+— lista para conectar un proveedor real el día que D20 se resuelva, sin
+tener que rediseñar nada.
+
+**Siguiente paso real del proyecto:** ya no es código — es que Yedin
+mande los correos de S0.3 o consiga el RNC+certificado del cliente. Sin
+eso, S2.7 no puede empezar y Fase 3 (`docs/08-BLUEPRINT.md` §6, módulo
+Retail) es lo único que queda desbloqueado para seguir avanzando en
+paralelo.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -2245,11 +2301,20 @@ está resuelto — está anotado como abierto y sigue así.**
 - [x] S2.12 Print format "Representación Impresa e-CF" con QR (PyQRCode, ya instalado) — QR real cuando hay `qr_url`, placeholder claro mientras S2.7 siga bloqueado
 - [x] S2.13 E31/E34 sobre la misma plantilla que E32 (`ecf.xml`) — D21 ampliada: `is_return` → E34 siempre
 - [x] S2.14 Reporte "e-CF Pendientes" — ECF + ECF Contingencia sin resolver, ordenado por antigüedad, filtro de company explícito
-- [ ] S2.15 — suite completa estilo India, cierre de Fase 2
+- [x] S2.15 Auditoría final (91 tests, ruff/Semgrep sin regresión) — CERRADO. `responses`/`time_machine` diferidos a S2.7 (sin necesidad real hoy)
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
 sites, con cola asíncrona y contingencia probadas cortando la red. Más `/secure-vibe`
 en verde y el loop de 4 auditores completo.
+
+🔴 **NO CUMPLIDO — bloqueado por S2.7/D20, no por falta de trabajo.** S2.1
+a S2.15 (estructura completa, 91 tests, auditada) están cerrados. Lo que
+falta es enteramente dependiente de un proveedor real: sin él no hay
+TrackID real de TesteCF que mostrar, y sin eso el gate no se puede
+declarar cumplido de verdad. `/secure-vibe` y el loop de 4 auditores
+tampoco corrieron — están pensados para un cierre de fase con proveedor
+real conectado, no para auditar una estructura que todavía no habla con
+la DGII.
 
 ### Fase 3 — Módulo Retail · 06/10 → 10/10
 - [ ] S3.1 → S3.6 — atributos del vertical, FEFO, verificación de edad, cafetería

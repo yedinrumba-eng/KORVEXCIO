@@ -1,32 +1,36 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
-> **Actualización 2026-09-01 — S2.6 a S2.10 cerrados (S2.7 sigue
-> bloqueado), auditados por Claude.** El nodo está en `3e9ddbf`. Claude
-> hizo S2.6 (`providers/base.py`), S2.8 (plantillas Jinja2, SIN validar
-> contra el XSD oficial — no lo tenemos, D20) y S2.9 (hooks de Sales
-> Invoice). Codex, en paralelo sobre el mismo checkout, corrigió S2.9
-> (fuente de RNC real: `Customer.rnc` con fallback a `tax_id`; umbral
-> contra `base_grand_total`, no `grand_total`) e implementó S2.10 completo
-> (claim atómico, throttle Redis, guard de XML, polling, redacción de
-> secretos). Auditoría independiente de Claude sobre el S2.10 de Codex
-> encontró **12 hallazgos bloqueantes de Semgrep** contra la regla 12b del
-> `CLAUDE.md` (`ignore_permissions=True`/`frappe.db.sql()` crudo sin
-> justificación escrita ni test de aislamiento dedicado — solo 1 de 9 usos
-> los tenía) — corregidos: `_claim_ecf()` sin SQL crudo (mismo patrón
-> `for_update=True` de S2.3), los 8 `ignore_permissions=True` dispersos
-> centralizados en un helper con una sola justificación completa, un test
-> de aislamiento nuevo, y un `TimestampMismatchError` real que el propio
-> fix del claim introdujo (arreglado con `ecf.reload()`). Semgrep bajó de
-> 12 a 2 hallazgos — los 2 que quedan están documentados y testeados, que
-> es lo que la regla exige, no "cero". Suite completa: 68/68 verde
-> (55 integration + 13 unit, `OK (skipped=1)`). S2.7 sigue bloqueado por
-> proveedor real, RNC y certificado; no se inventó una emisión DGII. S2.11
-> no comienza hasta que el gate fiscal esté resuelto o Yedin lo autorice
-> como estructura sin proveedor real (mismo criterio ya usado en S2.6/S2.8).
+> **Actualización 2026-09-01 — Fase 2 (S2.1→S2.15) CERRADA como
+> estructura; el gate real sigue sin cumplirse por D20, no por falta de
+> trabajo.** El nodo está en `e138fa3`. 91 tests verdes (71 integration +
+> 20 unit), `ruff`/Semgrep limpios (6 hallazgos de deuda vieja documentada
+> desde S2.6, 2 de `ignore_permissions=True` justificados+testeados desde
+> S2.10, ninguno nuevo), KORVIS sano en cada slice.
 >
-> **Carriles para trabajar en paralelo con Codex, desde ahora:** Carril A
-> (Claude) = `korvexcio/ecf/**`, camino crítico. Carril B (Codex) = todo lo
-> que no toque ese árbol. Trabajar los dos sobre los mismos archivos sin
+> Claude hizo S2.1/S2.6/S2.8/S2.9 (base), auditó y corrigió S2.9/S2.10 de
+> Codex (12→2 hallazgos de la regla 12b), y completó S2.11 a S2.15:
+> `ECF Contingencia` (patrón ZATCA, encontró y arregló 2 bugs reales de
+> Frappe con XML en campos Long Text — `ignore_xss_filter` e imposibilidad
+> de `reqd` en XML puro, aplica también a `ECF` de S2.4), print format
+> "Representación Impresa e-CF" con QR (`PyQRCode`, ya instalado, sin
+> dependencia nueva), E31/E34 sobre la misma plantilla que E32
+> (`templates/ecf.xml`, renombrado), reporte "e-CF Pendientes", y el
+> cierre de fase con auditoría completa. Codex hizo S2.10 completo (claim
+> atómico, throttle Redis, guard de XML) y corrigió S2.9 (fuente de RNC
+> real vía `Customer.rnc`, umbral contra `base_grand_total`).
+>
+> **El gate real de Fase 2 — "un E32 emitido + su RFCE con TrackID real
+> de TesteCF" — NO se cumplió.** Depende enteramente de S2.7 (proveedor
+> real), bloqueado por D20 (S0.9/S0.3: sin RNC, sin certificado, sin
+> correspondencia enviada). Lo que sí existe: toda la estructura de
+> S2.1-S2.14, probada y auditada, lista para conectar un proveedor real
+> el día que D20 se resuelva. **Siguiente paso real del proyecto: ya no es
+> código — Yedin manda los correos de S0.3 o consigue RNC+certificado.**
+> Sin eso, Fase 3 (módulo Retail) es lo único que sigue desbloqueado.
+>
+> **Carriles para trabajar en paralelo con Codex:** Carril A (Claude) =
+> `korvexcio/ecf/**`, camino crítico. Carril B (Codex) = todo lo que no
+> toque ese árbol. Trabajar los dos sobre los mismos archivos sin
 > repartir, como pasó en S2.9/S2.10, funcionó esta vez pero fue suerte, no
 > diseño — el propio `docs/08-BLUEPRINT.md` §7.2 ya proponía esta frontera.
 
