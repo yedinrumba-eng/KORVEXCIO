@@ -30,6 +30,12 @@ def open_shift(pos_profile: str, opening_balances: dict[str, float]) -> str:
     `opening_balances`: {mode_of_payment: opening_amount}. Returns the
     submitted POS Opening Entry name."""
     profile = frappe.get_doc("POS Profile", pos_profile)
+    if not profile.has_permission("read"):
+        # frappe.get_doc() doesn't check read permission (the S1.8
+        # lesson) -- without this, a caller could name a POS Profile
+        # from another Company and have its `company` used below before
+        # Frappe's own create-time isolation check gets a chance to run.
+        frappe.throw(frappe._("No tienes permiso para leer este POS Profile."), frappe.PermissionError)
     entry = frappe.new_doc("POS Opening Entry")
     entry.pos_profile = pos_profile
     entry.company = profile.company
@@ -51,6 +57,14 @@ def close_shift(pos_opening_entry: str, counted_amounts: dict[str, float]) -> st
     minus expected, expected including the opening float for that
     mode)."""
     opening = frappe.get_doc("POS Opening Entry", pos_opening_entry)
+    if not opening.has_permission("read"):
+        # Same S1.8 gap as above: get_doc() ignores read permission, and
+        # make_closing_entry_from_opening() below would otherwise query
+        # another Company's real sales invoices into memory before any
+        # permission check ran.
+        frappe.throw(
+            frappe._("No tienes permiso para leer este turno."), frappe.PermissionError
+        )
     closing = make_closing_entry_from_opening(opening)
 
     opening_by_mode = {row.mode_of_payment: row.opening_amount for row in opening.balance_details}

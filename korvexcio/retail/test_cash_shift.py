@@ -184,3 +184,23 @@ class TestCashShiftReconciliation(IntegrationTestCase):
         frappe.set_user(CAJERO_A)
         with self.assertRaises(frappe.PermissionError):
             frappe.client.get("POS Closing Entry", closing_b_name)
+
+    def test_cajero_cannot_open_or_close_a_shift_naming_another_companys_profile(self):
+        """frappe.get_doc() (used internally to resolve pos_profile /
+        pos_opening_entry) does not check read permission on its own --
+        the S1.8 lesson. open_shift/close_shift must reject a foreign
+        Company's names explicitly, before touching their real data."""
+        frappe.set_user("Administrator")
+        opening_b = open_shift(self.profile_b, {"Cash": 0})
+        self._sell(COMPANY_B, ABBR_B, self.profile_b, 700)
+
+        frappe.set_user(CAJERO_A)
+        with self.assertRaises(frappe.PermissionError):
+            open_shift(self.profile_b, {"Cash": 0})
+        with self.assertRaises(frappe.PermissionError):
+            close_shift(opening_b, {"Cash": 700})
+
+        # Neither denied call closed B's shift -- close it for real so it
+        # doesn't collide with the other tests' own opening of profile_b.
+        frappe.set_user("Administrator")
+        close_shift(opening_b, {"Cash": 700})
