@@ -1283,9 +1283,13 @@ sin configuración fiscal falsa.
   la Company después de crear el documento. El escenario 9 de aislamiento
   confirma que un Contador limitado a A lista/lee A, no B, y no puede moverla.
 
-**RED real:** el commit `74a5205` se aplicó al nodo y el test falló por la
-ausencia del DocType/controlador (`ModuleNotFoundError`, `Ran 0 tests`, exit
-1), no por sintaxis. Después del primer GREEN apareció una trampa de Frappe:
+**Intento RED — no cuenta como RED válido de TDD:** el commit `74a5205` se
+aplicó al nodo, pero la importación del controlador inexistente falló durante
+discovery (`ModuleNotFoundError`, `Ran 0 tests`, exit 1). Ninguna aserción llegó
+a ejecutarse. Se conserva esta evidencia por honestidad: la cobertura final sí
+prueba el comportamiento, pero S2.1 **no tiene evidencia cronológica de un test
+descubrible fallando antes del código de producción**. Después del primer GREEN
+apareció otra trampa de Frappe:
 un test ubicado dentro de `doctype/dgii_settings/` infiere ese DocType y trata
 de sembrar toda la cadena de Links antes de `setUpClass`; la cadena de Company
 terminó en `DoesNotExistError: DocType Payment Gateway not found`. El arreglo
@@ -1314,7 +1318,7 @@ OK
 
 bench --site korvexcio.korvexdev.cc run-tests --app korvexcio
 Running 13 integration tests for korvexcio
-Ran 13 tests in 0.953s
+Ran 13 tests in 0.940s
 OK (skipped=1)
 
 frappe.get_all("DGII Settings", fields=["company", "ambiente"])
@@ -1324,9 +1328,35 @@ frappe.get_all("DGII Settings", fields=["company", "ambiente"])
 systemctl status korvex-api --no-pager
 Active: active (running)
 curl -s http://127.0.0.1:4000/health
-{"status":"ok","checks":{"postgres":"ok","redis":"ok"},"uptime":175968}
+{"status":"ok","checks":{"postgres":"ok","redis":"ok"},"uptime":207091}
 df -h /
 98G total, 36G used, 58G avail, 39%
+```
+
+**D21 — el usuario MariaDB del site se limita a la subred Docker privada de
+KORVEXCIO (`172.18.%`), no a una IP de contenedor.** El reinicio obligatorio
+movió `backend` de `172.18.0.5` a `172.18.0.9`; Frappe había creado el grant
+solo para la IP vieja y la primera suite post-restart murió antes de ejecutar
+tests con `OperationalError 1045`. Yedin autorizó explícitamente ampliar el
+host a la subred aislada `172.18.0.0/16`; MariaDB no publica puertos al host.
+Se conservó el mismo usuario, contraseña y privilegios.
+
+```text
+SELECT User, Host ...
+_2121ada3306b29ac  172.18.0.5
+
+docker inspect ... korvexcio-backend-1
+/korvexcio-backend-1 172.18.0.9
+
+RENAME USER ...@'172.18.0.5' TO ...@'172.18.%'
+exit 0
+
+SELECT User, Host ...
+_2121ada3306b29ac  172.18.%
+
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio
+Ran 13 tests in 0.940s
+OK (skipped=1)
 ```
 
 **Evidencia adicional recapturada, salida real:**
@@ -1351,8 +1381,8 @@ NO MATCHES: ignore_permissions=True / frappe.db.sql(
 ```
 
 No se instaló una dependencia solo para lint: `compileall` es el mecanismo
-equivalente disponible. S2.1 queda pendiente únicamente de las auditorías;
-no se declara cerrada antes de sus veredictos.
+equivalente disponible. S2.1 quedó cerrado con suite y auditorías verdes; la
+desviación de TDD descrita arriba queda registrada, no rebautizada como éxito.
 
 **Deuda que no cambió:** S0.3/S0.9 siguen abiertas por D20. No bloquean la
 estructura de S2.1, pero detienen S2.7 si siguen sin correo de proveedor,
@@ -1479,9 +1509,57 @@ completa (azul `#2b44e6`-ish + gris acero, viendo el logo). Eso es trabajo
 de frontend que no está en ningún slice todavía; se anota para cuando
 haya UI propia (Fase 4+).
 
-**Siguiente al retomar:** Fase 2 — el módulo `ecf`, empezando por S2.1.
+**Siguiente al retomar:** Fase 2 — S2.2, `DGII Digital Certificate`.
 **Esta sesión para aquí** — el prompt para continuar queda en
 `PROMPT-CLAUDE-CODE.md`, listo para pegar en Codex.
+
+---
+
+## 2026-08-31 — Cierre operativo final de S2.1 y handoff a S2.2
+
+S2.1 quedó desplegado desde `feat/ecf` y probado en el nodo sobre el commit
+`e1b8edc`. No se mezcló a `main`: `docs/08-BLUEPRINT.md` §7.2 manda hacer
+merge solo en los gates de fase. El push correcto de este slice es
+`origin/feat/ecf`.
+
+El restart obligatorio reveló y cerró el incidente D21: el usuario MariaDB
+estaba amarrado a la IP efímera `.5`, `backend` pasó a `.9` y la primera suite
+murió con `1045 Access denied`. Con autorización explícita de Yedin, el host
+quedó limitado a `172.18.%`, la red privada `korvexcio_default`; la DB sigue
+sin puerto publicado al host.
+
+**Verificación fresca de cierre, salida real:**
+
+```text
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio
+Running 13 integration tests for korvexcio
+Ran 13 tests in 0.940s
+OK (skipped=1)
+
+frappe.get_all("DGII Settings", fields=["company","ambiente"])
+[{"company":"_Test Company KORVEXCIO B","ambiente":"CerteCF"},
+ {"company":"_Test Company KORVEXCIO A","ambiente":"TesteCF"}]
+
+systemctl status korvex-api --no-pager
+Active: active (running)
+
+curl -s http://127.0.0.1:4000/health
+{"status":"ok","checks":{"postgres":"ok","redis":"ok"},"uptime":207091}
+
+df -h /
+/dev/mapper/ubuntu--vg-ubuntu--lv  98G  36G  58G  39% /
+```
+
+La auditoría de seguridad y la de fiabilidad devolvieron **APROBADO**, sin
+Críticos ni Altos. Sus hallazgos Medios/Bajos quedaron en deuda técnica. La
+revisión de spec detectó que `Ran 0 tests` estaba mal descrito como RED real;
+la bitácora ahora lo registra correctamente como desviación de TDD, sin
+fabricar evidencia retroactiva.
+
+**Siguiente:** S2.2 — `DGII Digital Certificate`. El checkout conserva el
+trabajo no committeado que Claude ya empezó en `isolation.py` y
+`ecf/doctype/dgii_digital_certificate/`; no se reseteó, movió ni incluyó en
+el commit de S2.1. `PROMPT-CLAUDE-CODE.md` quedó actualizado para retomarlo.
 
 ---
 
@@ -1574,4 +1652,8 @@ Ordenada por lo que más duele.
 | 🟡 | **D16 (POS) recomendado hacia POSNext por S0.8, sin confirmar** | Evidencia de código en `docs/10-SPIKE-POS.md` | OK explícito de Yedin, o prueba en vivo en S4.1 |
 | 🟡 | **7.154 GB de caché de build reclamable en el nodo** | La alarma de disco avisa al 80% | Mantenimiento autorizado con `docker builder prune` |
 | 🟡 | **La mini PC viaja con Yedin** | Ninguna mitigación técnica | Decisión de Yedin antes del go-live: deja de viajar · VPS · contingencia por OFV |
+| 🟡 | **Un `Contador` con permiso de lectura pero sin `User Permission` de Company puede quedar sin filtro efectivo** — hallazgo MEDIO de la auditoría de S2.1 | El aprovisionamiento actual asigna Company y el escenario 9 prueba un Contador acotado | En el slice de aprovisionamiento de usuarios, impedir `Contador`/`Dueño` sin Company y agregar un test default-deny que espere cero `DGII Settings` |
+| ⚪ | **Falta probar creación/escritura cross-Company de `DGII Settings` con `Dueño`** — hallazgo BAJO de la auditoría de S2.1 | `freeze_company()` cubre el DocType y el escenario 9 ya prueba lectura y mutación de Company con Contador | Añadir el caso cuando vuelva a ampliarse la suite de aislamiento |
+| ⚪ | **Fixtures de S2.1 reutilizan usuarios/registros persistentes sin normalizar todos sus valores** | Los helpers garantizan existencia y la suite actual pasó limpia | Normalizar roles/valores cuando el registro ya existe, o crear fixtures aislados con limpieza explícita |
+| ⚪ | **Los resolvers futuros no deben asumir `DGII Settings.name == company`** — un rename de Company puede volver obsoleto el nombre físico | `company` también es único y es la fuente de verdad | Buscar por el campo `company` y añadir esa regresión cuando se implemente el resolver fiscal |
 | ⚪ | Warnings de Vite en el build de POSNext/URY | No producen fallo observable | Se revisan solo si rompen algo observable |

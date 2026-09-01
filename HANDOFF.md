@@ -35,7 +35,7 @@
 > workflows de CI + regla propia de Semgrep, probada de verdad · `custom
 > fields` en Customer · roles y User Permissions por Company · **la
 > barrera de aislamiento** (`korvexcio/isolation.py`, `freeze_company`) con
-> 8 de 12 escenarios reales verificados y 4 diferidos a Fase 2 con motivo
+> 9 de 12 escenarios reales verificados y 3 diferidos a Fase 2 con motivo
 > explícito. Detalle completo, slice por slice, en `PROGRESO.md`.
 >
 > Próximo paso: **S2.2** — `DGII Digital Certificate` (bloqueado en la
@@ -57,12 +57,13 @@
 
 ---
 
-## Estado técnico al retomar — Fase 2 en curso, S2.1 implementado
+## Estado técnico al retomar — Fase 2 en curso, S2.1 completado
 
 - Imagen en `korvex-node1`: `korvexcio:16`, sitio `korvexcio.korvexdev.cc`,
-  `frappe 16.32.0` + `erpnext 16.33.0` + **`korvexcio 0.0.1` (rama `main`)**.
-  Nueve servicios de runtime arriba, MariaDB healthy. Red y recursos sin
-  cambios desde S0.5.
+  `frappe 16.32.0` + `erpnext 16.33.0` + **`korvexcio 0.0.1` (rama
+  `feat/ecf`)**. Nueve servicios de runtime arriba, MariaDB healthy. D21
+  cambió el host del usuario DB de una IP efímera a `172.18.%`, limitado a
+  la red Docker privada de KORVEXCIO; MariaDB sigue sin puerto al host.
 - **Companies:** `VAPERIA LA J Y EL JALAPEÑO` (`VLJ`) y
   `EL SABOR DE LAS 5 ESQUINAS` (`ESE`), con `tax_id` placeholder (RNC
   pendiente, D13), almacenes, cost centers y Chart of Accounts completos.
@@ -112,11 +113,15 @@
   vivo (S4.1).
 - 🔴 **S0.9/S0.3 (fiscal):** deuda técnica por decisión de Yedin (D20),
   ya no bloquea código. **Para de verdad en S2.7** si sigue sin resolver.
+- **D21 (operación):** el usuario MariaDB del site acepta conexiones desde
+  `172.18.%`, la subred privada de KORVEXCIO. Yedin lo autorizó después de
+  que el restart moviera `backend` de `.5` a `.9` y rompiera el grant.
 - Deuda menor: build cache reclamable 7.154 GB · SHA-pin de GitHub Actions
   (`@v6` en vez de SHA fijo, detectado por `/security-review`, no urgente
   porque nada ha corrido todavía sin push).
-- **Sin push.** `origin/main` sigue en `e19389f`. Commits locales: ver
-  `git log --oneline` — Fase 0 completa + Fase 1 completa, todo en `main`.
+- **Push de S2.1 hecho a `origin/feat/ecf` en `e1b8edc`;** el nodo ejecutó
+  ese SHA durante la verificación. `origin/main` sigue en `74048e4` porque
+  `docs/08-BLUEPRINT.md` §7.2 ordena mergear a `main` solo en gates de fase.
 
 ---
 
@@ -372,7 +377,7 @@ solo pide 1–3 GB. Un bench con 2–3 sites cabe; **10 tenants no caben.** El
 
 | # | Slice | Qué |
 |---|---|---|
-| 1 | **S2.1** 🟡 | `DGII Settings` — evidencia completa; pendiente únicamente de auditorías |
+| 1 | **S2.1** ✅ | `DGII Settings` — código, migrate, suite y auditorías completados |
 | 2 | **S2.2** | `DGII Digital Certificate` — `.p12` como Attach, password como Password (nunca Data) |
 | 3 | **S2.3 → S2.6** | Secuencia eNCF, DocType `ECF`, `ECF Integration Log`, interfaz `providers/base.py` |
 | 4 | **S2.7** 🔴 | El proveedor real. **Aquí es donde S0.9/S0.3 paran de verdad** si siguen sin resolver |
@@ -441,6 +446,8 @@ pagarlas — el detalle completo con comandos está en la entrada de
 | **`frappe.get_doc(doctype, name)` NO chequea permisos de lectura** — es una llamada de ORM de bajo nivel (S1.8) | Un test que usa `get_doc()` para simular "¿puede leer esto un usuario sin permiso?" da falso negativo: parece que hay un hueco de seguridad cuando en realidad el test está mal escrito | Usar `frappe.client.get(doctype, name)` — la función real detrás de `/api/resource/<doctype>/<name>` — para probar lectura. Y en código propio: todo `@frappe.whitelist()` que lea un doc debe llamar `doc.check_permission("read")` explícito, nunca confiar en `get_doc()` solo |
 | **Frappe distingue "existe pero no es tuyo" de "no existe"** — `PermissionError` vs `DoesNotExistError` (S1.8) | Es comportamiento nativo de la plataforma, no algo que introdujo este proyecto — pero sí es la fuga de enumeración exacta que el blueprint pedía probar (§7.3, escenario 9) | Documentado como deuda menor en `PROGRESO.md`. No se intentó parchear Frappe para unificar los errores — cambio de mayor alcance que este slice |
 | **El checkout del nodo quedó sucio antes de consumir Git** (S2.1) | Un `git pull --ff-only` puede quedar bloqueado o mezclar cambios manuales con el artefacto versionado; el exit code solo no prueba qué SHA corre | Antes de conectar el nodo a Git: crear backup recuperable del árbol, verificarlo y hacer `git stash` de todo cambio local. Luego el nodo solo hace pull de commits conocidos y se verifica el SHA |
+| **`Ran 0 tests` no es un RED válido de TDD** (S2.1) | Un fallo de import/discovery puede parecer el rojo esperado, pero ninguna aserción se ejecutó | El test inicial tiene que ser descubrible y fallar dentro del caso. En S2.1 la desviación quedó documentada; no se fingió evidencia retroactiva |
+| **Frappe creó el usuario MariaDB atado a la IP efímera del contenedor** (S2.1, D21) | `migrate` funcionó antes del restart; después Docker movió `backend` de `172.18.0.5` a `.9` y la suite murió con `1045 Access denied`, aunque DB y contenedores parecían sanos | Con autorización explícita de Yedin, se conservó usuario/clave/privilegios y se cambió solo el host a `172.18.%`, la red Docker privada y aislada de KORVEXCIO. Verificar el grant después de cualquier recreación de DB/site |
 
 ---
 
