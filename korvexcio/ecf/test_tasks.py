@@ -17,6 +17,7 @@ from korvexcio.ecf.providers.base import ConsultaResult, EmisionResult, Err, Ok
 
 COMPANY_A = "_Test Company KORVEXCIO A"
 DUENO_A = "_test.isolation.owner.tasks.a@korvexdev.cc"
+CAJERO_A = "_test.isolation.cajero.tasks.a@korvexdev.cc"
 
 
 class _FakeProvider:
@@ -98,6 +99,19 @@ class TestEmitirECF(IntegrationTestCase):
                 }
             ).insert()
         assign_company_user_permission(DUENO_A, COMPANY_A)
+
+        if not frappe.db.exists("User", CAJERO_A):
+            frappe.get_doc(
+                {
+                    "doctype": "User",
+                    "email": CAJERO_A,
+                    "first_name": "Cajero Tasks Isolation Test",
+                    "user_type": "System User",
+                    "send_welcome_email": 0,
+                    "roles": [{"role": "Cajero VLJ"}],
+                }
+            ).insert()
+        assign_company_user_permission(CAJERO_A, COMPANY_A)
 
     def setUp(self):
         frappe.set_user("Administrator")
@@ -242,6 +256,35 @@ class TestEmitirECF(IntegrationTestCase):
         log_name = frappe.db.get_value("ECF Integration Log", {"ecf": ecf.name, "operation": "emitir"}, "name")
         self.assertIsNotNone(log_name, "el job no debio fallar por el create-permission del Dueño")
         self.assertEqual(frappe.db.get_value("ECF Integration Log", log_name, "company"), COMPANY_A)
+
+    def test_worker_writes_bypass_permission_but_stay_company_scoped(self):
+        """Prueba de aislamiento requerida por CLAUDE.md regla 12b para el
+        ignore_permissions=True de _save_as_system: un Cajero no tiene
+        NINGUN permiso en ECF (tabla de S2.4) -- ni siquiera lectura por
+        la via correcta. Confirma dos cosas: (1) el propio Cajero, actuando
+        directo, no puede escribir el ECF; (2) el job que su venta encolo
+        SI puede avanzarlo -- sin que eso abra una via nueva para tocar
+        datos de otra Company (el campo `company` sigue congelado por
+        freeze_company(), ignore_permissions=True no toca ese mecanismo)."""
+        fake = _FakeProvider(emitir_result=Ok(EmisionResult(track_id="TRK-CAJERO")))
+        registry._REGISTRY["Alanube"] = lambda: fake
+        ecf = _make_ecf()
+
+        frappe.set_user(CAJERO_A)
+        # get_doc() no chequea permisos de lectura (leccion de S1.8) -- el
+        # save() si los chequea, y es ahi donde se prueba que el Cajero de
+        # verdad no tiene acceso de escritura.
+        doc = frappe.get_doc("ECF", ecf.name)
+        doc.validation_messages = "intento directo del cajero, sin bypass"
+        with self.assertRaises(frappe.PermissionError):
+            doc.save()
+
+        tasks.emitir_ecf(ecf.name)
+
+        frappe.set_user("Administrator")
+        ecf.reload()
+        self.assertEqual(ecf.track_id, "TRK-CAJERO")
+        self.assertEqual(ecf.company, COMPANY_A)
 
 
 class TestRetryAndPoll(IntegrationTestCase):

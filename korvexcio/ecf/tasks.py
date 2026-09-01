@@ -46,23 +46,34 @@ def _safe_message(message: str | None) -> str | None:
     return sanitized[:2000]
 
 
-def _submit_internal(ecf) -> None:
-    """Submit an ECF from the trusted background worker."""
-    ecf.flags.ignore_permissions = True
-    ecf.submit()
+def _save_as_system(doc, *, submit: bool = False) -> None:
+    """El job de la cola corre bajo la sesion de quien encolo la venta --
+    un Cajero (sin NINGUN permiso en ECF, tabla de S2.4) o un Dueño (solo
+    create/read/submit, sin write). Ninguno de los dos puede actualizar
+    el estado fiscal de su propia venta sin este bypass, y es correcto
+    que no puedan: es el SISTEMA avanzando su propio trabajo interno, no
+    una accion de negocio del usuario. ignore_permissions=True
+    justificado por CLAUDE.md regla 12b -- `company` ya esta congelado
+    por freeze_company() desde la creacion del ECF (S2.9), asi que esto
+    nunca reasigna un documento a otra Company; el aislamiento entre
+    tenants no se toca. Test de aislamiento dedicado:
+    test_tasks.py::test_worker_writes_bypass_permission_but_stay_company_scoped.
+    """
+    doc.flags.ignore_permissions = True
+    doc.submit() if submit else doc.save()
 
 
 def _claim_ecf(ecf_name: str) -> bool:
-    """Atomically claim a pending ECF for one worker only."""
-    frappe.db.sql(
-        """
-        UPDATE `tabECF`
-        SET estado = 'Enviando'
-        WHERE name = %s AND estado = 'Pendiente' AND docstatus = 0
-        """,
-        (ecf_name,),
-    )
-    return frappe.db.sql("SELECT ROW_COUNT()")[0][0] == 1
+    """Compare-and-swap atomico via SELECT ... FOR UPDATE -- mismo patron
+    que Secuencia eNCF.reserve_next() (S2.3): bloquea la fila hasta el
+    commit de esta transaccion, asi que un segundo worker que la pida
+    espera, ve el estado ya en Enviando y no puede reclamarla dos veces.
+    Sin frappe.db.sql() crudo (CLAUDE.md regla 12b)."""
+    estado, docstatus = frappe.db.get_value("ECF", ecf_name, ["estado", "docstatus"], for_update=True)
+    if estado != "Pendiente" or docstatus != 0:
+        return False
+    frappe.db.set_value("ECF", ecf_name, "estado", "Enviando")
+    return True
 
 
 def _resolve_provider_for_company(company: str):
@@ -131,20 +142,24 @@ def emitir_ecf(ecf_name: str) -> None:
         return
     if ecf.estado != "Pendiente" or not _claim_ecf(ecf_name):
         return
-    ecf.estado = "Enviando"
+    # _claim_ecf() escribe directo a la base (frappe.db.set_value), lo que
+    # actualiza `modified` -- sin este reload, el `ecf` en memoria queda
+    # con un timestamp viejo y el primer .save() de mas abajo revienta con
+    # TimestampMismatchError (optimistic locking de Frappe).
+    ecf.reload()
 
     if not _source_is_submitted(ecf):
         ecf.estado = "Anulado"
         ecf.validation_messages = frappe._(
             "La factura origen ya no está sometida; el e-CF no se enviará."
         )
-        ecf.save(ignore_permissions=True)
+        _save_as_system(ecf)
         return
 
     if not ecf.signed_xml:
         ecf.validation_messages = frappe._("No se puede enviar un e-CF sin XML firmado.")
         ecf.estado = "Pendiente"
-        ecf.save(ignore_permissions=True)
+        _save_as_system(ecf)
         return
     try:
         validate_well_formed(ecf.signed_xml)
@@ -153,7 +168,7 @@ def emitir_ecf(ecf_name: str) -> None:
             type(exc).__name__
         )
         ecf.estado = "Pendiente"
-        ecf.save(ignore_permissions=True)
+        _save_as_system(ecf)
         return
 
     provider, provider_name = _resolve_provider_for_company(ecf.company)
@@ -163,19 +178,20 @@ def emitir_ecf(ecf_name: str) -> None:
             "Sin proveedor real configurado todavia para {0} (S2.7 sigue bloqueado por D20)."
         ).format(ecf.company)
         ecf.estado = "Pendiente"
-        ecf.save(ignore_permissions=True)
+        _save_as_system(ecf)
         return
 
     if not _throttle_provider(provider_name):
         ecf.validation_messages = frappe._("Límite temporal del proveedor alcanzado; se reintentará.")
         ecf.estado = "Pendiente"
-        ecf.save(ignore_permissions=True)
+        _save_as_system(ecf)
         return
 
     ecf.attempt_count = (ecf.attempt_count or 0) + 1
     try:
         result = provider.emitir(ecf.company, ecf.signed_xml)
     except Exception:  # noqa: BLE001
+        frappe.log_error(title=f"emitir_ecf: {provider_name} emitir() crashed for {ecf_name}")
         result = Err(message="Proveedor no disponible", code="provider_error", retryable=True)
     _log_attempt(ecf, "emitir", result, provider_name)
 
@@ -185,16 +201,16 @@ def emitir_ecf(ecf_name: str) -> None:
         ecf.qr_url = result.value.qr_url
         # TrackID is an acknowledgement only; polling confirms acceptance.
         ecf.estado = "Pendiente"
-        ecf.save(ignore_permissions=True)
+        _save_as_system(ecf)
         return
 
     ecf.validation_messages = _safe_message(result.message)
     if not result.retryable or ecf.attempt_count >= MAX_ATTEMPTS:
         ecf.estado = "Rechazado"
-        _submit_internal(ecf)
+        _save_as_system(ecf, submit=True)
     else:
         ecf.estado = "Pendiente"
-        ecf.save(ignore_permissions=True)
+        _save_as_system(ecf)
 
 
 def retry_pending_ecf() -> None:
@@ -228,6 +244,9 @@ def poll_pending_status() -> None:
         try:
             result = provider.consultar(ecf.company, ecf.track_id)
         except Exception:  # noqa: BLE001
+            frappe.log_error(
+                title=f"poll_pending_status: {provider_name} consultar() crashed for {ecf_name}"
+            )
             continue
         _log_attempt(ecf, "consultar", result, provider_name)
         if not result.is_ok():
@@ -238,9 +257,9 @@ def poll_pending_status() -> None:
         ecf.estado = result.value.estado
         ecf.validation_messages = _safe_message(result.value.validation_messages)
         if ecf.estado in _TERMINAL_ESTADOS:
-            _submit_internal(ecf)
+            _save_as_system(ecf, submit=True)
         else:
-            ecf.save(ignore_permissions=True)
+            _save_as_system(ecf)
 
 
 def refresh_provider_tokens() -> None:
@@ -256,4 +275,5 @@ def refresh_provider_tokens() -> None:
             try:
                 refresh(setting.company)
             except Exception:  # noqa: BLE001
+                frappe.log_error(title=f"refresh_provider_tokens: {setting.provider} crashed for {setting.company}")
                 continue
