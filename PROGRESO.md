@@ -1995,6 +1995,61 @@ Invoice`, `on_trash` debe lanzar excepción — nunca borrable).
 
 ---
 
+## 2026-09-01 — S2.11: COMPLETADO — ECF Contingencia, y dos bugs reales de Frappe con XML en Long Text
+
+**Estado:** COMPLETADO. `ECF Contingencia` es la contraparte offline de
+`ECF` (S2.4): cuando no hay internet o la DGII no responde, el XML se
+computa y se firma **localmente**, en el momento de la venta (regla 4
+del `CLAUDE.md`: "sin internet, el negocio sigue vendiendo"), y se
+entrega al cliente ahí mismo. No existe un "borrador real" donde
+"todavía no se le dio al cliente" — por eso, a diferencia de `ECF` (que
+solo bloquea borrar/cancelar una vez que la DGII respondió Aceptado),
+`ECF Contingencia` bloquea **las dos cosas siempre**, incluso en Draft
+sin someter. Se agregó a `COMPANY_SCOPED_DOCTYPES` (D19).
+
+**Dos bugs reales de Frappe encontrados por los tests, no por revisión —
+y los dos afectaban también a `ECF` de S2.4, que nunca se había probado
+con XML real en `signed_xml`:**
+
+1. `_sanitize_content()` (protección XSS de Frappe) trata cualquier campo
+   Long Text que "parece HTML" como riesgo y lo pasa por BeautifulSoup —
+   un XML puro sin texto libre entre tags queda despojado a la nada.
+   Se corrigió con `ignore_xss_filter: 1` en `signed_xml` de **ambos**
+   DocTypes (`ECF` y `ECF Contingencia`). Un XML firmado con un solo byte
+   alterado en silencio invalida la firma digital — nadie lo había visto
+   porque ningún test anterior escribió XML real en ese campo.
+2. `reqd: 1` en un campo Long Text no significa lo que parece: el propio
+   validador de "obligatorio" de Frappe (`has_content()` en
+   `base_document.py`) le hace `strip_html()` al valor **sin importar**
+   `ignore_xss_filter` — un XML sin texto visible entre tags se lee como
+   "vacío" y Frappe lo rechaza con `MandatoryError`, aunque el valor esté
+   ahí, visible, en el objeto en memoria. `signed_xml` **nunca** puede ser
+   `reqd` a nivel de DocType — se quitó el `reqd` y se agregó un
+   `if not self.signed_xml: frappe.throw(...)` explícito en `validate()`.
+
+**Verificación, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Ran 63 tests in 16.297s -> OK (skipped=1)
+Ran 13 tests in 0.454s -> OK
+(76 tests totales, subiendo de 68)
+
+ruff check -> All checks passed!
+semgrep (regla propia) -> Findings: 2 (los mismos 2 ya justificados en S2.10, ninguno nuevo)
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, 39%, sin cambio
+git rev-parse HEAD (nodo) == a50ae20 == origin/feat/ecf (SHA verificado)
+```
+
+**Deuda que esto abre:** cualquier campo `signed_xml`/XML crudo futuro
+(si S2.13 necesita uno propio para E31/E34) debe seguir el mismo patrón:
+`ignore_xss_filter: 1` en el JSON, y validación de "obligatorio" a mano
+en `validate()`, nunca `reqd: 1` a nivel de campo.
+
+**Siguiente:** S2.12 — Print format "Representación Impresa" con QR
+abajo a la izquierda (exigencia DGII).
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -2051,6 +2106,7 @@ está resuelto — está anotado como abierto y sigue así.**
 - [~] S2.8 plantillas Jinja2 `ecf_32.xml`/`rfce.xml` — traducidas de laravel-dgii (MIT), SIN validar contra el XSD oficial (no lo tenemos, D20)
 - [x] S2.9 `hooks.py` de Sales Invoice — corregido por Codex (`Customer.rnc` con fallback a `tax_id`, umbral contra `base_grand_total`, permiso de Cajero); verificado en nodo el 2026-09-01 (SHA `3e9ddbf`, 55/55 integration verde)
 - [x] S2.10 `frappe.enqueue` after commit + retry/poll/token crons — implementado por Codex, auditado y corregido por mí (regla 12b: 12→2 hallazgos de Semgrep, `TimestampMismatchError` real); verificado en nodo `3e9ddbf`
+- [x] S2.11 `ECF Contingencia` — patrón ZATCA Precomputed Invoice, on_trash/before_cancel siempre bloqueados; 2 bugs reales de Frappe con XML en Long Text encontrados y corregidos (también en ECF de S2.4)
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
 sites, con cola asíncrona y contingencia probadas cortando la red. Más `/secure-vibe`
