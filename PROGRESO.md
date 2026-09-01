@@ -2102,6 +2102,53 @@ para E32.
 
 ---
 
+## 2026-09-01 — S2.13: COMPLETADO — E31/E34 sobre la misma plantilla
+
+**Estado:** COMPLETADO. Antes de escribir nada, se bajaron
+`ecf_31.blade.php` y `ecf_34.blade.php` reales de `laravel-dgii` (mismo
+repo MIT de S2.8) y se compararon línea por línea contra `ecf_32.xml` ya
+traducido. Diferencia real: un puñado de campos opcionales, no
+documentos distintos —
+- **E31**: agrega `IdDoc.FechaVencimientoSecuencia`.
+- **E34**: agrega `IdDoc.IndicadorNotaCredito` y tres totales de
+  retención (`TotalITBISRetenido`, `TotalISRRetencion`,
+  `TotalITBISPercepcion`).
+
+`templates/ecf_32.xml` se **renombró a `templates/ecf.xml`** (era
+engañoso llamarlo "32" sirviendo para los tres tipos) y se le agregaron
+esos campos con el mismo patrón `'campo' in Grupo` de siempre — un
+contexto E32 normal nunca los muestra (test dedicado que lo confirma).
+`render_ecf_31`/`render_ecf_34` son la misma función que
+`render_ecf_32` (`assertIs`, no solo "se comportan igual") — la API
+pública de S2.8 no cambió, ningún test viejo se tocó.
+
+**D21 se amplía**: `Sales Invoice.is_return` (el mecanismo nativo de
+ERPNext para notas de crédito) mapea a **E34 siempre**, chequeado antes
+que la lógica de RNC — una nota de crédito no es una venta nueva, la
+pregunta del RNC no aplica ahí.
+
+**Verificación, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Ran 67 tests in 17.096s -> OK (skipped=1)
+Ran 20 tests in 0.711s -> OK
+(87 tests totales, subiendo de 81)
+
+ruff check -> All checks passed!
+semgrep (regla propia) -> Findings: 2 (los mismos ya justificados desde S2.10, ninguno nuevo)
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, 39%, sin cambio
+git rev-parse HEAD (nodo) == 2167127 == origin/feat/ecf (SHA verificado)
+```
+
+**Lo que sigue bloqueado, sin cambio:** un e-CF de cada tipo con TrackID
+real en TesteCF (el criterio de verificación completo del blueprint)
+sigue sin poder cumplirse — necesita el proveedor real (S2.7/D20).
+
+**Siguiente:** S2.14 — panel visible de e-CF pendientes (regla 4: ninguna
+venta se pierde en silencio).
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -2160,6 +2207,7 @@ está resuelto — está anotado como abierto y sigue así.**
 - [x] S2.10 `frappe.enqueue` after commit + retry/poll/token crons — implementado por Codex, auditado y corregido por mí (regla 12b: 12→2 hallazgos de Semgrep, `TimestampMismatchError` real); verificado en nodo `3e9ddbf`
 - [x] S2.11 `ECF Contingencia` — patrón ZATCA Precomputed Invoice, on_trash/before_cancel siempre bloqueados; 2 bugs reales de Frappe con XML en Long Text encontrados y corregidos (también en ECF de S2.4)
 - [x] S2.12 Print format "Representación Impresa e-CF" con QR (PyQRCode, ya instalado) — QR real cuando hay `qr_url`, placeholder claro mientras S2.7 siga bloqueado
+- [x] S2.13 E31/E34 sobre la misma plantilla que E32 (`ecf.xml`) — D21 ampliada: `is_return` → E34 siempre
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
 sites, con cola asíncrona y contingencia probadas cortando la red. Más `/secure-vibe`
