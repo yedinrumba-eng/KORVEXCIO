@@ -1902,6 +1902,99 @@ enqueue_after_commit=True)` + `scheduler_events` de retry/poll/refresh).
 
 ---
 
+## 2026-09-01 — S2.10: COMPLETADO por Codex, auditado y corregido — cola asíncrona con hallazgo real de regla 12b
+
+**Estado:** COMPLETADO. Codex (sesión concurrente sobre este mismo
+checkout, autorizada por Yedin para trabajar en paralelo) implementó
+`korvexcio/ecf/tasks.py` completo mientras yo tenía un borrador propio sin
+commitear de la misma pieza — su versión quedó, y es más completa que la
+mía: claim atómico con estado `Enviando`, throttle real por Redis
+(35/min, 1.7s entre llamadas — mismas reglas de §11 del `CLAUDE.md`
+global), validación de que el XML no esté vacío/mal formado antes de
+enviar, chequeo de que la Sales Invoice origen siga sometida, secretos
+redactados en `validation_messages`, y el resolver de proveedor por
+Company (regla 10, D19) intacto.
+
+**Verificación independiente, salida real (no solo el reporte de
+Codex):**
+```
+git rev-parse HEAD (nodo, antes de mi auditoría) == d21c3cd == origin/feat/ecf
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Ran 54 tests in 14.478s -> OK (skipped=1)
+Ran 13 tests in 0.434s -> OK
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, 39%
+```
+
+**El hallazgo real, no reportado por Codex:** `ruff` limpio, pero
+`semgrep --config .semgrep/korvexcio-isolation.yml` dio **12 hallazgos
+bloqueantes** — la regla 12b del `CLAUDE.md` ("`ignore_permissions=True`
+y `frappe.db.sql()` crudo PROHIBIDOS... si un caso los necesita de
+verdad, se justifica por escrito y se le escribe su propio test de
+aislamiento. Sin excepción silenciosa"). De los 9 usos de
+`ignore_permissions=True` y 2 de `frappe.db.sql()` crudo en `tasks.py`,
+**solo 1** (el `insert()` de `ECF Integration Log`) tenía la
+justificación por escrito y el test dedicado que la regla exige. Los
+otros 8 estaban sin comentario ni test — exactamente la "excepción
+silenciosa" que la regla prohíbe. El handoff de Codex no mencionó haber
+corrido Semgrep.
+
+**Corrección (mía, mismo día):**
+- `_claim_ecf()`: el `UPDATE ... WHERE` + `SELECT ROW_COUNT()` con SQL
+  crudo se reemplazó por el mismo patrón `for_update=True` +
+  `frappe.db.set_value()` ya validado en `Secuencia eNCF.reserve_next()`
+  (S2.3) — misma atomicidad real (row lock hasta el commit de la
+  transacción), sin SQL crudo.
+- Los 8 `ecf.save(ignore_permissions=True)`/`.submit()` dispersos se
+  centralizaron en un único helper `_save_as_system()`, con una
+  justificación completa escrita una sola vez: el job corre bajo la
+  sesión de quien encoló la venta — un Cajero (CERO permisos en `ECF`,
+  tabla de S2.4) o un Dueño (solo create/read/submit, sin write) — es el
+  sistema avanzando su propio trabajo interno, no una acción del usuario,
+  y `company` ya está congelado por `freeze_company()` desde la creación
+  del `ECF`, así que esto nunca mueve un documento entre Companies.
+- Test de aislamiento nuevo,
+  `test_worker_writes_bypass_permission_but_stay_company_scoped`:
+  confirma que un Cajero de verdad **no puede** escribir el `ECF`
+  directo (`PermissionError` real), pero el job que su propia venta
+  encoló sí puede — sin abrir una vía cruzada entre Companies.
+
+**Bug real encontrado al re-verificar, no por revisión de código:** el
+`for_update=True` + `set_value` del claim escribe directo a la base y
+actualiza `modified`; el objeto `ecf` en memoria (cargado antes del
+claim) quedó con timestamp viejo y el primer `.save()` posterior reventó
+con `TimestampMismatchError` (optimistic locking de Frappe). Se corrigió
+con un `ecf.reload()` justo después de un claim exitoso.
+
+**Verificación final, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Ran 55 tests in 16.298s -> OK (skipped=1)
+Ran 13 tests in 0.442s -> OK
+(68 tests totales, subiendo de 67 tras el fix; 1 test de aislamiento nuevo)
+
+ruff check (tasks.py, test_tasks.py, sales_invoice_hooks.py, test_sales_invoice_hooks.py) -> All checks passed!
+semgrep (regla propia) -> Findings: 2 (bajando de 12) -- los 2 que quedan
+  tienen justificación escrita + test de aislamiento nombrado, que es
+  exactamente lo que pide la regla 12b (no es "cero", es "documentado")
+
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, 39%, sin cambio
+git rev-parse HEAD (nodo) == 3e9ddbf == origin/feat/ecf (SHA verificado)
+```
+
+**Lección para coordinar con Codex de ahora en adelante:** trabajar los
+dos sobre los mismos archivos en paralelo, sin repartir por carril,
+funcionó esta vez porque su versión era mejor y no hubo conflicto de
+merge — pero fue suerte, no diseño. El propio `docs/08-BLUEPRINT.md` §7.2
+ya proponía la frontera de archivos (Carril A = `korvexcio/ecf/**`,
+Carril B = `korvexcio/retail/**` + `scripts/` + `docs/`) precisamente
+para esto. Se adopta desde ahora: yo sigo en `korvexcio/ecf/**`
+(Fase 2, camino crítico), Codex en lo que no toque ese árbol.
+
+**Siguiente:** S2.11 — `ECF Contingencia` (patrón `ZATCA Precomputed
+Invoice`, `on_trash` debe lanzar excepción — nunca borrable).
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -1956,8 +2049,8 @@ está resuelto — está anotado como abierto y sigue así.**
 - [x] S2.6 `providers/base.py` — interfaz `FiscalProvider`, Result/Ok/Err, test con fake provider
 - [ ] S2.7 🔴 bloqueado por D20 (S0.9/S0.3) — el proveedor real
 - [~] S2.8 plantillas Jinja2 `ecf_32.xml`/`rfce.xml` — traducidas de laravel-dgii (MIT), SIN validar contra el XSD oficial (no lo tenemos, D20)
-- [~] S2.9 `hooks.py` de Sales Invoice — implementación auditada; correcciones de fuente RNC, permisos POS y moneda base escritas en DEV, pendientes de deploy y verificación
-- [x] S2.10 `frappe.enqueue` after commit + retry/poll/token crons — claim atómico, estado Enviando, XML obligatorio, factura origen validada, throttle Redis, redacción de errores y pruebas de commit/rollback; verificado en nodo `bc52c49`
+- [x] S2.9 `hooks.py` de Sales Invoice — corregido por Codex (`Customer.rnc` con fallback a `tax_id`, umbral contra `base_grand_total`, permiso de Cajero); verificado en nodo el 2026-09-01 (SHA `3e9ddbf`, 55/55 integration verde)
+- [x] S2.10 `frappe.enqueue` after commit + retry/poll/token crons — implementado por Codex, auditado y corregido por mí (regla 12b: 12→2 hallazgos de Semgrep, `TimestampMismatchError` real); verificado en nodo `3e9ddbf`
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
 sites, con cola asíncrona y contingencia probadas cortando la red. Más `/secure-vibe`
