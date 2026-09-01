@@ -1852,6 +1852,56 @@ oficial", y esta entrada existe para que esa diferencia no se pierda.
 
 ---
 
+## 2026-08-31 — S2.9: COMPLETADO — Sales Invoice conectada a eNCF/ECF
+
+**Estado:** COMPLETADO. `korvexcio/ecf/sales_invoice_hooks.py` conecta
+`Sales Invoice` (de ERPNext, nunca tocada — regla 1) con la maquinaria de
+S2.2-S2.8, toda por `doc_events` en `hooks.py`, nunca por
+`override_doctype_class`:
+- `validate` → exige RNC a partir de RD$250,000 (Norma 05-19, regla 9)
+- `before_submit` → reserva el próximo eNCF de la `Secuencia eNCF` de esa
+  Company + tipo
+- `on_submit` → crea el `ECF` (estado Pendiente), apuntando a la Sales
+  Invoice vía `reference_doctype`/`reference_name`
+- `before_cancel` → bloquea cancelar si el `ECF` ya está Aceptado (espejo
+  de `ECF.before_cancel` de S2.4 — se anula, no se cancela)
+
+**D21 (nueva):** el tipo de e-CF se decide con la única señal que existe
+hoy sin proveedor real — si la factura resolvió `tax_id` → **E31**
+(crédito fiscal); si no → **E32** (consumo, el 95% del volumen). El flujo
+completo de E31 (sus propias validaciones) se termina en S2.13; aquí solo
+hacía falta elegir el tipo correcto para reservar la secuencia correcta.
+
+**Todo esto es local** — cero llamadas de red, cero contacto con
+`FiscalProvider`. El POS nunca espera a la DGII para cerrar una venta
+(regla 3): la llamada real al proveedor es el job en background de
+S2.10, que sigue bloqueado por S2.7/D20.
+
+**Bug real encontrado por el test, no por revisión:** `Sales
+Invoice.tax_id` tiene `fetch_from: customer.tax_id` y es `read_only` —
+ponerlo a mano en una factura sin guardar se pisa solo durante
+`validate()`, volviendo al valor (vacío) del Customer. El primer intento
+de test fallaba silenciosamente (E31 nunca se disparaba). Se corrigió
+dándole el RNC a un Customer de prueba dedicado en vez de a la factura.
+
+**Verificación, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Ran 38 tests in 3.863s -> OK (skipped=1)
+Ran 13 tests in 0.469s -> OK
+(51 tests totales: 38 integration + 13 unit, subiendo de 44 tras S2.8)
+
+ruff check (archivos de S2.9) -> All checks passed!
+semgrep (regla propia) -> Findings: 0 (29 archivos)
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, 39%, sin cambio
+git rev-parse HEAD (nodo) == bb9d006 == origin/feat/ecf (SHA verificado)
+```
+
+**Siguiente:** S2.10 — cola asíncrona (`frappe.enqueue(...,
+enqueue_after_commit=True)` + `scheduler_events` de retry/poll/refresh).
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -1906,7 +1956,8 @@ está resuelto — está anotado como abierto y sigue así.**
 - [x] S2.6 `providers/base.py` — interfaz `FiscalProvider`, Result/Ok/Err, test con fake provider
 - [ ] S2.7 🔴 bloqueado por D20 (S0.9/S0.3) — el proveedor real
 - [x] S2.8 plantillas Jinja2 `ecf_32.xml`/`rfce.xml` — traducidas de laravel-dgii (MIT), SIN validar contra el XSD oficial (no lo tenemos, D20)
-- [ ] S2.9 → S2.15 (`docs/08-BLUEPRINT.md` §6)
+- [x] S2.9 `hooks.py` de Sales Invoice — RNC ≥ RD$250,000, reserva eNCF, crea ECF, bloquea cancelar si Aceptado (D21: tipo por tax_id)
+- [ ] S2.10 → S2.15 (`docs/08-BLUEPRINT.md` §6)
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
 sites, con cola asíncrona y contingencia probadas cortando la red. Más `/secure-vibe`
