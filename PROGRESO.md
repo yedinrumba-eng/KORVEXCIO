@@ -1779,6 +1779,79 @@ proveedor real).
 
 ---
 
+## 2026-08-31 — S2.8: COMPLETADO — plantillas Jinja2 de e-CF (SIN el XSD oficial)
+
+**Estado:** COMPLETADO con una desviación real, dicha de una vez: el
+blueprint pide "el XML generado valida contra el XSD oficial de la DGII".
+**No tenemos ese XSD.** Bajarlo del portal de la DGII pide exactamente el
+mismo acceso que sigue bloqueado por D20 (S0.9/S2.7): RNC y certificado del
+cliente. No se inventó un XSD ni se fingió una validación — se reporta
+como bloqueo (R2), no se improvisa un reemplazo.
+
+**Lo que sí se pudo hacer, con evidencia real, no de memoria:** en vez de
+adivinar la estructura del e-CF 32/RFCE, se bajó el archivo real del repo
+MIT `platinum-place/laravel-dgii` (ya verificado como referencia real en
+`docs/08-BLUEPRINT.md` §2.1) — `resources/views/ecf/ecf_32.blade.php` (727
+líneas) y `resources/views/rfce/xml.blade.php` (120 líneas) — vía `curl`
+directo a `raw.githubusercontent.com` (WebFetch normal resume con un
+modelo chico y no entrega el contenido verbatim; para traducir una
+estructura fielmente hace falta el archivo real, no un resumen). Se
+tradujo 1:1 — mismos tags, mismo anidamiento, mismo orden — a
+`korvexcio/ecf/templates/ecf_32.xml` y `rfce.xml`.
+
+**`korvexcio/ecf/xml_render.py`:**
+- `render_ecf_32(context)` / `render_rfce(context)` — reciben un dict
+  (`IdDoc`/`Emisor`/`Comprador`/`Totales`/`DetallesItems`/etc, mismos
+  nombres de campo del e-CF oficial). El mapeo real desde `Sales Invoice`
+  vive en S2.9, no aquí.
+- Todo string del contexto se escapa (XML) antes de renderizar — un nombre
+  de cliente o de item con `&`/`<` no puede romper el documento.
+- `env.trim_blocks`/`env.lstrip_blocks` del Jinja compartido de Frappe se
+  prenden solo dentro de un `try/finally` — exactamente la advertencia del
+  blueprint: no restaurarlo rompe cualquier otro template (print formats,
+  correos) que se renderice en la misma request.
+- `validate_well_formed()` — lo único que se puede verificar de verdad sin
+  el XSD: que el XML resultante parsea. No es lo mismo que "válido contra
+  el schema oficial", y el docstring lo dice así de claro.
+
+**Bugs reales encontrados por los tests, no por revisión:**
+1. `TEMPLATES_DIR` apuntaba a `korvexcio/ecf/` en vez de
+   `korvexcio/ecf/templates/` — `FileNotFoundError` en 6 de 8 tests al
+   primer intento. Corregido.
+2. `ruff` (sobre archivos SÍ de este slice, no deuda vieja): `B017` por un
+   `assertRaises(Exception)` deliberadamente amplio (el test prueba que el
+   `try/finally` restaura el entorno compartido sin importar QUÉ excepción
+   reviente, no una excepción específica) — resuelto con `# noqa: B017` y
+   el porqué en un comentario; y `DTZ005` por `datetime.now()` sin
+   timezone — resuelto con `zoneinfo.ZoneInfo("America/Santo_Domingo")`
+   explícito (la DGII quiere hora local de RD en `FechaHoraFirma`, no UTC).
+
+**Verificación, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Ran 31 tests in 2.032s -> OK (skipped=1)
+Ran 13 tests in 0.444s -> OK
+(44 tests totales: 31 integration + 13 unit -- 8 de xml_render + 5 de providers)
+
+ruff check (solo archivos de S2.8) -> All checks passed!
+semgrep (regla propia) -> Findings: 0 (28 archivos escaneados)
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, 39%, sin cambio
+git rev-parse HEAD (nodo) == 17f5611 == origin/feat/ecf (SHA verificado)
+```
+
+**Deuda que esto abre:** re-validar `ecf_32.xml`/`rfce.xml` contra el XSD
+real de la DGII en cuanto S0.9/S2.7 se desbloqueen (D20) — antes de S5.4
+(certificación). La fidelidad de tags/orden es alta (viene de una
+implementación MIT en producción, no inventada), pero "alta fidelidad a
+una referencia no oficial" no es lo mismo que "validado contra el schema
+oficial", y esta entrada existe para que esa diferencia no se pierda.
+
+**Siguiente:** S2.9 — `hooks.py` (`doc_events`, nunca
+`override_doctype_class`): `validate` (umbral RD$250,000), `before_submit`
+(reservar eNCF), `on_submit` (crear `ECF`), `before_cancel`.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -1832,7 +1905,8 @@ está resuelto — está anotado como abierto y sigue así.**
 - [x] S2.5 `ECF Integration Log` — secretos enmascarados de verdad (bug real de regex atrapado por el test)
 - [x] S2.6 `providers/base.py` — interfaz `FiscalProvider`, Result/Ok/Err, test con fake provider
 - [ ] S2.7 🔴 bloqueado por D20 (S0.9/S0.3) — el proveedor real
-- [ ] S2.8 → S2.15 (`docs/08-BLUEPRINT.md` §6)
+- [x] S2.8 plantillas Jinja2 `ecf_32.xml`/`rfce.xml` — traducidas de laravel-dgii (MIT), SIN validar contra el XSD oficial (no lo tenemos, D20)
+- [ ] S2.9 → S2.15 (`docs/08-BLUEPRINT.md` §6)
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
 sites, con cola asíncrona y contingencia probadas cortando la red. Más `/secure-vibe`
@@ -1879,4 +1953,5 @@ Ordenada por lo que más duele.
 | ⚪ | **Fixtures de S2.1 reutilizan usuarios/registros persistentes sin normalizar todos sus valores** | Los helpers garantizan existencia y la suite actual pasó limpia | Normalizar roles/valores cuando el registro ya existe, o crear fixtures aislados con limpieza explícita |
 | ⚪ | **Los resolvers futuros no deben asumir `DGII Settings.name == company`** — un rename de Company puede volver obsoleto el nombre físico | `company` también es único y es la fuente de verdad | Buscar por el campo `company` y añadir esa regresión cuando se implemente el resolver fiscal |
 | ⚪ | Warnings de Vite en el build de POSNext/URY | No producen fallo observable | Se revisan solo si rompen algo observable |
+| 🟡 | **`ecf_32.xml`/`rfce.xml` (S2.8) NO están validados contra el XSD oficial de la DGII** — solo confirmado bien-formado y fiel a la estructura de una referencia MIT en producción (laravel-dgii), no al schema real | `validate_well_formed()` confirma que parsea; la fidelidad de tags/orden viene de una implementación real, no inventada | Bajar el XSD oficial del portal de la DGII y re-validar en cuanto S0.9/S2.7 se desbloqueen (D20) — antes de S5.4 |
 | ⚪ | **6 hallazgos de `ruff` en código de S2.2/S1.8** (`DTZ011` ×5 en `dgii_digital_certificate.py`/su test, `BLE001` ×1 en `test_isolation.py:231`) — aparecieron entre S2.5 y S2.6 sin cambiar ese código, probablemente por `ruff:latest` sin fijar por SHA | Ninguna — el código funciona, es solo lint | Fijar la imagen de ruff por digest y limpiar los 6 hallazgos en un slice de mantenimiento, no mezclado con fiscal |
