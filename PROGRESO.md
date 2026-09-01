@@ -1721,6 +1721,64 @@ KORVIS: {"status":"ok",...}   df -h /: 58G libres, sin cambio
 
 ---
 
+## 2026-08-31 — S2.6: COMPLETADO — interfaz `FiscalProvider`, Result/Ok/Err
+
+**Estado:** COMPLETADO. `korvexcio/ecf/providers/base.py` — la interfaz
+abstracta que cualquier proveedor real (Alanube, ECF SSD) va a implementar
+cuando S2.7 lo desbloquee. Tres métodos (`emitir`, `consultar`, `anular`),
+cada uno devuelve `Result[T]` (`Ok[T] | Err`) en vez de levantar
+excepciones — así un fallo del proveedor real, corriendo dentro de un job
+en background (S2.10), nunca tumba el worker de la cola: quien llama
+recibe un `Err` tipado y decide si reintenta.
+
+**Sin implementación real todavía** — sigue bloqueado por S0.9/S0.3 (D20):
+sin proveedor elegido, sin RNC ni certificado del cliente. Este slice es
+solo la base/estructura que el resto del módulo `ecf` puede empezar a
+depender, tal como pidió Yedin explícitamente en el `/goal` de esta sesión.
+
+**Test:** `providers/test_base.py` con un `FakeProvider` de prueba (nunca
+toca la red) que ejercita el contrato completo — instanciar la clase
+abstracta directamente falla (`TypeError`), y cada método responde tanto
+`Ok` como `Err` sin levantar. Exactamente lo que pedía el blueprint: "Test
+unitario del contrato con un provider falso."
+
+**Verificación, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Ran 31 tests in 2.056s -> OK (skipped=1)
+Ran 5 tests in 0.001s -> OK
+(36 tests totales entre ambas corridas del runner, todas verdes)
+
+semgrep (regla propia korvexcio-isolation.yml) -> Findings: 0
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, 39%, sin cambio
+git rev-parse HEAD (nodo) == 88c940e == origin/feat/ecf (SHA verificado)
+```
+
+**Deuda encontrada, NO tocada (fuera del scope de este slice, R3):** el
+mismo `ruff check` sobre el árbol completo dio 6 hallazgos en código de
+slices anteriores — `korvexcio/ecf/providers/base.py` y `test_base.py`
+(los archivos de S2.6) salieron limpios:
+- `DTZ011` (×5) en `dgii_digital_certificate.py`/su test (S2.2): usan
+  `date.today()` sin timezone explícito — regla de `flake8-datetimez`.
+- `BLE001` (×1) en `tests/test_isolation.py:231` (S1.8): un
+  `except Exception as e` deliberado, para comparar el *tipo* de error
+  entre escenarios de aislamiento (el punto del test es que da igual cuál
+  excepción sea, todas las Company-cruzadas tienen que dar el mismo
+  status/mensaje — escenario 6 de enumeración).
+
+En S2.5 el `ruff check` sobre el mismo árbol había dado "All checks
+passed!" — lo más probable es que `ghcr.io/astral-sh/ruff:latest` haya
+subido de versión entre una corrida y la otra y promovido reglas nuevas a
+default (la imagen no está fijada por SHA). No se investigó más a fondo
+porque no es parte de este slice. Se anota en la tabla de deuda técnica.
+
+**Siguiente:** S2.8 — plantillas Jinja2 `ecf_32.xml`/`rfce.xml` (S2.7 sigue
+bloqueado por D20; se salta directo al siguiente slice desbloqueado, tal
+como indica el `/goal` activo: dejar la base lista, sin forzar S2.7 sin
+proveedor real).
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -1768,7 +1826,13 @@ está resuelto — está anotado como abierto y sigue así.**
 
 ### Fase 2 — Módulo ECF · 15/09 → 03/10 · ⬅ CAMINO CRÍTICO
 - [x] S2.1 `DGII Settings` — código, migrate, suites, evidencia y auditoría (code-review + security-review, APROBADO)
-- [ ] S2.2 → S2.15 (`docs/08-BLUEPRINT.md` §6)
+- [x] S2.2 `DGII Digital Certificate` — password nunca en texto plano, aviso de vencimiento
+- [x] S2.3 `Secuencia eNCF` — reserva atómica con `for_update=True`
+- [x] S2.4 `ECF` submittable — "se anula, no se cancela"
+- [x] S2.5 `ECF Integration Log` — secretos enmascarados de verdad (bug real de regex atrapado por el test)
+- [x] S2.6 `providers/base.py` — interfaz `FiscalProvider`, Result/Ok/Err, test con fake provider
+- [ ] S2.7 🔴 bloqueado por D20 (S0.9/S0.3) — el proveedor real
+- [ ] S2.8 → S2.15 (`docs/08-BLUEPRINT.md` §6)
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
 sites, con cola asíncrona y contingencia probadas cortando la red. Más `/secure-vibe`
@@ -1815,3 +1879,4 @@ Ordenada por lo que más duele.
 | ⚪ | **Fixtures de S2.1 reutilizan usuarios/registros persistentes sin normalizar todos sus valores** | Los helpers garantizan existencia y la suite actual pasó limpia | Normalizar roles/valores cuando el registro ya existe, o crear fixtures aislados con limpieza explícita |
 | ⚪ | **Los resolvers futuros no deben asumir `DGII Settings.name == company`** — un rename de Company puede volver obsoleto el nombre físico | `company` también es único y es la fuente de verdad | Buscar por el campo `company` y añadir esa regresión cuando se implemente el resolver fiscal |
 | ⚪ | Warnings de Vite en el build de POSNext/URY | No producen fallo observable | Se revisan solo si rompen algo observable |
+| ⚪ | **6 hallazgos de `ruff` en código de S2.2/S1.8** (`DTZ011` ×5 en `dgii_digital_certificate.py`/su test, `BLE001` ×1 en `test_isolation.py:231`) — aparecieron entre S2.5 y S2.6 sin cambiar ese código, probablemente por `ruff:latest` sin fijar por SHA | Ninguna — el código funciona, es solo lint | Fijar la imagen de ruff por digest y limpiar los 6 hallazgos en un slice de mantenimiento, no mezclado con fiscal |
