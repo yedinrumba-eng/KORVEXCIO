@@ -28,6 +28,13 @@
 > código — Yedin manda los correos de S0.3 o consigue RNC+certificado.**
 > Sin eso, Fase 3 (módulo Retail) es lo único que sigue desbloqueado.
 >
+> **`docs/14-ACTIVACION-FISCAL.md` (nuevo, 2026-09-01)** responde la
+> pregunta de cómo se prueba sin RNC del cliente: separa un Camino A (el
+> sandbox propio de un proveedor, que NO depende del cliente y se puede
+> empezar mandando los correos de S0.3 hoy mismo) de un Camino B (RNC +
+> certificado real del cliente, sin atajo posible), y trae el checklist
+> de activación paso a paso para el día que llegue.
+>
 > **Carriles para trabajar en paralelo con Codex:** Carril A (Claude) =
 > `korvexcio/ecf/**`, camino crítico. Carril B (Codex) = todo lo que no
 > toque ese árbol. Trabajar los dos sobre los mismos archivos sin
