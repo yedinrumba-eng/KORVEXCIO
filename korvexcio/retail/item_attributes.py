@@ -28,6 +28,7 @@ def sync_item_attributes() -> list[str]:
         if doc.numeric_values:
             doc.from_range = config.get("from_range", 0)
             doc.to_range = config.get("to_range", 100)
+            doc.increment = config.get("increment", 1)
         existing_values = {row.attribute_value for row in doc.item_attribute_values}
         for raw_value in values:
             value, abbr = _attribute_value(raw_value)
