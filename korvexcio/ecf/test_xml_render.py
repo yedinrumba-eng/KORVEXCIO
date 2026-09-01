@@ -11,7 +11,13 @@ from xml.etree import ElementTree
 import frappe
 import frappe.utils.jinja
 
-from korvexcio.ecf.xml_render import render_ecf_32, render_rfce, validate_well_formed
+from korvexcio.ecf.xml_render import (
+    render_ecf_31,
+    render_ecf_32,
+    render_ecf_34,
+    render_rfce,
+    validate_well_formed,
+)
 
 
 def _sample_ecf_32_context() -> dict:
@@ -150,3 +156,64 @@ class TestRenderRFCE(unittest.TestCase):
         del context["CodigoSeguridadeCF"]
         with self.assertRaises(frappe.ValidationError):
             render_rfce(context)
+
+
+class TestRenderE31AndE34(unittest.TestCase):
+    """S2.13: E31 y E34 sobre la misma maquinaria de E32 -- un solo
+    template (templates/ecf.xml), comparado linea por linea contra
+    ecf_31.blade.php/ecf_34.blade.php de laravel-dgii. Las unicas
+    diferencias reales son un puñado de campos opcionales."""
+
+    def test_render_ecf_31_and_32_are_the_same_function(self):
+        self.assertIs(render_ecf_31, render_ecf_32)
+
+    def test_render_ecf_34_and_32_are_the_same_function(self):
+        self.assertIs(render_ecf_34, render_ecf_32)
+
+    def test_e31_includes_fecha_vencimiento_secuencia(self):
+        context = _sample_ecf_32_context()
+        context["IdDoc"]["TipoeCF"] = "31"
+        context["IdDoc"]["FechaVencimientoSecuencia"] = "31-12-2027"
+
+        xml_string = render_ecf_31(context)
+        validate_well_formed(xml_string)
+        root = ElementTree.fromstring(xml_string)
+        self.assertEqual(root.findtext("./Encabezado/IdDoc/FechaVencimientoSecuencia"), "31-12-2027")
+
+    def test_e34_includes_indicador_nota_credito_and_retenciones(self):
+        context = {
+            "IdDoc": {
+                "TipoeCF": "34",
+                "eNCF": "E340000000001",
+                "IndicadorNotaCredito": "1",
+            },
+            "Emisor": {"RNCEmisor": "131234567", "RazonSocialEmisor": "VAPERIA LA J Y EL JALAPEÑO SRL"},
+            "Totales": {
+                "MontoTotal": "-1500.00",
+                "TotalITBISRetenido": "50.00",
+                "TotalISRRetencion": "30.00",
+                "TotalITBISPercepcion": "10.00",
+            },
+            "InformacionReferencia": {
+                "NCFModificado": "E320000000001",
+                "CodigoModificacion": "01",
+            },
+        }
+        xml_string = render_ecf_34(context)
+        validate_well_formed(xml_string)
+        root = ElementTree.fromstring(xml_string)
+        self.assertEqual(root.findtext("./Encabezado/IdDoc/IndicadorNotaCredito"), "1")
+        self.assertEqual(root.findtext("./Encabezado/Totales/TotalITBISRetenido"), "50.00")
+        self.assertEqual(root.findtext("./Encabezado/Totales/TotalISRRetencion"), "30.00")
+        self.assertEqual(root.findtext("./Encabezado/Totales/TotalITBISPercepcion"), "10.00")
+        self.assertEqual(root.findtext("./InformacionReferencia/NCFModificado"), "E320000000001")
+
+    def test_e32_context_never_shows_e31_or_e34_only_fields(self):
+        """Los campos nuevos son opcionales -- un contexto de E32 normal
+        (sin FechaVencimientoSecuencia/IndicadorNotaCredito/retenciones)
+        no los debe mostrar, para no romper la fidelidad de S2.8."""
+        xml_string = render_ecf_32(_sample_ecf_32_context())
+        root = ElementTree.fromstring(xml_string)
+        self.assertIsNone(root.find("./Encabezado/IdDoc/FechaVencimientoSecuencia"))
+        self.assertIsNone(root.find("./Encabezado/IdDoc/IndicadorNotaCredito"))
+        self.assertIsNone(root.find("./Encabezado/Totales/TotalITBISRetenido"))

@@ -1,8 +1,16 @@
-"""Render de las plantillas Jinja2 de e-CF (S2.8).
+"""Render de las plantillas Jinja2 de e-CF (S2.8, extendida en S2.13).
 
 Traducidas 1:1 (mismos tags, mismo orden) de resources/views/ecf/ecf_32.blade.php
 y resources/views/rfce/xml.blade.php del repo MIT `platinum-place/laravel-dgii`
 (verificado en docs/08-BLUEPRINT.md S0.9/S2.1 como fuente real en produccion).
+
+templates/ecf.xml (renombrado de ecf_32.xml en S2.13) sirve para E31, E32 y
+E34 -- se comparo linea por linea contra ecf_31.blade.php y ecf_34.blade.php
+del mismo repo: la unica diferencia real son un puñado de campos opcionales
+(FechaVencimientoSecuencia en E31; IndicadorNotaCredito y las retenciones
+TotalITBISRetenido/TotalISRRetencion/TotalITBISPercepcion en E34), ya
+agregados al mismo template con sus propios `'X' in Grupo` -- "misma
+maquinaria", tal como pide el blueprint, no tres archivos casi identicos.
 
 NO estan validadas contra el XSD oficial de la DGII -- no lo tenemos. Bajarlo
 requiere el mismo acceso que sigue bloqueado por D20 (S0.9/S2.7): sin RNC ni
@@ -73,13 +81,22 @@ def _render(template_filename: str, context: dict) -> str:
         jenv.lstrip_blocks = original_lstrip
 
 
-def render_ecf_32(context: dict) -> str:
+def _render_ecf(context: dict) -> str:
     """context: dict con IdDoc/Emisor/Comprador/Totales/DetallesItems/etc,
-    mismos nombres de campo que el e-CF oficial (ver ecf_32.xml). El mapeo
-    real desde Sales Invoice / ECF vive en S2.9 -- este render no lo asume."""
+    mismos nombres de campo que el e-CF oficial (ver templates/ecf.xml). El
+    mapeo real desde Sales Invoice / ECF vive en S2.9/D21 -- este render no
+    lo asume; el propio contexto (IdDoc.TipoeCF) dice de que tipo es."""
     prepared = _prepare_context(context)
     prepared.setdefault("FechaHoraFirma", datetime.now(tz=_RD_TZ).strftime("%d-%m-%Y %H:%M:%S"))
-    return _render("ecf_32.xml", prepared)
+    return _render("ecf.xml", prepared)
+
+
+# render_ecf_32 es el nombre historico (S2.8, el 95% del volumen del POS).
+# render_ecf_31/render_ecf_34 son el mismo render (S2.13) -- un solo
+# template generico, el tipo lo decide IdDoc.TipoeCF en el contexto.
+render_ecf_32 = _render_ecf
+render_ecf_31 = _render_ecf
+render_ecf_34 = _render_ecf
 
 
 def render_rfce(context: dict) -> str:

@@ -5,6 +5,8 @@
         <IdDoc>
             {% if 'TipoeCF' in IdDoc %}<TipoeCF>{{ IdDoc.TipoeCF }}</TipoeCF>{% endif %}
             {% if 'eNCF' in IdDoc %}<eNCF>{{ IdDoc.eNCF }}</eNCF>{% endif %}
+            {% if 'FechaVencimientoSecuencia' in IdDoc %}<FechaVencimientoSecuencia>{{ IdDoc.FechaVencimientoSecuencia }}</FechaVencimientoSecuencia>{% endif %}
+            {% if 'IndicadorNotaCredito' in IdDoc %}<IndicadorNotaCredito>{{ IdDoc.IndicadorNotaCredito }}</IndicadorNotaCredito>{% endif %}
             {% if 'IndicadorEnvioDiferido' in IdDoc %}<IndicadorEnvioDiferido>{{ IdDoc.IndicadorEnvioDiferido }}</IndicadorEnvioDiferido>{% endif %}
             {% if 'IndicadorMontoGravado' in IdDoc %}<IndicadorMontoGravado>{{ IdDoc.IndicadorMontoGravado }}</IndicadorMontoGravado>{% endif %}
             {% if 'IndicadorServicioTodoIncluido' in IdDoc %}<IndicadorServicioTodoIncluido>{{ IdDoc.IndicadorServicioTodoIncluido }}</IndicadorServicioTodoIncluido>{% endif %}
@@ -116,6 +118,9 @@
             {% if 'TotalITBIS1' in Totales %}<TotalITBIS1>{{ Totales.TotalITBIS1 }}</TotalITBIS1>{% endif %}
             {% if 'TotalITBIS2' in Totales %}<TotalITBIS2>{{ Totales.TotalITBIS2 }}</TotalITBIS2>{% endif %}
             {% if 'TotalITBIS3' in Totales %}<TotalITBIS3>{{ Totales.TotalITBIS3 }}</TotalITBIS3>{% endif %}
+            {% if 'TotalITBISRetenido' in Totales %}<TotalITBISRetenido>{{ Totales.TotalITBISRetenido }}</TotalITBISRetenido>{% endif %}
+            {% if 'TotalISRRetencion' in Totales %}<TotalISRRetencion>{{ Totales.TotalISRRetencion }}</TotalISRRetencion>{% endif %}
+            {% if 'TotalITBISPercepcion' in Totales %}<TotalITBISPercepcion>{{ Totales.TotalITBISPercepcion }}</TotalITBISPercepcion>{% endif %}
             {% if 'MontoImpuestoAdicional' in Totales %}<MontoImpuestoAdicional>{{ Totales.MontoImpuestoAdicional }}</MontoImpuestoAdicional>{% endif %}
             {% if Totales.ImpuestosAdicionales %}
             <ImpuestosAdicionales>

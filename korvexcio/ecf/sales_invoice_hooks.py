@@ -2,13 +2,13 @@
 nunca se toca su codigo (CLAUDE.md regla 1); todo esto entra por
 korvexcio/hooks.py's doc_events, nunca por override_doctype_class.
 
-D21 (esta sesion): sin correspondencia real de proveedor (S0.9/S2.7,
-D20), el tipo de e-CF se decide con la unica senal que ya existe en el
-documento -- Sales Invoice.tax_id lleno o no. Si el cliente pidio
-factura con RNC -> E31 (credito fiscal). Si no -> E32 (consumo, el 95%
-del volumen de este POS). El flujo completo de E31 (validaciones propias
-de credito fiscal) se termina de formalizar en S2.13; aqui solo se elige
-el tipo para poder reservar el eNCF correcto.
+D21 (S2.9, ampliada en S2.13): sin correspondencia real de proveedor
+(S0.9/S2.7, D20), el tipo de e-CF se decide con las señales que ya
+existen en el documento. Una devolucion (Sales Invoice.is_return, el
+mecanismo nativo de ERPNext para notas de credito) siempre es E34,
+pase lo que pase con el RNC -- es la excepcion, se chequea primero. Si
+no es devolucion: con RNC -> E31 (credito fiscal); sin RNC -> E32
+(consumo, el 95% del volumen de este POS).
 
 El POS nunca espera a la DGII para cerrar una venta (CLAUDE.md regla 3):
 todo lo de aqui es local -- reservar un numero de una secuencia propia y
@@ -29,10 +29,14 @@ _TIPO_ECF_FLAG = "_korvexcio_tipo_ecf"
 
 
 def _tipo_ecf_for(doc) -> str:
-    """D21: con RNC en la factura -> E31 (credito fiscal). Sin RNC -> E32
-    (consumo). Norma 05-19 exige el RNC a partir de RD$250,000; por debajo
-    de eso es el cliente quien decide si lo da. "E31"/"E32" (con prefijo)
-    para calzar con el Select de Secuencia eNCF y de ECF."""
+    """D21 (S2.9/S2.13): devolucion -> E34 siempre, sin importar el RNC
+    (una nota de credito no es una nueva venta). Si no: con RNC en la
+    factura -> E31 (credito fiscal); sin RNC -> E32 (consumo). Norma
+    05-19 exige el RNC a partir de RD$250,000; por debajo de eso es el
+    cliente quien decide si lo da. "E31"/"E32"/"E34" (con prefijo) para
+    calzar con el Select de Secuencia eNCF y de ECF."""
+    if doc.get("is_return"):
+        return "E34"
     return "E31" if _buyer_rnc(doc) else "E32"
 
 

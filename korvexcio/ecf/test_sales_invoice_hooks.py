@@ -101,6 +101,7 @@ class TestSalesInvoiceHooks(IntegrationTestCase):
 
         _ensure_secuencia(COMPANY_A, "E32")
         _ensure_secuencia(COMPANY_A, "E31")
+        _ensure_secuencia(COMPANY_A, "E34")
 
     def setUp(self):
         frappe.set_user("Administrator")
@@ -157,6 +158,33 @@ class TestSalesInvoiceHooks(IntegrationTestCase):
         ecf = self._submit_and_get_ecf(self._new_invoice(with_rnc=True, rate=1500))
         self.assertEqual(ecf.tipo_ecf, "E31")
         self.assertTrue(ecf.encf.startswith("E31"))
+
+    def test_credit_note_reserves_e34_regardless_of_rnc(self):
+        original = self._submit_and_get_ecf(self._new_invoice(with_rnc=True, rate=1500))
+        original_si = frappe.get_all(
+            "ECF", filters={"name": original.name}, pluck="reference_name"
+        )[0]
+
+        credit_note = frappe.new_doc("Sales Invoice")
+        credit_note.company = COMPANY_A
+        credit_note.customer = CUSTOMER_WITH_RNC
+        credit_note.currency = "DOP"
+        credit_note.conversion_rate = 1
+        credit_note.is_return = 1
+        credit_note.return_against = original_si
+        credit_note.append(
+            "items",
+            {
+                "item_code": ITEM,
+                "qty": -1,
+                "rate": 1500,
+                "income_account": f"Sales - {ABBR_A}",
+                "cost_center": f"Main - {ABBR_A}",
+            },
+        )
+        ecf = self._submit_and_get_ecf(credit_note)
+        self.assertEqual(ecf.tipo_ecf, "E34")
+        self.assertTrue(ecf.encf.startswith("E34"))
 
     def test_two_submits_do_not_collide_on_encf(self):
         ecf_1 = self._submit_and_get_ecf(self._new_invoice(rate=1500))
