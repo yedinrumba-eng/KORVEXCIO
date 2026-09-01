@@ -28,6 +28,7 @@ COMPANY_SCOPED_DOCTYPES = {
     "Item Price",
     "DGII Settings",
     "DGII Digital Certificate",
+    "Secuencia eNCF",
 }
 
 

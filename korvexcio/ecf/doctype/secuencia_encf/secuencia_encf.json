@@ -1,0 +1,92 @@
+{
+ "actions": [],
+ "autoname": "format:{company}-{tipo_ecf}",
+ "creation": "2026-08-31 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "tipo_ecf",
+  "desde",
+  "hasta",
+  "siguiente",
+  "fecha_vencimiento",
+  "warning_threshold"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tipo_ecf",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Tipo de e-CF",
+   "options": "E31\nE32\nE34",
+   "reqd": 1
+  },
+  {
+   "fieldname": "desde",
+   "fieldtype": "Int",
+   "label": "Desde",
+   "reqd": 1
+  },
+  {
+   "fieldname": "hasta",
+   "fieldtype": "Int",
+   "label": "Hasta",
+   "reqd": 1
+  },
+  {
+   "fieldname": "siguiente",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Siguiente numero a usar",
+   "reqd": 1
+  },
+  {
+   "fieldname": "fecha_vencimiento",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Fecha de vencimiento",
+   "reqd": 1
+  },
+  {
+   "default": "100",
+   "fieldname": "warning_threshold",
+   "fieldtype": "Int",
+   "label": "Avisar cuando queden menos de N numeros",
+   "reqd": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-31 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ECF",
+ "name": "Secuencia eNCF",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "write": 1,
+   "role": "Dueño"
+  },
+  {
+   "read": 1,
+   "role": "Contador"
+  }
+ ]
+}

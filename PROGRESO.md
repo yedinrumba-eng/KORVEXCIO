@@ -1601,6 +1601,64 @@ un archivo real es cuando haya certificado de verdad.
 
 ---
 
+## 2026-08-31 — S2.3: COMPLETADO — Secuencia eNCF, reserva atómica, y un error operativo real
+
+**Estado:** COMPLETADO. `Secuencia eNCF`: `company` + `tipo_ecf` (E31/E32/E34)
+con nombre compuesto vía `autoname: format:{company}-{tipo_ecf}` — dos
+secuencias del mismo tipo en la misma Company chocan por nombre duplicado
+directo, sin necesitar un campo `unique` compuesto. `desde`/`hasta`/`siguiente`
+validados, aviso configurable cuando quedan pocos números.
+
+**Dos bugs reales, corregidos en el camino, no ocultados:**
+
+1. **`Document.lock()` no es un mutex de propósito general.** El primer
+   `reserve_next()` usaba `self.lock()` alrededor de leer-incrementar-guardar
+   — reventó con `DocumentLockedError` en la segunda llamada, porque
+   `Document.save()` de Frappe **rechaza guardar un doc que está lockeado**
+   (el lock es para "esto está en cola para un job en background, no lo
+   toques", no un mutex de aplicación). Se corrigió con
+   `frappe.db.get_value(..., for_update=True)` — un `SELECT ... FOR UPDATE`
+   real, pero vía el query builder de Frappe, **no** `frappe.db.sql()` crudo
+   (eso sigue prohibido, regla 12b).
+
+2. **Error operativo propio: un `migrate` borró el `DocType` de S2.2 de la
+   base.** Al limpiar el checkout del nodo entre S2.2 y S2.3 (para no
+   dejarlo sucio para Git), el siguiente despliegue de S2.3 solo copió los
+   archivos NUEVOS (`secuencia_encf/` + `isolation.py`), no el árbol
+   completo — `bench migrate` vio que faltaba
+   `dgii_digital_certificate.json` en disco y lo registró como "orphan
+   doctype", **borrando el registro `DocType` de la base** (la tabla SQL
+   sobrevivió, sin pérdida de datos reales — solo había fixtures de test).
+   Se corrigió resincronizando el árbol `korvexcio/` completo y corriendo
+   `migrate` de nuevo, que restauró el registro. **Lección: cualquier
+   despliegue de prueba tiene que llevar el árbol completo, nunca un
+   subconjunto** — un `migrate` parcial puede borrar estructura de un
+   slice anterior sin avisar más que "Removing orphan doctypes" en el log,
+   fácil de no notar.
+
+**Verificación, salida real (después de corregir los dos bugs):**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio
+Ran 24 tests in 1.260s -> OK (skipped=1)     # corrida 1
+Ran 24 tests in 1.237s -> OK (skipped=1)     # corrida 2, idempotencia
+
+frappe.db.exists("DocType", "DGII Digital Certificate") -> "DGII Digital Certificate"  (restaurado)
+
+ruff check korvexcio/ -> All checks passed!
+semgrep (regla propia) -> FINDINGS: 0
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, sin cambio
+```
+
+**Cambio de flujo, a partir de aquí:** en vez de seguir desplegando por
+`tar`/`docker cp` ad-hoc (la causa raíz del bug #2), se vuelve al patrón de
+Codex: commit + push a `origin/feat/ecf`, y el nodo hace `git pull` — un
+árbol completo y consistente siempre, verificado por SHA, no por bultos
+parciales.
+
+**Siguiente:** S2.4 — DocType `ECF` (el documento principal, submittable).
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
