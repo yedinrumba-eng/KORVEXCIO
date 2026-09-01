@@ -2050,6 +2050,58 @@ abajo a la izquierda (exigencia DGII).
 
 ---
 
+## 2026-09-01 — S2.12: COMPLETADO — Print format con QR, y dos bugs operacionales reales
+
+**Estado:** COMPLETADO. `"Representación Impresa e-CF"` — print format
+sobre `Sales Invoice`: RNC del emisor, cliente, items, ITBIS/total, el
+eNCF y estado del `ECF` vinculado, y el QR abajo a la izquierda
+(exigencia DGII) una vez que un proveedor real llene `ECF.qr_url`. Antes
+de eso (S2.7 sigue bloqueado por D20), muestra un placeholder explícito
+"QR pendiente" en vez de una imagen rota o un crash.
+
+El QR se genera con `PyQRCode` — **ya estaba instalado** en el bench
+(lo usa `frappe.twofactor` para el 2FA por TOTP de Frappe), mismo patrón
+de `qrcreate(...).svg(...)`, sin dependencia nueva que avisar.
+`korvexcio_ecf_for_invoice`/`korvexcio_qr_data_uri` se registran como
+funciones Jinja globales via `hooks.py`'s `jinja.methods`, resueltas con
+`frappe.get_all()` normal (respeta los permisos/User Permission de quien
+imprime) — no hace falta ningún bypass: quien puede imprimir la factura
+ya tiene acceso a su propia Company, y el `ECF` vinculado vive en la
+misma Company (`freeze_company`, D19).
+
+**Dos bugs reales encontrados por los tests, no por revisión — los dos
+operacionales, no de lógica de negocio:**
+1. El propio script de deploy tenía `git checkout -- korvexcio/hooks.py`
+   (puesto ahí para no pisar el trabajo de Codex en S2.9/S2.10 en ese
+   mismo archivo) — y descartó también MI cambio de `hooks.py` de este
+   slice. Resultado: las funciones Jinja nunca se registraron, y cada
+   render tiraba `'korvexcio_ecf_for_invoice' is undefined`. Redeploy sin
+   descartar `hooks.py` esta vez.
+2. El cleanup de los tests solo borraba la Sales Invoice de prueba, no el
+   `ECF` vinculado. La naming series de Frappe reciclaba el mismo nombre
+   en la siguiente corrida, y una factura draft "heredaba" el e-CF
+   huérfano de una factura ya borrada en un test anterior — el test que
+   probaba el estado "antes de someter" veía un eNCF que no era suyo.
+   Corregido borrando primero el/los `ECF` vinculados en el cleanup.
+
+**Verificación, salida real:**
+```
+bench --site korvexcio.korvexdev.cc run-tests --app korvexcio --test-category all
+Ran 66 tests in 16.840s -> OK (skipped=1)
+Ran 15 tests in 0.484s -> OK
+(81 tests totales, subiendo de 76)
+
+ruff check -> All checks passed!
+semgrep (regla propia) -> Findings: 2 (los mismos 2 ya justificados en S2.10, ninguno nuevo)
+KORVIS: {"status":"ok",...}   df -h /: 58G libres, 39%, sin cambio
+git rev-parse HEAD (nodo) == 3867d6b == origin/feat/ecf (SHA verificado)
+```
+
+**Siguiente:** S2.13 — E31 y E34 sobre la misma maquinaria ya construida
+para E32.
+
+---
+
 ## Fases
 
 > El detalle de cada slice, con su verificación y su entregable, está en
@@ -2107,6 +2159,7 @@ está resuelto — está anotado como abierto y sigue así.**
 - [x] S2.9 `hooks.py` de Sales Invoice — corregido por Codex (`Customer.rnc` con fallback a `tax_id`, umbral contra `base_grand_total`, permiso de Cajero); verificado en nodo el 2026-09-01 (SHA `3e9ddbf`, 55/55 integration verde)
 - [x] S2.10 `frappe.enqueue` after commit + retry/poll/token crons — implementado por Codex, auditado y corregido por mí (regla 12b: 12→2 hallazgos de Semgrep, `TimestampMismatchError` real); verificado en nodo `3e9ddbf`
 - [x] S2.11 `ECF Contingencia` — patrón ZATCA Precomputed Invoice, on_trash/before_cancel siempre bloqueados; 2 bugs reales de Frappe con XML en Long Text encontrados y corregidos (también en ECF de S2.4)
+- [x] S2.12 Print format "Representación Impresa e-CF" con QR (PyQRCode, ya instalado) — QR real cuando hay `qr_url`, placeholder claro mientras S2.7 siga bloqueado
 
 **🚦 Gate:** un E32 emitido + su RFCE, con respuesta real de TesteCF, en los dos
 sites, con cola asíncrona y contingencia probadas cortando la red. Más `/secure-vibe`
