@@ -132,13 +132,13 @@ def emitir_ecf(ecf_name: str) -> None:
         ecf.validation_messages = frappe._(
             "La factura origen ya no está sometida; el e-CF no se enviará."
         )
-        ecf.save()
+        ecf.save(ignore_permissions=True)
         return
 
     if not ecf.signed_xml:
         ecf.validation_messages = frappe._("No se puede enviar un e-CF sin XML firmado.")
         ecf.estado = "Pendiente"
-        ecf.save()
+        ecf.save(ignore_permissions=True)
         return
     try:
         validate_well_formed(ecf.signed_xml)
@@ -147,7 +147,7 @@ def emitir_ecf(ecf_name: str) -> None:
             type(exc).__name__
         )
         ecf.estado = "Pendiente"
-        ecf.save()
+        ecf.save(ignore_permissions=True)
         return
 
     provider, provider_name = _resolve_provider_for_company(ecf.company)
@@ -157,13 +157,13 @@ def emitir_ecf(ecf_name: str) -> None:
             "Sin proveedor real configurado todavia para {0} (S2.7 sigue bloqueado por D20)."
         ).format(ecf.company)
         ecf.estado = "Pendiente"
-        ecf.save()
+        ecf.save(ignore_permissions=True)
         return
 
     if not _throttle_provider(provider_name):
         ecf.validation_messages = frappe._("Límite temporal del proveedor alcanzado; se reintentará.")
         ecf.estado = "Pendiente"
-        ecf.save()
+        ecf.save(ignore_permissions=True)
         return
 
     ecf.attempt_count = (ecf.attempt_count or 0) + 1
@@ -179,15 +179,16 @@ def emitir_ecf(ecf_name: str) -> None:
         ecf.qr_url = result.value.qr_url
         # TrackID is an acknowledgement only; polling confirms acceptance.
         ecf.estado = "Pendiente"
-        ecf.save()
+        ecf.save(ignore_permissions=True)
         return
 
     ecf.validation_messages = _safe_message(result.message)
     if not result.retryable or ecf.attempt_count >= MAX_ATTEMPTS:
         ecf.estado = "Rechazado"
-        ecf.submit()
+        ecf.submit(ignore_permissions=True)
     else:
-        ecf.save()
+        ecf.estado = "Pendiente"
+        ecf.save(ignore_permissions=True)
 
 
 def retry_pending_ecf() -> None:
@@ -231,9 +232,9 @@ def poll_pending_status() -> None:
         ecf.estado = result.value.estado
         ecf.validation_messages = _safe_message(result.value.validation_messages)
         if ecf.estado in _TERMINAL_ESTADOS:
-            ecf.submit()
+            ecf.submit(ignore_permissions=True)
         else:
-            ecf.save()
+            ecf.save(ignore_permissions=True)
 
 
 def refresh_provider_tokens() -> None:
