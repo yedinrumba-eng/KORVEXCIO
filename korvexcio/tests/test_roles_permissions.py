@@ -191,7 +191,7 @@ class TestRolesPermissions(IntegrationTestCase):
         frappe.delete_doc("User", email, force=True)
 
     def test_create_accountant_user(self):
-        """Test crear contador con acceso de solo lectura."""
+        """Test crear contador con acceso de solo-lectura."""
         email = "_test.accountant.new@korvexdev.cc"
         if frappe.db.exists("User", email):
             frappe.delete_doc("User", email, force=True)
@@ -371,7 +371,7 @@ class TestRolesPermissions(IntegrationTestCase):
         self.assertEqual(si_b.company, COMPANY_B)
 
     def test_contador_read_only_both_companies(self):
-        """Contador solo lectura en ambas companies."""
+        """Contador solo-lectura en ambas companies."""
         frappe.set_user(self.accountant)
 
         # Puede leer
@@ -454,14 +454,14 @@ class TestRolesPermissions(IntegrationTestCase):
         self.assertTrue(any(p.read for p in perms))
 
     def test_dueno_full_access_ecf(self):
-        """Dueño acceso completo a todos los doctypes ECF."""
+        """Dueño full access a todos los doctypes ECF."""
         frappe.set_user(self.owner)
         for doctype in ["ECF", "ECF Settings", "ECF Integration Log", "ECF Contingencia", "ECF Print Queue", "Secuencia eNCF"]:
             perms = frappe.get_all("Custom DocPerm", filters={"parent": doctype, "role": "Dueño"}, fields=["create", "read", "write", "submit", "cancel"])
             self.assertTrue(any(p.create and p.read and p.write for p in perms))
 
     def test_contador_read_only_ecf(self):
-        """Contador solo lectura en todos los doctypes ECF."""
+        """Contador solo-lectura en todos los doctypes ECF."""
         frappe.set_user(self.accountant)
         for doctype in ["ECF", "ECF Settings", "ECF Integration Log", "ECF Contingencia", "ECF Print Queue", "Secuencia eNCF"]:
             perms = frappe.get_all("Custom DocPerm", filters={"parent": doctype, "role": "Contador"}, fields=["read"])
@@ -525,6 +525,181 @@ class TestRolesPermissions(IntegrationTestCase):
         self.assertTrue(any("Removed role Contador" in l.details for l in logs))
 
         frappe.delete_doc("User", email, force=True)
+
+    # =========================================================================
+    # Role Management Permission Tests (SEC-A01)
+    # =========================================================================
+
+    def test_cajero_cannot_assign_privileged_roles(self):
+        """Cajero NO puede asignar Dueño o Contador."""
+        from korvexcio.roles import assign_role_to_user
+
+        email = "_test.cajero.priv@korvexdev.cc"
+        if frappe.db.exists("User", email):
+            frappe.delete_doc("User", email, force=True)
+
+        # Crear usuario base sin roles
+        user = frappe.get_doc({
+            "doctype": "User",
+            "email": email,
+            "first_name": "Test Priv",
+            "user_type": "System User",
+            "send_welcome_email": 0,
+            "roles": [],
+        })
+        user.insert()
+
+        # Como cajero VLJ, intentar asignar Dueño -> debe fallar
+        frappe.set_user(self.cashier_a)
+        with self.assertRaises(frappe.PermissionError):
+            assign_role_to_user(email, "Dueño")
+
+        with self.assertRaises(frappe.PermissionError):
+            assign_role_to_user(email, "Contador")
+
+        # Como cajero VLJ, asignar Cajero ESE -> debe funcionar (rol de cajero)
+        assign_role_to_user(email, "Cajero ESE")
+        user_doc = frappe.get_doc("User", email)
+        self.assertIn("Cajero ESE", [r.role for r in user_doc.roles])
+
+        frappe.delete_doc("User", email, force=True)
+
+    def test_dueno_can_assign_privileged_roles(self):
+        """Dueño PUEDE asignar Dueño y Contador."""
+        from korvexcio.roles import assign_role_to_user
+
+        email = "_test.dueno.priv@korvexdev.cc"
+        if frappe.db.exists("User", email):
+            frappe.delete_doc("User", email, force=True)
+
+        user = frappe.get_doc({
+            "doctype": "User",
+            "email": email,
+            "first_name": "Test Dueño Priv",
+            "user_type": "System User",
+            "send_welcome_email": 0,
+            "roles": [],
+        })
+        user.insert()
+
+        # Como Dueño, asignar Contador -> debe funcionar
+        frappe.set_user(self.owner)
+        assign_role_to_user(email, "Contador")
+        user_doc = frappe.get_doc("User", email)
+        self.assertIn("Contador", [r.role for r in user_doc.roles])
+
+        # Como Dueño, asignar Dueño -> debe funcionar
+        assign_role_to_user(email, "Dueño")
+        user_doc = frappe.get_doc("User", email)
+        self.assertIn("Dueño", [r.role for r in user_doc.roles])
+
+        frappe.delete_doc("User", email, force=True)
+
+    def test_user_without_write_permission_cannot_assign_roles(self):
+        """Usuario sin permiso 'write' en User NO puede asignar roles."""
+        from korvexcio.roles import assign_role_to_user
+
+        # Crear usuario con solo rol "Contador" (solo read en User)
+        email = "_test.no.write@korvexdev.cc"
+        if frappe.db.exists("User", email):
+            frappe.delete_doc("User", email, force=True)
+
+        user = frappe.get_doc({
+            "doctype": "User",
+            "email": email,
+            "first_name": "No Write",
+            "user_type": "System User",
+            "send_welcome_email": 0,
+            "roles": [{"role": "Contador"}],
+        })
+        user.insert()
+
+        # Asignar User Permission para Company A
+        from korvexcio.roles import assign_company_user_permission
+        assign_company_user_permission(email, COMPANY_A)
+
+        # Como Contador (sin write en User), intentar asignar rol -> debe fallar
+        frappe.set_user(email)
+        with self.assertRaises(frappe.PermissionError):
+            assign_role_to_user(self.cashier_a, "Cajero ESE")
+
+        frappe.delete_doc("User", email, force=True)
+
+    def test_remove_role_prevents_last_role(self):
+        """No se puede remover el último rol del usuario."""
+        from korvexcio.roles import remove_role_from_user
+
+        email = "_test.last.role@korvexdev.cc"
+        if frappe.db.exists("User", email):
+            frappe.delete_doc("User", email, force=True)
+
+        # Usuario con solo un rol
+        user = frappe.get_doc({
+            "doctype": "User",
+            "email": email,
+            "first_name": "Last Role",
+            "user_type": "System User",
+            "send_welcome_email": 0,
+            "roles": [{"role": "Cajero VLJ"}],
+        })
+        user.insert()
+
+        frappe.set_user("Administrator")
+        with self.assertRaises(frappe.ValidationError):
+            remove_role_from_user(email, "Cajero VLJ")
+
+        # Agregar segundo rol y remover el primero -> debe funcionar
+        from korvexcio.roles import assign_role_to_user
+        assign_role_to_user(email, "Cajero ESE")
+        remove_role_from_user(email, "Cajero VLJ")
+
+        user_doc = frappe.get_doc("User", email)
+        self.assertEqual(len(user_doc.roles), 1)
+        self.assertIn("Cajero ESE", [r.role for r in user_doc.roles])
+
+        frappe.delete_doc("User", email, force=True)
+
+    def test_remove_role_requires_privilege_for_contador_dueno(self):
+        """Remover Contador/Dueño requiere privilegio (System Manager o Dueño)."""
+        from korvexcio.roles import assign_role_to_user, remove_role_from_user
+
+        email = "_test.remove.priv@korvexdev.cc"
+        if frappe.db.exists("User", email):
+            frappe.delete_doc("User", email, force=True)
+
+        user = frappe.get_doc({
+            "doctype": "User",
+            "email": email,
+            "first_name": "Remove Priv",
+            "user_type": "System User",
+            "send_welcome_email": 0,
+            "roles": [{"role": "Contador"}],
+        })
+        user.insert()
+
+        # Como cajero, intentar remover Contador -> debe fallar
+        frappe.set_user(self.cashier_a)
+        with self.assertRaises(frappe.PermissionError):
+            remove_role_from_user(email, "Contador")
+
+        # Como Dueño, remover Contador -> debe funcionar
+        frappe.set_user(self.owner)
+        remove_role_from_user(email, "Contador")
+        user_doc = frappe.get_doc("User", email)
+        self.assertNotIn("Contador", [r.role for r in user_doc.roles])
+
+        frappe.delete_doc("User", email, force=True)
+
+    def test_assign_role_invalid_role_rejected(self):
+        """Rol no asignable via API es rechazado."""
+        from korvexcio.roles import assign_role_to_user
+
+        frappe.set_user("Administrator")
+        with self.assertRaises(frappe.ValidationError):
+            assign_role_to_user(self.cashier_a, "System Manager")
+
+        with self.assertRaises(frappe.ValidationError):
+            assign_role_to_user(self.cashier_a, "Rol Inexistente")
 
     # =========================================================================
     # freeze_company on User Tests
