@@ -25,16 +25,26 @@ class ECFPrintQueue(Document):
 
 
 @frappe.whitelist()
-def get_pending_prints(company: str | None = None, limit: int = 20) -> list[dict]:
-    """Get pending print jobs for a company (for POS polling)."""
-    filters = {"status": ["in", ["Pending", "Printing"]]}
+def get_pending_prints(company: str | None = None, limit: int = 20, include_failed: bool = False) -> list[dict]:
+    """Get pending print jobs for a company (for POS polling).
+
+    Args:
+        company: Filter by company
+        limit: Max results (default 20)
+        include_failed: If True, also include 'Failed' status jobs (for requeue UI)
+    """
+    statuses = ["Pending", "Printing"]
+    if include_failed:
+        statuses.append("Failed")
+
+    filters = {"status": ["in", statuses]}
     if company:
         filters["company"] = company
 
     return frappe.get_all(
         "ECF Print Queue",
         filters=filters,
-        fields=["name", "invoice_name", "status", "priority", "attempts", "created_at"],
+        fields=["name", "invoice_name", "status", "priority", "attempts", "error_message", "created_at"],
         order_by="priority asc, creation asc",
         limit=limit,
     )
