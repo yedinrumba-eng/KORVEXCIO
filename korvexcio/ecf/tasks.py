@@ -213,27 +213,81 @@ def emitir_ecf(ecf_name: str) -> None:
         _save_as_system(ecf)
 
 
+def _cron_lock(cron_name: str, timeout: int = 300) -> bool:
+    """Lock distribuido via Redis para evitar solapamiento de crons (SEC-M04).
+    Retorna True si adquirió el lock, False si ya está corriendo."""
+    lock_key = f"korvexcio:ecf:cron:{cron_name}"
+    return frappe.cache().lock(lock_key, timeout=timeout)
+
+
 def retry_pending_ecf() -> None:
     """scheduler_events */5 -- reintenta los ECF Pendiente que no
-    llegaron al tope de intentos."""
+    llegaron al tope de intentos.
+
+    SEC-M02: Verificar jobs existentes en Redis queue antes de encolar duplicados.
+    SEC-M04: Lock distribuido para evitar solapamiento."""
+    if not _cron_lock("retry_pending_ecf"):
+        return
+
     pending = frappe.get_all(
         "ECF",
         filters={"estado": "Pendiente", "attempt_count": ["<", MAX_ATTEMPTS]},
         pluck="name",
     )
+
+    # Verificar jobs existentes en Redis queue (rq)
+    from rq import Queue
+    from redis import Redis
+    redis_conn = Redis.from_url(frappe.conf.redis_queue or "redis://localhost:6379/1")
+    q = Queue("short", connection=redis_conn)
+
+    existing_job_ids = set(q.job_ids)
+    enqueued = 0
     for ecf_name in pending:
-        frappe.enqueue("korvexcio.ecf.tasks.emitir_ecf", queue="short", ecf_name=ecf_name)
+        job_id = f"emitir_ecf_{ecf_name}"
+        if job_id not in existing_job_ids:
+            frappe.enqueue(
+                "korvexcio.ecf.tasks.emitir_ecf",
+                queue="short",
+                ecf_name=ecf_name,
+                job_id=job_id,
+            )
+            enqueued += 1
+
+    frappe.logger().info(f"retry_pending_ecf: {enqueued} nuevos jobs encolados de {len(pending)} pendientes")
 
 
 def poll_pending_status() -> None:
     """scheduler_events */15 -- para los ECF ya enviados (tienen
-    track_id) pero sin respuesta final, pregunta el estado real."""
-    awaiting = frappe.get_all(
-        "ECF",
-        filters={"estado": "Pendiente", "track_id": ["is", "set"]},
-        pluck="name",
-    )
-    for ecf_name in awaiting:
+    track_id) pero sin respuesta final, pregunta el estado real.
+
+    Además: cuando el ECF recibe QR del proveedor (track_id/qr_url/codigo_seguridad),
+    encola la impresión térmica (S4.4) - fix SEC-M01: mover encolado aquí
+    en vez de en create_ecf_record (antes de tener QR).
+
+    SEC-M03: Paginación con limit=100 para evitar O(N) sin límite.
+    SEC-M04: Lock distribuido para evitar solapamiento."""
+    if not _cron_lock("poll_pending_status"):
+        return
+
+    # SEC-M03: Paginación - procesar en batches de 100
+    BATCH_SIZE = 100
+    offset = 0
+    total_processed = 0
+
+    while True:
+        batch = frappe.get_all(
+            "ECF",
+            filters={"estado": "Pendiente", "track_id": ["is", "set"]},
+            pluck="name",
+            limit=BATCH_SIZE,
+            start=offset,
+        )
+        if not batch:
+            break
+
+        for ecf_name in batch:
+            total_processed += 1
         ecf = frappe.get_doc("ECF", ecf_name)
         provider, provider_name = _resolve_provider_for_company(ecf.company)
         if provider is None:
@@ -254,8 +308,25 @@ def poll_pending_status() -> None:
 
         if result.value.estado not in _VALID_ESTADOS:
             continue
+
+        # Capturar QR data si viene en la respuesta
+        qr_url = getattr(result.value, "qr_url", None) or getattr(result.value, "qr_code_url", None)
+        codigo_seguridad = getattr(result.value, "codigo_seguridad", None)
+
         ecf.estado = result.value.estado
         ecf.validation_messages = _safe_message(result.value.validation_messages)
+
+        if qr_url:
+            ecf.qr_url = qr_url
+        if codigo_seguridad:
+            ecf.codigo_seguridad = codigo_seguridad
+
+        # SEC-M01: Si el ECF ahora tiene QR (track_id + qr_url), encolar impresión
+        # Solo encolar si no estaba ya encolada (verificar ECF Print Queue)
+        if ecf.qr_url and ecf.track_id:
+            from korvexcio.ecf.print_queue import queue_print_job
+            queue_print_job(ecf.reference_name, ecf.company, priority=1)
+
         if ecf.estado in _TERMINAL_ESTADOS:
             _save_as_system(ecf, submit=True)
         else:

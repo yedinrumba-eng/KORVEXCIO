@@ -95,7 +95,9 @@ def reserve_encf(doc, method=None) -> None:
 def create_ecf_record(doc, method=None) -> None:
     """Crea el documento ECF en estado Pendiente, referenciando esta
     Sales Invoice. La emision real contra el proveedor la dispara la cola
-    de S2.10 -- este hook nunca llama a un FiscalProvider."""
+    de S2.10 -- este hook nunca llama a un FiscalProvider.
+
+    S4.4: También encola la impresión térmica del e-CF."""
     encf = doc.get(_ENCF_FLAG)
     tipo_ecf = doc.get(_TIPO_ECF_FLAG)
     if not encf or not tipo_ecf:
@@ -128,6 +130,10 @@ def create_ecf_record(doc, method=None) -> None:
         enqueue_after_commit=True,
         ecf_name=ecf.name,
     )
+
+    # S4.4: La impresión térmica se encola en poll_pending_status() (SEC-M01)
+    # cuando el ECF ya tiene QR (track_id + qr_url del proveedor).
+    # No encolar aquí porque antes de proveedor real no hay QR.
 
 
 def block_cancel_if_accepted(doc, method=None) -> None:
