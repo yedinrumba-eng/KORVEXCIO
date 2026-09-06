@@ -1,0 +1,125 @@
+{
+	"actions": [],
+	"allow_rename": 1,
+	"autoname": "format:PQ-{company}-{####}",
+	"creation": "2026-09-05 00:00:00.000000",
+	"custom": 0,
+	"doctype": "DocType",
+	"engine": "InnoDB",
+	"field_order": [
+		"company",
+		"invoice_name",
+		"status",
+		"priority",
+		"attempts",
+		"error_message",
+		"created_at",
+		"started_at",
+		"completed_at"
+	],
+	"fields": [
+		{
+			"fieldname": "company",
+			"fieldtype": "Link",
+			"label": "Company",
+			"options": "Company",
+			"reqd": 1,
+			"in_list_view": 1,
+			"in_filter": 1
+		},
+		{
+			"fieldname": "invoice_name",
+			"fieldtype": "Link",
+			"label": "Sales Invoice",
+			"options": "Sales Invoice",
+			"reqd": 1,
+			"in_list_view": 1,
+			"in_filter": 1
+		},
+		{
+			"fieldname": "status",
+			"fieldtype": "Select",
+			"label": "Status",
+			"options": "Pending\nPrinting\nCompleted\nFailed",
+			"default": "Pending",
+			"reqd": 1,
+			"in_list_view": 1,
+			"in_filter": 1
+		},
+		{
+			"fieldname": "priority",
+			"fieldtype": "Int",
+			"label": "Priority",
+			"default": 5,
+			"description": "1=High (immediate), 5=Normal, 10=Low"
+		},
+		{
+			"fieldname": "attempts",
+			"fieldtype": "Int",
+			"label": "Attempts",
+			"default": 0,
+			"read_only": 1
+		},
+		{
+			"fieldname": "error_message",
+			"fieldtype": "Small Text",
+			"label": "Error Message",
+			"read_only": 1
+		},
+		{
+			"fieldname": "created_at",
+			"fieldtype": "Datetime",
+			"label": "Created At",
+			"read_only": 1,
+			"in_list_view": 1
+		},
+		{
+			"fieldname": "started_at",
+			"fieldtype": "Datetime",
+			"label": "Started At",
+			"read_only": 1
+		},
+		{
+			"fieldname": "completed_at",
+			"fieldtype": "Datetime",
+			"label": "Completed At",
+			"read_only": 1,
+			"in_list_view": 1
+		}
+	],
+	"index_web_pages_for_search": 0,
+	"istable": 0,
+	"links": [],
+	"modified": "2026-09-05 00:00:00.000000",
+	"modified_by": "Administrator",
+	"module": "ECF",
+	"name": "ECF Print Queue",
+	"naming_rule": "Expression",
+	"owner": "Administrator",
+	"permissions": [
+		{
+			"create": 1,
+			"delete": 1,
+			"email": 1,
+			"export": 1,
+			"print": 1,
+			"read": 1,
+			"role": "System Manager",
+			"share": 1,
+			"write": 1
+		},
+		{
+			"create": 1,
+			"read": 1,
+			"role": "POS User",
+			"write": 1
+		},
+		{
+			"read": 1,
+			"role": "Dueño"
+		}
+	],
+	"sort_field": "modified",
+	"sort_order": "DESC",
+	"states": []
+}
