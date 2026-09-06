@@ -336,17 +336,32 @@ def create_item_defaults(item_code: str, item_row: ItemRow) -> tuple[int, int]:
 
     # 2. Item Price (selling)
     if item_row.price_list_rate > 0:
-        _upsert_item_price(item_code, price_list, item_row.price_list_rate, "Selling")
+        _upsert_item_price(item_code, price_list, item_row.price_list_rate, "Selling", company)
 
     # 3. Item Price (buying / valuation)
     if item_row.valuation_rate > 0:
-        _upsert_item_price(item_code, "Standard Buying", item_row.valuation_rate, "Buying")
+        _upsert_item_price(item_code, "Standard Buying", item_row.valuation_rate, "Buying", company)
 
     return created, updated
 
 
-def _upsert_item_price(item_code: str, price_list: str, rate: float, buying_selling: str):
-    """Create or update Item Price."""
+def _upsert_item_price(item_code: str, price_list: str, rate: float, buying_selling: str, company: str = ""):
+    """Create or update Item Price.
+
+    SEC-M07: Valida que Price List exista para la company antes de insertar
+    para evitar prices huérfanos referenciando Price Lists inexistentes.
+    """
+    # Validar Price List existe para esta company (si se proporciona company)
+    if company:
+        pl_exists = frappe.db.exists("Price List", {"name": price_list, "company": company})
+        if not pl_exists:
+            # Fallback: Price List global (sin company) o Standard
+            pl_global = frappe.db.exists("Price List", {"name": price_list, "company": ["in", ["", None]]})
+            if not pl_global:
+                frappe.throw(
+                    _("Price List '{0}' no existe para Company '{1}' ni globalmente").format(price_list, company)
+                )
+
     existing = frappe.db.get_value(
         "Item Price",
         {"item_code": item_code, "price_list": price_list},

@@ -182,3 +182,17 @@ BULK-POD-0.5,Pod Coil 0.5ohm,Products,Nos,1,_Test Company KORVEXCIO A,Stores - _
                 self.assertEqual(attrs["Ohmiaje"], code.split("-")[-1])
         finally:
             os.unlink(csv_path)
+
+    def test_upsert_item_price_validates_price_list(self):
+        """SEC-M07: _upsert_item_price valida que Price List exista para la company."""
+        from korvexcio.retail.bulk_import import _upsert_item_price
+
+        # Price List inexistente para la company -> debe fallar
+        with self.assertRaises(frappe.ValidationError) as ctx:
+            _upsert_item_price("TEST-ITEM", "Price List Inexistente", 100, "Selling", "_Test Company KORVEXCIO A")
+        self.assertIn("Price List 'Price List Inexistente' no existe", str(ctx.exception))
+
+        # Price List existente (Standard Selling es global) -> debe funcionar
+        _upsert_item_price("TEST-ITEM-PL", "Standard Selling", 100, "Selling", "_Test Company KORVEXCIO A")
+        price = frappe.get_doc("Item Price", {"item_code": "TEST-ITEM-PL", "price_list": "Standard Selling"})
+        self.assertEqual(price.price_list_rate, 100)
