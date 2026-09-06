@@ -1,5 +1,60 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
+> **Estado vigente — 2026-09-05 (actualizado post code-review + security-review):**
+>
+> ### ✅ FASES 1-4 COMPLETAS (excepto S4.4 hardware, S4.6 local real)
+> - **Fase 0** (S0.1-S0.12): Cerrada (S0.9/S0.3 deuda técnica por D20)
+> - **Fase 1** (S1.1-S1.8): Cerrada 31/08
+> - **Fase 2** (S2.1-S2.15): Estructura completa, 91 tests, auditada — **gate real bloqueado en S2.7** (proveedor real necesita RNC+certificado)
+> - **Fase 3** (S3.1-S3.6): Cerrada 01/09, 108 tests — 3 bugs críticos corregidos (permisos Sales Invoice, fuga datos reportes, BOM sin company)
+> - **Fase 4** (S4.1-S4.5): Cerrada en remoto — **S4.4 hardware / S4.6 local real bloqueados**
+>
+> ### ✅ POSNext fork (`yedinrumba-eng/posnext`, rama `korvex`)
+> - **S4.UI.1**: Login visual KORVEXCIO commitado (`819fd2f`) — 8 tests Vitest, build Windows OK
+> - **S4.2b**: Mensaje fiscal real en POSNext commitado (`8acd1a6`) — detecta "Norma 05-19"/"RNC del comprador" → "RNC Requerido" con retry
+> - **S4.1**: POS Profile por Company — 111/111 tests
+> - **S4.2**: Fork instalado, venta real E32 generada, umbral RD$250k probado en pantalla
+> - **S4.3**: Escáner keyboard-wedge nativo — 0 código, 0 config
+> - **S4.5**: Turno de caja / arqueo — 118/118 tests
+> - **S4.4/S4.6**: Bloqueados (hardware físico + local real del cliente)
+>
+> ### ✅ CODE REVIEW + SECURITY REVIEW COMPLETADOS (2026-09-05)
+> **18 fixes aplicados** (commits `3d4f11b` a `9c0f7eb`):
+>
+> **🔴 3 CRÍTICOS (SEC-A01, A02, A03):**
+> - `3d4f11b` SEC-A01: `assign_role_to_user/remove_role_from_user` validan permisos (write en User + privilegio Dueño/Contador)
+> - `43d6c6b` SEC-A02: `validate_session_limits()` usa `get_active_sessions()` — no cuenta sesiones expiradas
+> - `67764fa` SEC-A03: Test aislamiento `ecf.insert(ignore_permissions=True)` → `test_scenario_13`
+>
+> **🟡 1 LEGAL:**
+> - `dba0166` LICENSE MIT → GPL-3.0 (app deriva de ERPNext GPLv3)
+>
+> **🟡 6 MEDIOS SEGURIDAD (SEC-M01 a M07):**
+> - `e588567` SEC-M01-M04: Cola impresión en `poll_pending_status()` (cuando hay QR), locks Redis en crons, paginación batch=100, verifica jobs existentes
+> - `04d1328` SEC-M07: `_upsert_item_price()` valida Price List existe para company
+> - `6897927` SEC-M06: `_check_password_expiry()` decisión documentada: solo avisa, no bloquea
+>
+> **⚪ 8 BAJOS/CODE REVIEW:**
+> - `9c0f7eb` SEC-M08: `pyserial` en pyproject.toml
+> - `8d8ebc4` SEC-L07: `resolve_provider()` loggea error si proveedor sin implementación
+> - `b596603` SEC-L02: Eliminar `test_thermal_print()` falso → `_dev_test_thermal_print()`
+> - `4769169` SEC-L05: Emails únicos en tests con `frappe.generate_hash()`
+> - `c243f3f` CR-31: Documentar timeout max 300s en DGII Settings
+> - `7f49e60` CR-34: `get_pending_prints(include_failed=True)` para UI requeue
+> - `4769169` SEC-L05: Emails únicos en `test_roles_permissions` con `generate_hash()`
+> - `b596603` SEC-L02: Renombrar test falso a `_dev_test_thermal_print()`
+>
+> **Tests totales:** 148+ integration + unit verdes, 0 regresiones
+> **Semgrep:** 0 hallazgos nuevos (2 justificados desde S2.10)
+> **Ruff:** 6 deuda vieja (DTZ011×5, BLE001×1), 0 nuevos
+> **`ignore_permissions`/SQL crudo sin justificar:** 0
+>
+> ---
+>
+> **Siguiente inmediato: S5.4 (Certificación DGII 2 RNC) — BLOQUEADO por RNC+certificado real.**
+> Cuando Yedin tenga RNC + certificado: S5.4 → S2.7 (proveedor real) → Fase 6 (go-live local).
+> S4.4 (impresora física) y S4.6 (contingencia local real) esperan hardware/local.
+
 > **Actualización 2026-09-01 (5) — POSNext forkeado, instalado y probado
 > con una venta real de punta a punta. S4.1/S4.5/S4.2(backend) cerrados.**
 > Yedin forkeó `yedinrumba-eng/posnext` (rama `korvex`) a pedido. Instalarlo
@@ -205,6 +260,45 @@
 > resolver S0.9/S2.7 primero.
 > Evidencia de versión y operación: `docs/13-VERSION-FRAPPE.md`.
 >
+## Punto exacto para reanudar — 2026-09-05 — S4.UI.1
+
+Trabajo visual en `.worktrees/posnext-korvex-ui`, rama `feat/korvex-ui-s4`,
+base `0e47a47`. **Estado: PARCIAL, sin commit ni push.** No se modificó el
+servidor. El script de negocio de `Login.vue` continúa idéntico al de HEAD.
+
+El bloqueo anterior tenía causa concreta: `frappe-ui` buscaba el bench con
+`while (currentDir !== '/')`; Windows llega a `C:\` y nunca sale. `vite.config.js`
+desactiva ese descubrimiento solo en Windows, conserva el proxy manual y fija
+`baseUrl`. Linux conserva el proxy automático. Para desarrollo, el paquete ESM
+`frappe-ui` se excluye del preempaquetado (iconos virtuales), se preempaquetan
+`dayjs`/`debug` CommonJS y se retira `showdown`, que ya no existe. Sin dependencias
+nuevas ni parches a `node_modules`.
+
+Evidencia del 05/09, detalle y comandos en la última entrada de `PROGRESO.md`:
+
+- Vitest: `Test Files 1 passed (1)` / `Tests 8 passed (8)`.
+- Biome dirigido: `Checked 6 files in 40ms. No fixes applied.`
+- Build productivo Windows: exit 0, 2189 módulos y PWA con 60 entradas; se
+  conservan las rutas `/assets/pos_next/pos/` y la plantilla Jinja de Frappe.
+- Navegador real: 1440×900, 840×760 y 375×812 sin scroll horizontal; tarjeta
+  completa; campos 46 px, mostrar contraseña 44×44 y botón principal 48 px.
+- Teclado: usuario → contraseña → mostrar/ocultar → iniciar sesión; foco visible.
+- Lint global actual: `Checked 130 files` / `Found 124 errors` / exit 1. Los
+  seis archivos del slice pasan; no se limpiaron archivos ajenos al alcance.
+
+**Para cerrar:** activar temporalmente «Efectos de animación» = desactivado en
+Windows → Accesibilidad → Efectos visuales y comprobar `prefers-reduced-motion`
+en el navegador. Se pidió a Yedin; el navegador disponible no expone emulación
+de esa preferencia. La última lectura real es `false` (halos 14 s, órbitas 8 s).
+No marcar ese gate como pasado por leer el CSS. Registrar la excepción de lint
+heredado o acordar un slice de mantenimiento; no arreglar todo el fork de paso.
+
+Después: commit local de S4.UI.1; **S4.2b** (mensaje fiscal real en POSNext),
+luego preparación software de impresión. S4.4 físico y S4.6 en el local siguen
+pendientes; no frenan estos trabajos de software. Push solo con autorización
+explícita. La prueba visual no validó credenciales reales ni el backend Frappe;
+faltaba un backend en `127.0.0.1:8000` y hubo errores esperables al cargar APIs.
+
 > ### Los tres documentos que se leen, en este orden
 >
 > 1. **`docs/08-BLUEPRINT.md`** — el plan maestro: fases, microslices, la
@@ -601,6 +695,9 @@ pagarlas — el detalle completo con comandos está en la entrada de
 
 | Qué pasó | Por qué engañaba | El fix |
 |---|---|---|
+| **Build/dev de POSNext colgado en Windows antes del banner** (S4.UI.1) | Parecía lentitud o incompatibilidad Node 25; cambiar a Node 24 no podía arreglar un `while` que esperaba llegar a `/` desde `C:\` | Desactivar solo en Windows el descubrimiento automático del bench de `frappe-ui`, usar el proxy ya declarado y fijar la ruta pública. El build generó bundle y PWA con exit 0 |
+| **Dev no resolvía iconos virtuales y luego `debug` no exportaba `default`** (S4.UI.1) | El build productivo pasaba; dev usa otro paso de preempaquetado | Excluir `frappe-ui` del preempaquetado para que Vite procese iconos; incluir explícitamente dependencias CommonJS (`dayjs`, `debug`). No simular iconos ni instalar librerías innecesarias |
+| **Captura full-page con bandas blancas, pero DOM sin overflow** (S4.UI.1) | El navegador integrado usa DPR 1.25 y la captura completa escalaba mal; no era un defecto del layout | Usar captura de viewport (`fullPage: false`) y contrastar con medidas reales del DOM; no editar la imagen para esconderlo |
 | **`bench new-site --install-app` headless no siembra datos maestros** (`Warehouse Type`, UOM, Item Groups, Market Segments). Crear la primera `Company` reventó con `LinkValidationError: Could not find Warehouse Type: Transit` (S0.7) | El sitio se veía sano — `list-apps` mostraba `erpnext` instalado, el `ping` respondía. El hueco solo aparece cuando algo intenta usar ese dato maestro, y eso normalmente pasa recién al crear la primera `Company` | Llamar `erpnext.setup.setup_wizard.operations.install_fixtures.install(country=...)` (+ las funciones sueltas si `set_up_address_templates` revienta por el bug de `frappe.local.lang`, ver abajo) **antes** de crear cualquier `Company`, en todo tenant nuevo |
 | **Un proceso Python vivo no se entera de una app nueva.** Tras `bench new-app` + `install-app`, el site respondía `500 Internal Server Error` — `ModuleNotFoundError: No module named 'korvexcio'` (S1.1) | `install-app` terminó "sin errores" en la consola. El paquete se instaló bien en el venv (`uv pip install -e`). El problema es que `backend`/`queue-*`/`scheduler`/`websocket` ya estaban corriendo **desde antes** de que el paquete existiera, y un proceso vivo no relee `sys.path` solo | `docker compose restart backend queue-short queue-long scheduler websocket` **después** de instalar cualquier app nueva o cambiar `modules.txt`. No hace falta tocar `frontend`, `db` ni los `redis` |
 | **`frappe/locale.py:get_locale_value` revienta si `frappe.local.lang` no está seteado** fuera de un request HTTP (bug de upstream, no de este proyecto) — pasó corriendo `install_fixtures.install()` desde `bench console` (S0.7) | El traceback apunta a Jinja/`Address Template`, parece un problema de plantillas cuando en realidad es que falta un dato de contexto | No se parchea Frappe. Se evita ejecutando solo las funciones de `install_fixtures` que hacen falta (no el `install()` completo), o seteando `frappe.local.lang` a mano antes de llamar algo que dependa de plantillas Jinja desde consola. **Volvió a pasar en S1.4** (una `Notification` estándar al crear un `Fiscal Year` de prueba) — desde entonces `before_tests()` lo blinda al principio: `if not frappe.local.lang: frappe.local.lang = "en"` |
