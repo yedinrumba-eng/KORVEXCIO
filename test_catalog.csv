@@ -1,0 +1,38 @@
+item_code,item_name,item_group,stock_uom,is_stock_item,company,warehouse,price_list,price_list_rate,valuation_rate,description,variant_of,sabor,nicotina_mg,tamano_ml,ohmiaje
+ELIQ-30ML,E-Liquid 30ml,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,Base e-liquid 30ml,,,,
+ELIQ-60ML,E-Liquid 60ml,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,800,350,Base e-liquid 60ml,,,,
+POD-DEVICE,Pod System Device,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,1200,600,Pod system device,,,,
+CAFE-AMER,Cafe Americano,Cafeteria,Nos,1,EL SABOR DE LAS 5 ESQUINAS,Stores - ESE,Standard Selling,120,40,Cafe americano simple,,,,
+CROISSANT,Croissant,Cafeteria,Nos,1,EL SABOR DE LAS 5 ESQUINAS,Stores - ESE,Standard Selling,80,25,Croissant fresco,,,,
+ELIQ-30ML-MEN-3mg,E-Liquid 30ml Menta 3mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Menta 3mg,ELIQ-30ML,Menta,3mg,30ml,
+ELIQ-30ML-MEN-6mg,E-Liquid 30ml Menta 6mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Menta 6mg,ELIQ-30ML,Menta,6mg,30ml,
+ELIQ-30ML-MEN-12mg,E-Liquid 30ml Menta 12mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Menta 12mg,ELIQ-30ML,Menta,12mg,30ml,
+ELIQ-30ML-FRE-3mg,E-Liquid 30ml Fresa 3mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Fresa 3mg,ELIQ-30ML,Fresa,3mg,30ml,
+ELIQ-30ML-FRE-6mg,E-Liquid 30ml Fresa 6mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Fresa 6mg,ELIQ-30ML,Fresa,6mg,30ml,
+ELIQ-30ML-FRE-12mg,E-Liquid 30ml Fresa 12mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Fresa 12mg,ELIQ-30ML,Fresa,12mg,30ml,
+ELIQ-30ML-MAN-3mg,E-Liquid 30ml Mango 3mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Mango 3mg,ELIQ-30ML,Mango,3mg,30ml,
+ELIQ-30ML-MAN-6mg,E-Liquid 30ml Mango 6mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Mango 6mg,ELIQ-30ML,Mango,6mg,30ml,
+ELIQ-30ML-MAN-12mg,E-Liquid 30ml Mango 12mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Mango 12mg,ELIQ-30ML,Mango,12mg,30ml,
+ELIQ-60ML-MEN-3mg-30,E-Liquid 30ml Menta 3mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Menta 3mg,ELIQ-60ML,Menta,3mg,30ml,
+ELIQ-60ML-MEN-6mg-30,E-Liquid 30ml Menta 6mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Menta 6mg,ELIQ-60ML,Menta,6mg,30ml,
+ELIQ-60ML-MEN-12mg-30,E-Liquid 30ml Menta 12mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Menta 12mg,ELIQ-60ML,Menta,12mg,30ml,
+ELIQ-60ML-FRE-3mg-30,E-Liquid 30ml Fresa 3mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Fresa 3mg,ELIQ-60ML,Fresa,3mg,30ml,
+ELIQ-60ML-FRE-6mg-30,E-Liquid 30ml Fresa 6mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Fresa 6mg,ELIQ-60ML,Fresa,6mg,30ml,
+ELIQ-60ML-FRE-12mg-30,E-Liquid 30ml Fresa 12mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Fresa 12mg,ELIQ-60ML,Fresa,12mg,30ml,
+ELIQ-60ML-MAN-3mg-30,E-Liquid 30ml Mango 3mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Mango 3mg,ELIQ-60ML,Mango,3mg,30ml,
+ELIQ-60ML-MAN-6mg-30,E-Liquid 30ml Mango 6mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Mango 6mg,ELIQ-60ML,Mango,6mg,30ml,
+ELIQ-60ML-MAN-12mg-30,E-Liquid 30ml Mango 12mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,450,200,E-Liquid 30ml Mango 12mg,ELIQ-60ML,Mango,12mg,30ml,
+ELIQ-60ML-MEN-3mg-60,E-Liquid 60ml Menta 3mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,800,350,E-Liquid 60ml Menta 3mg,ELIQ-60ML,Menta,3mg,60ml,
+ELIQ-60ML-MEN-6mg-60,E-Liquid 60ml Menta 6mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,800,350,E-Liquid 60ml Menta 6mg,ELIQ-60ML,Menta,6mg,60ml,
+ELIQ-60ML-MEN-12mg-60,E-Liquid 60ml Menta 12mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,800,350,E-Liquid 60ml Menta 12mg,ELIQ-60ML,Menta,12mg,60ml,
+ELIQ-60ML-FRE-3mg-60,E-Liquid 60ml Fresa 3mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,800,350,E-Liquid 60ml Fresa 3mg,ELIQ-60ML,Fresa,3mg,60ml,
+ELIQ-60ML-FRE-6mg-60,E-Liquid 60ml Fresa 6mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,800,350,E-Liquid 60ml Fresa 6mg,ELIQ-60ML,Fresa,6mg,60ml,
+ELIQ-60ML-FRE-12mg-60,E-Liquid 60ml Fresa 12mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,800,350,E-Liquid 60ml Fresa 12mg,ELIQ-60ML,Fresa,12mg,60ml,
+ELIQ-60ML-MAN-3mg-60,E-Liquid 60ml Mango 3mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,800,350,E-Liquid 60ml Mango 3mg,ELIQ-60ML,Mango,3mg,60ml,
+ELIQ-60ML-MAN-6mg-60,E-Liquid 60ml Mango 6mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,800,350,E-Liquid 60ml Mango 6mg,ELIQ-60ML,Mango,6mg,60ml,
+ELIQ-60ML-MAN-12mg-60,E-Liquid 60ml Mango 12mg,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,800,350,E-Liquid 60ml Mango 12mg,ELIQ-60ML,Mango,12mg,60ml,
+POD-0.3,Pod Coil 0.3ohm,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,150,70,Pod Coil 0.3ohm para Pod System,POD-DEVICE,,,,0.3ohm
+POD-0.5,Pod Coil 0.5ohm,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,150,70,Pod Coil 0.5ohm para Pod System,POD-DEVICE,,,,0.5ohm
+POD-0.8,Pod Coil 0.8ohm,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,150,70,Pod Coil 0.8ohm para Pod System,POD-DEVICE,,,,0.8ohm
+POD-1.0,Pod Coil 1.0ohm,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,150,70,Pod Coil 1.0ohm para Pod System,POD-DEVICE,,,,1.0ohm
+POD-1.2,Pod Coil 1.2ohm,Vapes,Nos,1,VAPERIA LA J Y EL JALAPEÑO,Stores - VLJ,Standard Selling,150,70,Pod Coil 1.2ohm para Pod System,POD-DEVICE,,,,1.2ohm

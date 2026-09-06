@@ -1,0 +1,110 @@
+{
+	"actions": [],
+	"allow_rename": 1,
+	"creation": "2026-09-05 10:00:00.000000",
+	"doctype": "DocType",
+	"editable_grid": 1,
+	"engine": "InnoDB",
+	"field_order": [
+		"user",
+		"action",
+		"status",
+		"details",
+		"reference_doctype",
+		"reference_name",
+		"timestamp",
+		"ip_address"
+	],
+	"fields": [
+		{
+			"fieldname": "user",
+			"fieldtype": "Link",
+			"in_list_view": 1,
+			"label": "Usuario",
+			"options": "User",
+			"reqd": 1
+		},
+		{
+			"fieldname": "action",
+			"fieldtype": "Select",
+			"in_list_view": 1,
+			"label": "Acción",
+			"options": "login\nlogout\nfailed_login\nrole_change\nsession_limit_exceeded\npassword_change\npermission_change\ndocument_create\ndocument_read\ndocument_update\ndocument_delete\ndocument_submit\ndocument_cancel",
+			"reqd": 1
+		},
+		{
+			"fieldname": "status",
+			"fieldtype": "Select",
+			"in_list_view": 1,
+			"label": "Estado",
+			"options": "Success\nFailed",
+			"reqd": 1
+		},
+		{
+			"fieldname": "details",
+			"fieldtype": "Text",
+			"label": "Detalles"
+		},
+		{
+			"fieldname": "reference_doctype",
+			"fieldtype": "Link",
+			"label": "Doctype Referencia",
+			"options": "DocType"
+		},
+		{
+			"fieldname": "reference_name",
+			"fieldtype": "Data",
+			"label": "Nombre Referencia"
+		},
+		{
+			"fieldname": "timestamp",
+			"fieldtype": "Datetime",
+			"in_list_view": 1,
+			"label": "Timestamp",
+			"reqd": 1
+		},
+		{
+			"fieldname": "ip_address",
+			"fieldtype": "Data",
+			"label": "IP Address"
+		}
+	],
+	"index_web_pages_for_search": 0,
+	"istable": 0,
+	"links": [],
+	"modified": "2026-09-05 10:00:00.000000",
+	"modified_by": "Administrator",
+	"module": "KORVEXCIO",
+	"name": "User Activity Log",
+	"owner": "Administrator",
+	"permissions": [
+		{
+			"create": 1,
+			"delete": 1,
+			"email": 1,
+			"export": 1,
+			"print": 1,
+			"read": 1,
+			"report": 1,
+			"role": "System Manager",
+			"share": 1,
+			"write": 1
+		},
+		{
+			"read": 1,
+			"report": 1,
+			"role": "Dueño"
+		},
+		{
+			"read": 1,
+			"role": "Contador"
+		}
+	],
+	"sort_field": "timestamp",
+	"sort_order": "DESC",
+	"states": [],
+	"title_field": "user",
+	"track_changes": 1,
+	"track_seen": 1,
+	"track_views": 1
+}
