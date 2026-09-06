@@ -17,5 +17,10 @@ class DGIISettings(Document):
 
     @staticmethod
     def _validate_timeout(timeout: int, message: str) -> None:
+        # CR-31: Max 300s (5 min) porque:
+        # - DGII TesteCF/CerteCF responden típicamente en <30s
+        # - 300s cubre latencia alta + retries internos del proveedor
+        # - Más de 5 min bloquearía worker queue-short innecesariamente
+        # - Alineado con timeouts por defecto de requests/httpx (30-60s) + buffer
         if not 1 <= timeout <= 300:
             frappe.throw(message, frappe.ValidationError)
