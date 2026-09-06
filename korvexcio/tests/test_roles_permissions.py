@@ -702,6 +702,88 @@ class TestRolesPermissions(IntegrationTestCase):
             assign_role_to_user(self.cashier_a, "Rol Inexistente")
 
     # =========================================================================
+    # Session Limits Tests (SEC-A02)
+    # =========================================================================
+
+    def test_validate_session_limits_allows_within_limit(self):
+        """Sesiones dentro del límite son permitidas."""
+        from korvexcio.roles import validate_session_limits, configure_session_limits
+
+        # Configurar límite alto para test
+        configure_session_limits(cashier_hours=8, owner_hours=12, concurrent_sessions_cashier=5, concurrent_sessions_owner=10)
+
+        # Cajero con límite 5, 0 sesiones activas -> permitido
+        result = validate_session_limits(self.cashier_a)
+        self.assertTrue(result)
+
+        # Dueño con límite 10, 0 sesiones activas -> permitido
+        result = validate_session_limits(self.owner)
+        self.assertTrue(result)
+
+    def test_validate_session_limits_blocks_over_limit(self):
+        """Sesiones sobre el límite son bloqueadas."""
+        from korvexcio.roles import validate_session_limits, configure_session_limits
+        from frappe.auth import get_active_sessions
+
+        # Configurar límite bajo
+        configure_session_limits(cashier_hours=8, owner_hours=12, concurrent_sessions_cashier=1, concurrent_sessions_owner=1)
+
+        # Simular sesión activa existente manipulando get_active_sessions
+        # Nota: get_active_sessions lee de la DB, así que creamos una Session real
+        import frappe
+        from frappe.utils import now_datetime
+
+        # Crear una sesión fake para el cajero
+        fake_sid = "fake_sid_test_123"
+        session_doc = frappe.get_doc({
+            "doctype": "Session",
+            "sid": fake_sid,
+            "user": self.cashier_a,
+            "lastupdate": now_datetime(),
+            "sessiondata": "{}",
+        })
+        session_doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+
+        try:
+            # Cajero con límite 1, ya tiene 1 sesión fake -> debe bloquear
+            result = validate_session_limits(self.cashier_a)
+            self.assertFalse(result)
+
+            # Verificar que se loggeó el intento
+            logs = get_user_activity_log(user=self.cashier_a, action="session_limit_exceeded", limit=1)
+            self.assertEqual(len(logs), 1)
+            self.assertEqual(logs[0].status, "Failed")
+
+        finally:
+            # Limpiar
+            frappe.delete_doc("Session", fake_sid, force=True, ignore_permissions=True)
+            frappe.db.commit()
+
+    def test_validate_session_limits_excludes_current_session(self):
+        """La sesión actual no cuenta hacia el límite."""
+        from korvexcio.roles import validate_session_limits, configure_session_limits
+        from frappe.auth import get_active_sessions
+
+        configure_session_limits(cashier_hours=8, owner_hours=12, concurrent_sessions_cashier=1, concurrent_sessions_owner=1)
+
+        # Límite 1, pero la sesión actual no cuenta
+        # Como cajero_a está logueado en este test, debería permitir
+        frappe.set_user(self.cashier_a)
+        result = validate_session_limits(self.cashier_a)
+        self.assertTrue(result)
+
+    def test_validate_session_limits_other_roles_unlimited(self):
+        """Roles que no son cajero ni dueño no tienen límite."""
+        from korvexcio.roles import validate_session_limits, configure_session_limits
+
+        configure_session_limits(cashier_hours=8, owner_hours=12, concurrent_sessions_cashier=1, concurrent_sessions_owner=1)
+
+        # Contador no tiene límite configurado -> permitido
+        result = validate_session_limits(self.accountant)
+        self.assertTrue(result)
+
+    # =========================================================================
     # freeze_company on User Tests
     # =========================================================================
 

@@ -657,6 +657,8 @@ def validate_session_limits(user: str) -> bool:
     """Valida límites de sesión concurrente por rol.
 
     Se llama desde auth_hooks. Retorna True si permite la sesión, False si la deniega.
+    Usa frappe.auth.get_active_sessions() para contar solo sesiones realmente vivas,
+    no sesiones expiradas con lastupdate > 24h (fix SEC-A02).
     """
     # Obtener roles del usuario
     user_roles = frappe.get_roles(user)
@@ -674,11 +676,15 @@ def validate_session_limits(user: str) -> bool:
     else:
         max_sessions = cint(frappe.db.get_single_value("System Settings", "concurrent_sessions_owner")) or 3
 
-    # Contar sesiones activas del usuario
-    active_sessions = frappe.db.count(
-        "Session",
-        filters={"user": user, "sid": ["!=", frappe.session.sid], "lastupdate": [">", frappe.utils.add_to_date(frappe.utils.now(), hours=-24)]}
-    )
+    # Contar sesiones ACTIVAS reales (no expiradas)
+    # frappe.auth.get_active_sessions() devuelve lista de dicts con 'sid', 'user', 'lastupdate'
+    active_sessions_list = frappe.auth.get_active_sessions(user)
+    # Excluir la sesión actual si está en la lista
+    current_sid = getattr(frappe.session, "sid", None)
+    if current_sid:
+        active_sessions_list = [s for s in active_sessions_list if s.get("sid") != current_sid]
+
+    active_sessions = len(active_sessions_list)
 
     if active_sessions >= max_sessions:
         log_user_activity(user, "session_limit_exceeded", "Failed",
