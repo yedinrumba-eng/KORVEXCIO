@@ -676,16 +676,13 @@ def save_receipt_for_test(invoice_name: str, output_dir: str = "/tmp/korvexcio_t
     }
 
 
-def test_thermal_print() -> dict[str, Any]:
-    """Test function for bench run-tests --module korvexcio.ecf.test_thermal_print.
+def _dev_test_thermal_print() -> dict[str, Any]:
+    """Función helper para testing manual en desarrollo (NO es test automatizado).
 
-    Creates a test invoice and generates receipt outputs.
+    SEC-L02: Eliminado como test real - no hereda de IntegrationTestCase,
+    devuelve dict, no usa assertions. Los tests reales están en
+    test_thermal_print.py (14 tests de integración).
     """
-    from frappe.tests import IntegrationTestCase
-
-    # This is a simple function test, not a full IntegrationTestCase
-    # Use save_receipt_for_test with a test invoice
-
     test_company = "_Test Company KORVEXCIO A"
     if not frappe.db.exists("Company", test_company):
         return {"error": "Test company not found. Run before_tests first."}
