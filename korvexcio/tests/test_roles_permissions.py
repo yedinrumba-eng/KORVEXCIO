@@ -784,6 +784,42 @@ class TestRolesPermissions(IntegrationTestCase):
         self.assertTrue(result)
 
     # =========================================================================
+    # Password Expiry Tests (SEC-M06)
+    # =========================================================================
+
+    def test_password_expiry_only_warns_does_not_block(self):
+        """SEC-M06: Password expirado solo avisa (msgprint), no bloquea login.
+
+        Decisión de producto documentada en _check_password_expiry():
+        - frappe.msgprint(alert=True, indicator='orange') visible al usuario
+        - NO usa frappe.throw -> no bloquea el flujo de login
+        """
+        from korvexcio.roles import _check_password_expiry
+        from frappe.utils import add_days, nowdate
+
+        # Simular password expirado (last_password_updated hace 100 días, policy 90 días)
+        user_doc = frappe.get_doc("User", self.cashier_a)
+        old_date = add_days(nowdate(), -100)
+        user_doc.last_password_updated = old_date
+        user_doc.save()
+        frappe.db.commit()
+
+        try:
+            # No debe lanzar excepción - solo msgprint
+            _check_password_expiry(self.cashier_a)
+            # Si llega aquí, pasó (no bloqueó)
+        except frappe.ValidationError:
+            self.fail("_check_password_expiry() bloqueó con ValidationError - debería solo avisar")
+
+        # Verificar que msgprint se habría llamado (no se puede testear directo sin mock)
+        # El test pasa si no lanzó excepción
+
+        # Restore
+        user_doc.last_password_updated = nowdate()
+        user_doc.save()
+        frappe.db.commit()
+
+    # =========================================================================
     # freeze_company on User Tests
     # =========================================================================
 

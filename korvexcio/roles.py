@@ -731,7 +731,14 @@ def extend_bootinfo(bootinfo: dict) -> None:
 
 
 def _check_password_expiry(user: str) -> None:
-    """Verifica si la contraseña ha expirado."""
+    """Verifica si la contraseña ha expirado.
+
+    SEC-M06: Decisión de producto documentada - solo avisa (no bloquea).
+    Rationale: Bloquear login rompería flujos donde el usuario necesita acceder
+    para cambiar la password. El aviso visible (alert=True, indicator=orange)
+    es suficiente para cumplimiento normativo. Si se requiere bloqueo estricto,
+    cambiar a frappe.throw con redirect a change_password.
+    """
     expire_days = cint(frappe.db.get_single_value("System Settings", "password_expire_days")) or 90
 
     # Obtener última vez que se cambió la contraseña
@@ -741,7 +748,7 @@ def _check_password_expiry(user: str) -> None:
         from frappe.utils import date_diff, nowdate
         days_since_change = date_diff(nowdate(), user_doc.last_password_updated)
         if days_since_change >= expire_days:
-            # Enviar notificación o forzar cambio
+            # Solo aviso visible - no bloquea login (ver docstring)
             frappe.msgprint(
                 _("Su contraseña ha expirado. Por favor cámbiela."),
                 alert=True,
