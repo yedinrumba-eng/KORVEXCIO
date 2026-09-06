@@ -27,12 +27,6 @@ from korvexcio.roles import (
 COMPANY_A = VLJ
 COMPANY_B = ESE
 
-TEST_CASHIER_A = "_test.cashier.a@korvexdev.cc"
-TEST_CASHIER_B = "_test.cashier.b@korvexdev.cc"
-TEST_OWNER = "_test.owner@korvexdev.cc"
-TEST_ACCOUNTANT = "_test.accountant@korvexdev.cc"
-
-
 class TestRolesPermissions(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
@@ -48,16 +42,23 @@ class TestRolesPermissions(IntegrationTestCase):
         set_password_policy(min_length=8, require_special=False, expire_days=90)
         configure_session_limits(cashier_hours=8, owner_hours=12, concurrent_sessions_cashier=1, concurrent_sessions_owner=3)
 
+        # SEC-L05: Emails únicos con generate_hash para evitar colisiones en runs paralelos
+        test_hash = frappe.generate_hash(8)
+        cls.cashier_a_email = f"_test.cashier.a.{test_hash}@korvexdev.cc"
+        cls.cashier_b_email = f"_test.cashier.b.{test_hash}@korvexdev.cc"
+        cls.owner_email = f"_test.owner.{test_hash}@korvexdev.cc"
+        cls.accountant_email = f"_test.accountant.{test_hash}@korvexdev.cc"
+
         # Limpiar usuarios de test previos
-        for email in [TEST_CASHIER_A, TEST_CASHIER_B, TEST_OWNER, TEST_ACCOUNTANT]:
+        for email in [cls.cashier_a_email, cls.cashier_b_email, cls.owner_email, cls.accountant_email]:
             if frappe.db.exists("User", email):
                 frappe.delete_doc("User", email, force=True)
 
         # Crear usuarios de test usando las funciones de provisión
-        cls.cashier_a = create_cashier_user(TEST_CASHIER_A, "Cajero Test A", COMPANY_A, "TestPass123")
-        cls.cashier_b = create_cashier_user(TEST_CASHIER_B, "Cajero Test B", COMPANY_B, "TestPass123")
-        cls.owner = create_owner_user(TEST_OWNER, "Owner Test", [COMPANY_A, COMPANY_B], "TestPass123")
-        cls.accountant = create_accountant_user(TEST_ACCOUNTANT, "Accountant Test", [COMPANY_A, COMPANY_B], "TestPass123")
+        cls.cashier_a = create_cashier_user(cls.cashier_a_email, "Cajero Test A", COMPANY_A, "TestPass123")
+        cls.cashier_b = create_cashier_user(cls.cashier_b_email, "Cajero Test B", COMPANY_B, "TestPass123")
+        cls.owner = create_owner_user(cls.owner_email, "Owner Test", [COMPANY_A, COMPANY_B], "TestPass123")
+        cls.accountant = create_accountant_user(cls.accountant_email, "Accountant Test", [COMPANY_A, COMPANY_B], "TestPass123")
 
         # Setup básico de datos
         cls.warehouse_a = cls._ensure_warehouse("_Test WH Roles A", COMPANY_A)
@@ -69,7 +70,7 @@ class TestRolesPermissions(IntegrationTestCase):
     @classmethod
     def tearDownClass(cls):
         # Limpiar usuarios de test
-        for email in [TEST_CASHIER_A, TEST_CASHIER_B, TEST_OWNER, TEST_ACCOUNTANT]:
+        for email in [cls.cashier_a_email, cls.cashier_b_email, cls.owner_email, cls.accountant_email]:
             if frappe.db.exists("User", email):
                 frappe.delete_doc("User", email, force=True)
         super().tearDownClass()
