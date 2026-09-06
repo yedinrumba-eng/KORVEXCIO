@@ -312,3 +312,75 @@ class TestIsolation(IntegrationTestCase):
         - metodos @frappe.whitelist propios de korvexcio/ecf (no existen aun)
         Se marcan como skip explicito, no como pasados de mentira."""
         self.skipTest("Requiere un provider real conectado - S2.7")
+
+    # --- 13. ECF insert con ignore_permissions=True se queda en Company del cajero (SEC-A03) ---
+    def test_scenario_13_ecf_created_by_cashier_stays_company_scoped(self):
+        """Test de aislamiento dedicado para ecf.insert(ignore_permissions=True) en sales_invoice_hooks.py:122.
+
+        El hook create_ecf_record usa ignore_permissions=True justificado por regla 12b
+        (job de background avanza trabajo interno del sistema). Este test confirma que
+        un Cajero de Company A encolando una venta genera ECF en Company A, nunca B.
+        """
+        frappe.set_user(self.user_a)  # Cajero de COMPANY_A
+
+        # Asegurar secuencia E32 para Company A
+        if not frappe.db.exists("Secuencia eNCF", f"{COMPANY_A}-E32"):
+            frappe.get_doc({
+                "doctype": "Secuencia eNCF",
+                "company": COMPANY_A,
+                "tipo_ecf": "E32",
+                "desde": 1,
+                "hasta": 999999,
+                "siguiente": 1,
+                "fecha_vencimiento": "2027-12-31",
+            }).insert()
+
+        # Crear Sales Invoice de prueba
+        si = frappe.get_doc({
+            "doctype": "Sales Invoice",
+            "customer": "_Test Customer KORVEXCIO Thermal",
+            "company": COMPANY_A,
+            "currency": "DOP",
+            "conversion_rate": 1,
+            "items": [{
+                "item_code": "_Test Item KORVEXCIO Thermal",
+                "qty": 1,
+                "rate": 1000,
+                "income_account": "Sales - _TCKA",
+                "cost_center": "Main - _TCKA",
+            }],
+        })
+        si.insert()
+        si.submit()  # Esto dispara create_ecf_record via on_submit hook
+
+        try:
+            # Verificar que ECF se creó en Company A
+            ecf = frappe.get_all(
+                "ECF",
+                filters={"reference_doctype": "Sales Invoice", "reference_name": si.name},
+                fields=["name", "company", "estado"],
+                limit=1
+            )
+            self.assertEqual(len(ecf), 1)
+            self.assertEqual(ecf[0].company, COMPANY_A)
+            self.assertEqual(ecf[0].estado, "Pendiente")
+
+            # Verificar que NO hay ECF en Company B para esta factura
+            ecf_b = frappe.get_all(
+                "ECF",
+                filters={"reference_doctype": "Sales Invoice", "reference_name": si.name, "company": COMPANY_B},
+                pluck="name"
+            )
+            self.assertEqual(len(ecf_b), 0)
+
+        finally:
+            # Cleanup
+            for ecf_name in frappe.get_all("ECF", filters={"reference_doctype": "Sales Invoice", "reference_name": si.name}, pluck="name"):
+                ecf_doc = frappe.get_doc("ECF", ecf_name)
+                if ecf_doc.docstatus == 1:
+                    ecf_doc.cancel()
+                frappe.delete_doc("ECF", ecf_name, force=True, ignore_permissions=True)
+
+            if si.docstatus == 1:
+                si.cancel()
+            frappe.delete_doc("Sales Invoice", si.name, force=True, ignore_permissions=True)
