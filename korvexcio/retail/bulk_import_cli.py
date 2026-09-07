@@ -64,7 +64,7 @@ def bulk_import_cmd(
     # Parsear archivo
     try:
         rows = parse_file(file_content, filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError, IOError) as e:
         result.add_error(f"Error parseando archivo: {e}")
         return result
 
@@ -98,7 +98,7 @@ def bulk_import_cmd(
                 result.add_created(item_code)
             else:
                 result.add_updated(item_code)
-        except Exception as e:
+        except (ValueError, KeyError, TypeError, frappe.ValidationError, frappe.DoesNotExistError) as e:
             item_code = row.get("item_code", "desconocido")
             result.add_error(f"{item_code}: {e}")
 

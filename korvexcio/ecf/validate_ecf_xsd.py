@@ -35,7 +35,7 @@ def load_xsd_schemas(xsd_dir: Path) -> dict[str, etree.XMLSchema]:
                 print(f"✓ Cargado XSD: {xsd_file.name}")
         except etree.XMLSchemaParseError as e:
             print(f"✗ Error parseando XSD {xsd_file.name}: {e}", file=sys.stderr)
-        except Exception as e:
+        except (OSError, IOError) as e:
             print(f"✗ Error cargando XSD {xsd_file.name}: {e}", file=sys.stderr)
     return schemas
 
@@ -64,8 +64,8 @@ def validate_xml_against_schema(xml_path: Path, schema: etree.XMLSchema) -> tupl
     except etree.XMLSyntaxError as e:
         errors.append(f"  Error de sintaxis XML: {e}")
         return False, errors
-    except Exception as e:
-        errors.append(f"  Error inesperado: {e}")
+    except (OSError, IOError) as e:
+        errors.append(f"  Error de E/S: {e}")
         return False, errors
 
 
@@ -98,7 +98,7 @@ def find_matching_schema(xml_path: Path, schemas: dict[str, etree.XMLSchema]) ->
         for schema_name in schemas:
             if schema_name.lower() in root_tag or root_tag in schema_name.lower():
                 return schemas[schema_name]
-    except Exception:
+    except (etree.XMLSyntaxError, OSError, IOError):
         pass
 
     # Último recurso: primer schema disponible

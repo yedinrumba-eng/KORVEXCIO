@@ -190,8 +190,7 @@ def log_user_activity(
             "timestamp": frappe.utils.now(),
             "ip_address": getattr(frappe.local, "request_ip", None) or "system",
         }).insert(ignore_permissions=True)
-    except Exception:
-        # Never fail the main operation due to audit logging
+    except Exception:  # noqa: BLE001 - Intentional: never fail main operation due to audit logging
         pass
 
 

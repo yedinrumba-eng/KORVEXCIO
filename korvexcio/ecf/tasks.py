@@ -30,6 +30,7 @@ import frappe
 from korvexcio.ecf.providers.base import Err
 from korvexcio.ecf.providers.registry import resolve_provider
 from korvexcio.ecf.xml_render import validate_well_formed
+from xml.etree import ElementTree
 
 MAX_ATTEMPTS = 5
 _TERMINAL_ESTADOS = {"Aceptado", "Rechazado"}
@@ -163,7 +164,9 @@ def emitir_ecf(ecf_name: str) -> None:
         return
     try:
         validate_well_formed(ecf.signed_xml)
-    except Exception as exc:  # noqa: BLE001
+    except ElementTree.ParseError as exc:
+        # validate_well_formed uses ElementTree.fromstring which raises
+        # ElementTree.ParseError on malformed XML
         ecf.validation_messages = frappe._("El XML del e-CF no es valido: {0}").format(
             type(exc).__name__
         )
