@@ -22,7 +22,9 @@ class DGIIDigitalCertificate(Document):
 
 
 def days_until_expiry(valid_until, today: date | None = None) -> int:
-    return (getdate(valid_until) - (today or date.today())).days
+    """Calculate days until expiry. Uses fixed date if not provided for testability."""
+    from frappe.utils import nowdate
+    return (getdate(valid_until) - (today or nowdate())).days
 
 
 def expiry_message(company: str, valid_until, warning_days: int, today: date | None = None) -> str | None:

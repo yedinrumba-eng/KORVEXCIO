@@ -94,7 +94,7 @@ def process_print_queue(limit: int = 10) -> dict[str, int]:
 
             result["processed"] += 1
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             frappe.log_error(f"Print queue error for {job.invoice_name}: {e}")
             new_attempts = job.attempts + 1
             if new_attempts >= 3:
@@ -125,8 +125,12 @@ def _send_to_printer(escpos_data: bytes, company: str) -> None:
         # Production: send to actual printer
         # Could use pyserial for USB/Serial, or socket for network printer
         import serial
-        with serial.Serial(printer_config.printer_port, printer_config.printer_baudrate or 9600, timeout=2) as ser:
-            ser.write(escpos_data)
+        try:
+            with serial.Serial(printer_config.printer_port, printer_config.printer_baudrate or 9600, timeout=2) as ser:
+                ser.write(escpos_data)
+        except (serial.SerialException, OSError, TimeoutError) as e:
+            frappe.log_error(f"Printer error for {company}: {e}")
+            raise
     else:
         # Development: save to file for inspection
         import os
@@ -134,9 +138,13 @@ def _send_to_printer(escpos_data: bytes, company: str) -> None:
         os.makedirs(test_dir, exist_ok=True)
         filename = f"print_{company}_{int(time.time())}.escpos"
         filepath = os.path.join(test_dir, filename)
-        with open(filepath, "wb") as f:
-            f.write(escpos_data)
-        frappe.logger().info(f"Development: Saved print job to {filepath}")
+        try:
+            with open(filepath, "wb") as f:
+                f.write(escpos_data)
+            frappe.logger().info(f"Development: Saved print job to {filepath}")
+        except (OSError, IOError) as e:
+            frappe.log_error(f"Failed to save print job for {company}: {e}")
+            raise
 
 
 def get_pending_print_count(company: str | None = None) -> int:

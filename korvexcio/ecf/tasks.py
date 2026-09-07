@@ -190,8 +190,8 @@ def emitir_ecf(ecf_name: str) -> None:
     ecf.attempt_count = (ecf.attempt_count or 0) + 1
     try:
         result = provider.emitir(ecf.company, ecf.signed_xml)
-    except Exception:  # noqa: BLE001
-        frappe.log_error(title=f"emitir_ecf: {provider_name} emitir() crashed for {ecf_name}")
+    except (ConnectionError, TimeoutError, ValueError) as e:
+        frappe.log_error(title=f"emitir_ecf: {provider_name} emitir() crashed for {ecf_name}", message=str(e))
         result = Err(message="Proveedor no disponible", code="provider_error", retryable=True)
     _log_attempt(ecf, "emitir", result, provider_name)
 
@@ -297,9 +297,10 @@ def poll_pending_status() -> None:
             continue
         try:
             result = provider.consultar(ecf.company, ecf.track_id)
-        except Exception:  # noqa: BLE001
+        except (ConnectionError, TimeoutError, ValueError) as e:
             frappe.log_error(
-                title=f"poll_pending_status: {provider_name} consultar() crashed for {ecf_name}"
+                title=f"poll_pending_status: {provider_name} consultar() crashed for {ecf_name}",
+                message=str(e)
             )
             continue
         _log_attempt(ecf, "consultar", result, provider_name)
@@ -345,6 +346,6 @@ def refresh_provider_tokens() -> None:
         if refresh:
             try:
                 refresh(setting.company)
-            except Exception:  # noqa: BLE001
-                frappe.log_error(title=f"refresh_provider_tokens: {setting.provider} crashed for {setting.company}")
+            except (ConnectionError, TimeoutError, ValueError) as e:
+                frappe.log_error(title=f"refresh_provider_tokens: {setting.provider} crashed for {setting.company}", message=str(e))
                 continue

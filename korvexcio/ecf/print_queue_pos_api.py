@@ -117,7 +117,7 @@ def pos_sync_offline_prints(offline_prints: str) -> dict[str, Any]:
                 queue_print_job(invoice_name, company)
                 synced += 1
 
-        except Exception as e:
+        except (ValueError, KeyError, frappe.DoesNotExistError, frappe.ValidationError) as e:
             errors.append({"invoice": print_record.get("invoice_name"), "error": str(e)})
 
     return {"success": True, "synced": synced, "errors": errors}

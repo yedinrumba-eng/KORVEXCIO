@@ -3452,11 +3452,12 @@ Commit `dba0166` ya aplicado. Deuda legal raíz resuelta desde S0.1.
 5. **4.3** Preparar validación XSD: descargar XSD oficial DGII + script `validate_ecf_xsd.py` con `lxml.etree.XMLSchema` (~2h, cuando XSD disponible)
 6. **4.6** `pyserial` en `pyproject.toml` + `try/except ImportError` en `_send_to_printer()` (~15min) ✅ (`9c0f7eb`)
 7. **4.7** Log error en `resolve_provider()` si `provider_class is None` y `provider_name` configurado (~15min) ✅ (`8d8ebc4`)
-8. **4.8** Separar god modules (>400 líneas):
-   - `thermal_print.py` (679) → `thermal_receipt_builder.py` + `thermal_print_api.py` + `test_helpers.py`
-   - `print_queue.py` (294) → `print_queue_server.py` + `print_queue_pos_api.py` + `print_queue_offline.py`
-   - `roles.py` (672) → `roles_provisioning.py` + `roles_permissions.py` + `roles_audit.py` + `roles_session.py`
-   - `bulk_import.py` (489) → `bulk_import_parser.py` + `bulk_import_builder.py` + `bulk_import_defaults.py` + `bulk_import_cli.py`
+8. ✅ **4.8** Separar god modules (>400 líneas) — commit `55e9cf4`
+   - `thermal_print.py` (757) → `thermal_receipt_builder.py` + `thermal_print_api.py` + `test_helpers.py` + facade
+   - `print_queue.py` (293) → `print_queue_server.py` + `print_queue_pos_api.py` + `print_queue_offline.py` + facade
+   - `roles.py` (756) → `roles_provisioning.py` + `roles_permissions.py` + `roles_audit.py` + `roles_session.py` + facade
+   - `bulk_import.py` (504) → `bulk_import_parser.py` + `bulk_import_builder.py` + `bulk_import_defaults.py` + `bulk_import_cli.py` + facade
+   - Todos los archivos < 300 líneas, responsabilidad única por módulo
 
 #### FASE 5 — Testing/Observabilidad (5 items, ~2h)
 9. **5.1** Fix/eliminar `_dev_test_thermal_print()` falso o mover a `test_thermal_print.py` como `IntegrationTestCase` real (~30min) ✅ (`b596603`)

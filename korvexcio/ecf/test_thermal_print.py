@@ -1,4 +1,4 @@
-"""Integration tests for thermal printing (S4.4).
+"""Integration tests for thermal printing (S4.4) — FIXTURES AISLADAS (FASE 5.3).
 
 Tests cover:
 - Thermal receipt HTML generation
@@ -6,6 +6,9 @@ Tests cover:
 - QR code inclusion from ECF
 - Print queue operations
 - Offline/online queue sync
+
+Cada test usa setUp/tearDown independiente con datos únicos (generate_hash)
+para evitar contaminación entre tests en CI paralelo.
 """
 
 import json
@@ -14,114 +17,120 @@ import os
 import frappe
 from frappe.tests import IntegrationTestCase
 
-COMPANY_A = "_Test Company KORVEXCIO A"
-ABBR_A = "_TCKA"
-CUSTOMER = "_Test Customer KORVEXCIO Thermal"
-ITEM = "_Test Item KORVEXCIO Thermal"
-
-
-def _ensure_secuencia(company: str, tipo_ecf: str) -> None:
-    name = f"{company}-{tipo_ecf}"
-    if frappe.db.exists("Secuencia eNCF", name):
-        return
-    frappe.get_doc(
-        {
-            "doctype": "Secuencia eNCF",
-            "company": company,
-            "tipo_ecf": tipo_ecf,
-            "desde": 1,
-            "hasta": 999999,
-            "siguiente": 1,
-            "fecha_vencimiento": "2027-12-31",
-        }
-    ).insert()
-
 
 class TestThermalPrint(IntegrationTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    """Tests de impresión térmica con fixtures aisladas por test."""
+
+    def setUp(self):
+        """Setup aislado por test - crea datos únicos con generate_hash."""
+        frappe.set_user("Administrator")
         if not frappe.local.lang:
             frappe.local.lang = "en"
 
         from korvexcio.install import before_tests
-
         before_tests()
 
-        if not frappe.db.exists("Customer", CUSTOMER):
-            frappe.get_doc(
-                {
-                    "doctype": "Customer",
-                    "customer_name": CUSTOMER,
-                    "customer_group": "Commercial",
-                    "territory": "All Territories",
-                }
-            ).insert()
+        # Generar sufijo único para este test
+        self.test_hash = frappe.generate_hash(8)
+        self.company = "_Test Company KORVEXCIO A"
+        self.abbr = "_TCKA"
+        self.customer_name = f"_Test Customer Thermal {self.test_hash}"
+        self.item_code = f"_Test Item Thermal {self.test_hash}"
 
-        if not frappe.db.exists("Item", ITEM):
-            frappe.get_doc(
-                {
-                    "doctype": "Item",
-                    "item_code": ITEM,
-                    "item_name": ITEM,
-                    "item_group": "All Item Groups",
-                    "is_stock_item": 0,
-                    "stock_uom": "Nos",
-                }
-            ).insert()
+        # Crear customer único
+        self.customer = frappe.get_doc({
+            "doctype": "Customer",
+            "customer_name": self.customer_name,
+            "customer_group": "Commercial",
+            "territory": "All Territories",
+        }).insert()
 
-        _ensure_secuencia(COMPANY_A, "E32")
+        # Crear item único
+        self.item = frappe.get_doc({
+            "doctype": "Item",
+            "item_code": self.item_code,
+            "item_name": self.item_code,
+            "item_group": "All Item Groups",
+            "is_stock_item": 0,
+            "stock_uom": "Nos",
+        }).insert()
 
-    def setUp(self):
-        frappe.set_user("Administrator")
+        # Asegurar secuencia E32 para company
+        seq_name = f"{self.company}-E32"
+        if not frappe.db.exists("Secuencia eNCF", seq_name):
+            frappe.get_doc({
+                "doctype": "Secuencia eNCF",
+                "company": self.company,
+                "tipo_ecf": "E32",
+                "desde": 1,
+                "hasta": 999999,
+                "siguiente": 1,
+                "fecha_vencimiento": "2027-12-31",
+            }).insert()
 
     def tearDown(self):
+        """Limpieza completa por test - elimina datos creados."""
         frappe.set_user("Administrator")
+        # Limpiar en orden inverso de dependencias
+        try:
+            # ECFs
+            for ecf_name in frappe.get_all("ECF", filters={"reference_doctype": "Sales Invoice"}, pluck="name"):
+                try:
+                    doc = frappe.get_doc("ECF", ecf_name)
+                    if doc.docstatus == 1:
+                        doc.cancel()
+                    frappe.delete_doc("ECF", ecf_name, force=True, ignore_permissions=True)
+                except (frappe.DoesNotExistError, frappe.ValidationError):
+                    pass
+
+            # Sales Invoices
+            for si_name in frappe.get_all("Sales Invoice", filters={"customer": self.customer_name}, pluck="name"):
+                try:
+                    doc = frappe.get_doc("Sales Invoice", si_name)
+                    if doc.docstatus == 1:
+                        doc.cancel()
+                    frappe.delete_doc("Sales Invoice", si_name, force=True, ignore_permissions=True)
+                except (frappe.DoesNotExistError, frappe.ValidationError):
+                    pass
+
+            # Print Queue
+            for pq_name in frappe.get_all("ECF Print Queue", filters={"company": self.company}, pluck="name"):
+                try:
+                    frappe.delete_doc("ECF Print Queue", pq_name, force=True, ignore_permissions=True)
+                except (frappe.DoesNotExistError, frappe.ValidationError):
+                    pass
+
+            # Customer
+            if frappe.db.exists("Customer", self.customer_name):
+                frappe.delete_doc("Customer", self.customer_name, force=True, ignore_permissions=True)
+
+            # Item
+            if frappe.db.exists("Item", self.item_code):
+                frappe.delete_doc("Item", self.item_code, force=True, ignore_permissions=True)
+
+        except (frappe.DoesNotExistError, frappe.ValidationError):
+            pass
 
     def _submitted_invoice(self, with_ecf: bool = False) -> str:
-        """Create and submit a test Sales Invoice."""
+        """Crea y somete una Sales Invoice de prueba."""
         si = frappe.new_doc("Sales Invoice")
-        si.company = COMPANY_A
-        si.customer = CUSTOMER
+        si.company = self.company
+        si.customer = self.customer_name
         si.currency = "DOP"
         si.conversion_rate = 1
         si.append(
             "items",
             {
-                "item_code": ITEM,
+                "item_code": self.item_code,
                 "qty": 2,
                 "rate": 1500,
-                "income_account": f"Sales - {ABBR_A}",
-                "cost_center": f"Main - {ABBR_A}",
+                "income_account": f"Sales - {self.abbr}",
+                "cost_center": f"Main - {self.abbr}",
             },
         )
         si.insert()
         si.submit()
-
-        self.addCleanup(self._cleanup_invoice, si.name)
-
-        if with_ecf:
-            # The on_submit hook creates ECF automatically
-            pass
-
         return si.name
-
-    def _cleanup_invoice(self, name):
-        try:
-            for ecf_name in frappe.get_all(
-                "ECF", filters={"reference_doctype": "Sales Invoice", "reference_name": name}, pluck="name"
-            ):
-                doc = frappe.get_doc("ECF", ecf_name)
-                if doc.docstatus == 1:
-                    doc.cancel()
-                frappe.delete_doc("ECF", ecf_name, force=True, ignore_permissions=True)
-
-            doc = frappe.get_doc("Sales Invoice", name)
-            if doc.docstatus == 1:
-                doc.cancel()
-            frappe.delete_doc("Sales Invoice", name, force=True, ignore_permissions=True)
-        except Exception:  # noqa: BLE001, S110
-            pass
 
     def test_generate_html_receipt_basic(self):
         """Test HTML receipt generation without ECF data."""
@@ -134,9 +143,9 @@ class TestThermalPrint(IntegrationTestCase):
         # Check basic structure
         self.assertIn("<html", html)
         self.assertIn("FACTURA DE VENTA", html)
-        self.assertIn(CUSTOMER, html)
+        self.assertIn(self.customer_name, html)
         self.assertIn(invoice_name, html)
-        self.assertIn(ITEM, html)
+        self.assertIn(self.item_code, html)
         self.assertIn("1,500.00", html)  # rate
         self.assertIn("3,000.00", html)  # amount (2 * 1500)
         self.assertIn("ITBIS", html)
@@ -194,10 +203,10 @@ class TestThermalPrint(IntegrationTestCase):
 
         # Check for invoice info
         self.assertIn(invoice_name.encode("utf-8"), escpos)
-        self.assertIn(CUSTOMER.encode("utf-8"), escpos)
+        self.assertIn(self.customer_name.encode("utf-8"), escpos)
 
         # Check for item
-        self.assertIn(ITEM.encode("utf-8"), escpos)
+        self.assertIn(self.item_code.encode("utf-8"), escpos)
 
         # Check for totals
         self.assertIn("TOTAL".encode("utf-8"), escpos)
@@ -221,7 +230,6 @@ class TestThermalPrint(IntegrationTestCase):
         escpos = generate_thermal_receipt_escpos(invoice_name)
 
         # Check for QR code ESC/POS commands
-        # GS ( k commands for QR code
         self.assertIn(b"\x1d\x28\x6b", escpos)  # GS ( k
 
         # Check for e-CF specific text
@@ -293,25 +301,25 @@ class TestThermalPrint(IntegrationTestCase):
         """Test receipt generation for credit note (is_return)."""
         # Create a return invoice
         si = frappe.new_doc("Sales Invoice")
-        si.company = COMPANY_A
-        si.customer = CUSTOMER
+        si.company = self.company
+        si.customer = self.customer_name
         si.currency = "DOP"
         si.conversion_rate = 1
         si.is_return = 1
         si.append(
             "items",
             {
-                "item_code": ITEM,
+                "item_code": self.item_code,
                 "qty": 1,
                 "rate": 1000,
-                "income_account": f"Sales - {ABBR_A}",
-                "cost_center": f"Main - {ABBR_A}",
+                "income_account": f"Sales - {self.abbr}",
+                "cost_center": f"Main - {self.abbr}",
             },
         )
         si.insert()
         si.submit()
 
-        self.addCleanup(self._cleanup_invoice, si.name)
+        self.addCleanup(lambda: self._cleanup_invoice(si.name))
 
         from korvexcio.ecf.thermal_print import generate_thermal_receipt_html
 
@@ -320,6 +328,24 @@ class TestThermalPrint(IntegrationTestCase):
         self.assertIn("NOTA DE CRÉDITO", html)
         self.assertIn("e-NCF:", html)  # Should still show e-NCF for credit note
 
+    def _cleanup_invoice(self, name):
+        """Cleanup helper for single invoice."""
+        try:
+            for ecf_name in frappe.get_all(
+                "ECF", filters={"reference_doctype": "Sales Invoice", "reference_name": name}, pluck="name"
+            ):
+                doc = frappe.get_doc("ECF", ecf_name)
+                if doc.docstatus == 1:
+                    doc.cancel()
+                frappe.delete_doc("ECF", ecf_name, force=True, ignore_permissions=True)
+
+            doc = frappe.get_doc("Sales Invoice", name)
+            if doc.docstatus == 1:
+                doc.cancel()
+            frappe.delete_doc("Sales Invoice", name, force=True, ignore_permissions=True)
+        except (frappe.DoesNotExistError, frappe.ValidationError):
+            pass
+
     def test_print_queue_operations(self):
         """Test server-side print queue operations."""
         invoice_name = self._submitted_invoice(with_ecf=True)
@@ -327,11 +353,11 @@ class TestThermalPrint(IntegrationTestCase):
         from korvexcio.ecf.print_queue import queue_print_job, get_pending_print_count, process_print_queue
 
         # Queue a print job
-        queue_name = queue_print_job(invoice_name, COMPANY_A, priority=1)
+        queue_name = queue_print_job(invoice_name, self.company, priority=1)
         self.assertTrue(queue_name.startswith("PQ-"))
 
         # Check count
-        count = get_pending_print_count(COMPANY_A)
+        count = get_pending_print_count(self.company)
         self.assertEqual(count, 1)
 
         # Process queue (in development mode, saves to file)
@@ -349,8 +375,8 @@ class TestThermalPrint(IntegrationTestCase):
 
         from korvexcio.ecf.print_queue import queue_print_job
 
-        queue_name1 = queue_print_job(invoice_name, COMPANY_A)
-        queue_name2 = queue_print_job(invoice_name, COMPANY_A)
+        queue_name1 = queue_print_job(invoice_name, self.company)
+        queue_name2 = queue_print_job(invoice_name, self.company)
 
         # Should return same queue name
         self.assertEqual(queue_name1, queue_name2)
@@ -381,7 +407,7 @@ class TestThermalPrint(IntegrationTestCase):
         offline_data = json.dumps([
             {
                 "invoice_name": invoice_name,
-                "company": COMPANY_A,
+                "company": self.company,
                 "timestamp": "2026-09-05T10:00:00Z",
             }
         ])
@@ -437,14 +463,18 @@ class TestThermalPrint(IntegrationTestCase):
 
 
 class TestThermalPrintOfflineQueue(IntegrationTestCase):
-    """Tests for offline print queue (POSNext IndexedDB integration)."""
+    """Tests for offline print queue (POSNext IndexedDB integration) - aislados."""
+
+    def setUp(self):
+        frappe.set_user("Administrator")
+        if not frappe.local.lang:
+            frappe.local.lang = "en"
+
+    def tearDown(self):
+        frappe.set_user("Administrator")
 
     def test_offline_queue_schema_includes_prints(self):
         """Verify the offline DB schema can be extended for prints."""
-        # This test documents the expected schema extension
-        # The actual POSNext IndexedDB is in JavaScript
-        # We verify the Python side can handle the sync format
-
         from korvexcio.ecf.print_queue import pos_sync_offline_prints
 
         # Test with empty array
