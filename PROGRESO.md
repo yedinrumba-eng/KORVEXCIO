@@ -3415,17 +3415,52 @@ rg "ignore_permissions=True|frappe\.db\.sql\(" korvexcio/
 | ⚪ | **`ecf.xml`/`rfce.xml` sin validar XSD oficial** | Antes de S5.4 (certificación) |
 | ⚪ | **God modules** (>400 líneas): `thermal_print.py` (679), `print_queue.py` (294), `roles.py` (672), `bulk_import.py` (489) | Slices mantenimiento planificados |
 | ⚪ | **Fixtures tests compartidas** → contaminación CI | Migrar a fixtures aisladas / emails únicos ✅ (SEC-L05) |
+| ⚪ | **`freeze_user_company()` body vacío** (validación real en hooks.py doc_events) | Defensa en profundidad intencional; no bloquea. Revisar en refactor roles.py (FASE 4.8) |
+| ⚪ | **`_check_password_expiry()` solo avisa** (no bloquea) | Decisión producto SEC-M06 documentada. Revisar si normativa/cliente exige bloqueo estricto |
+
+---
+
+### ✅ FASE 2 COMPLETADA (2026-09-06) — LICENSE MIT → GPL-3.0
+Commit `dba0166` ya aplicado. Deuda legal raíz resuelta desde S0.1.
+
+### ✅ FASE 3 COMPLETADA (2026-09-06) — 6 Medios de Seguridad
+| Fix | Commit | Qué |
+|-----|--------|-----|
+| SEC-M01 | `e588567` | Cola impresión en `poll_pending_status()` cuando hay QR |
+| SEC-M02 | `e588567` | `retry_pending_ecf()` verifica jobs existentes en Redis |
+| SEC-M03 | `e588567` | `poll_pending_status()` paginación batch=100 |
+| SEC-M04 | `e588567` | Locks Redis en crons `retry` + `poll` |
+| SEC-M07 | `04d1328` | `_upsert_item_price()` valida Price List existe |
+| SEC-M06 | `6897927` | `_check_password_expiry()` decisión documentada: solo avisa |
 
 ---
 
 ### Próximos pasos accionables (remoto, sin blockers externos):
 
+#### FASE 4 — Calidad/Arquitectura (8 items, ~8-16h)
 1. **4.1** Decorator `@require_company_access` centralizar `_assert_user_may_view_company()` en `retail/reports.py` + `dashboard.py` (~2h)
-2. **4.2** Parametrizar ESC/POS por modelo impresora en `POS Profile` (~4h)
-3. **4.4** Constantes impresora en DocType `ECF Print Settings` (~1h)
-4. **4.5** Helper `_get_ecf_data()` eliminar duplicación `thermal_print.py` (~30min)
-5. **4.8** Separar god modules en slices dedicados (~8-16h total)
-6. **5.3** Fixtures aisladas en `test_thermal_print.py` (~1h)
+2. **4.2** Parametrizar ESC/POS por modelo impresora en `POS Profile` (Epson/Star/Bixolon/Custom) (~4h)
+3. **4.3** Preparar validación XSD: descargar XSD oficial DGII + script `validate_ecf_xsd.py` con `lxml.etree.XMLSchema` (~2h, cuando XSD disponible)
+4. **4.4** Constantes impresora en DocType `ECF Print Settings` o `POS Profile` (width_dots, char_width, char_height) (~1h)
+5. **4.5** Helper `_get_ecf_data(invoice_name)` eliminar duplicación entre `generate_thermal_receipt_html/escpos` (~30min)
+6. **4.6** `pyserial` en `pyproject.toml` + `try/except ImportError` en `_send_to_printer()` (~15min) ✅ (`9c0f7eb`)
+7. **4.7** Log error en `resolve_provider()` si `provider_class is None` y `provider_name` configurado (~15min) ✅ (`8d8ebc4`)
+8. **4.8** Separar god modules (>400 líneas):
+   - `thermal_print.py` (679) → `thermal_receipt_builder.py` + `thermal_print_api.py` + `test_helpers.py`
+   - `print_queue.py` (294) → `print_queue_server.py` + `print_queue_pos_api.py` + `print_queue_offline.py`
+   - `roles.py` (672) → `roles_provisioning.py` + `roles_permissions.py` + `roles_audit.py` + `roles_session.py`
+   - `bulk_import.py` (489) → `bulk_import_parser.py` + `bulk_import_builder.py` + `bulk_import_defaults.py` + `bulk_import_cli.py`
+
+#### FASE 5 — Testing/Observabilidad (5 items, ~2h)
+9. **5.1** Fix/eliminar `_dev_test_thermal_print()` falso o mover a `test_thermal_print.py` como `IntegrationTestCase` real (~30min) ✅ (`b596603`)
+10. **5.2** Emails únicos en `test_roles_permissions` con `frappe.generate_hash(8)` (~30min) ✅ (`4769169`)
+11. **5.3** Fixtures aisladas en `test_thermal_print.py` (migrar de `setUpClass` a `setUp`/`tearDown` por test) (~1h)
+12. **5.4** Documentar timeout max 300s en `dgii_settings` (comentario en `_validate_timeout`) (~10min) ✅ (`c243f3f`)
+13. **5.5** Filtro `include_failed` en `get_pending_prints()` para UI requeue (~15min) ✅ (`7f49e60`)
+
+---
+
+### Blockers externos (requieren Yedin/hardware):
 
 ### Blockers externos (requieren Yedin/hardware):
 - **S2.7/S5.4**: RNC + certificado digital cliente (3-10 días hábiles c/u)

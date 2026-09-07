@@ -9,4 +9,5 @@ from . import pos_profile  # noqa: F401
 from . import cash_shift  # noqa: F401
 from . import dashboard  # noqa: F401
 from . import reports  # noqa: F401
+from . import company_scope  # noqa: F401
 from . import site_config  # noqa: F401

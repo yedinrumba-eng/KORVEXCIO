@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 import frappe
 from frappe.utils import today
 
+from korvexcio.retail.company_scope import _assert_user_may_view_company
+
 _RD_TZ = ZoneInfo("America/Santo_Domingo")
 
 
@@ -32,24 +34,6 @@ def company_filter(filters: dict[str, Any]) -> str:
     company = company.strip()
     _assert_user_may_view_company(company)
     return company
-
-
-def _assert_user_may_view_company(company: str) -> None:
-    if "System Manager" in frappe.get_roles():
-        return
-    allowed_companies = frappe.get_all(
-        "User Permission",
-        filters={"user": frappe.session.user, "allow": "Company"},
-        pluck="for_value",
-    )
-    # Sin ninguna fila de User Permission sobre Company, el usuario no
-    # esta acotado por diseno (p.ej. sesiones de servicio) -- no negar
-    # por ausencia, solo cuando SI esta acotado a otra cosa distinta.
-    if allowed_companies and company not in allowed_companies:
-        frappe.throw(
-            frappe._("No tienes acceso a los datos de {0}.").format(company),
-            frappe.PermissionError,
-        )
 
 
 def sold_invoice_names(company: str, from_date: str | None = None) -> list[str]:
