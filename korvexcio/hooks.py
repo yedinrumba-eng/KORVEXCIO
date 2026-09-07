@@ -186,7 +186,24 @@ doc_events = {
         "on_submit": "korvexcio.ecf.sales_invoice_hooks.create_ecf_record",
         "before_cancel": "korvexcio.ecf.sales_invoice_hooks.block_cancel_if_accepted",
     },
+    # S5.3: freeze_company en User doc también - evita cambiar la company
+    # del usuario después de creado (equivalente a RLS WITH CHECK)
+    "User": {
+        "validate": "korvexcio.roles.freeze_user_company",
+    },
 }
+
+# S5.3: Authentication hooks for session limits and audit trail
+auth_hooks = [
+    "korvexcio.roles.validate_session_limits",
+]
+
+# S5.3: Login/Logout hooks for audit trail
+on_login = "korvexcio.roles.on_login"
+on_logout = "korvexcio.roles.on_logout"
+
+# S5.3: Extend session expiry per role
+extend_bootinfo = "korvexcio.roles.extend_bootinfo"
 
 # Scheduled Tasks
 # ---------------

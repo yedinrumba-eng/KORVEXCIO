@@ -46,6 +46,8 @@ apps/
 
 # ─── Herramientas y sesión ───────────────────────────────────────────
 .remember/
+.worktrees/
+.superpowers/
 SECURITY-AUDIT-REPORT.md
 
 # ─── Sistema operativo / editor ──────────────────────────────────────

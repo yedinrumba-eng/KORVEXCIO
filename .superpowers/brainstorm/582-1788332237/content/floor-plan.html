@@ -1,0 +1,32 @@
+<h2>Korvex POS · flujo de mesas</h2>
+<p class="subtitle">Demo NYC: bottle service, pestañas abiertas y meseros asignados. Elige el enfoque que se ve más vendible para tu amigo.</p>
+
+<div class="cards">
+  <div class="card" data-choice="floor" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0b1020;padding:18px;color:#eef2ff;min-height:250px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><strong>CLUB NOVA · SALÓN</strong><span style="background:#263a97;padding:5px 9px;border-radius:7px">Turno abierto</span></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:11px">
+        <div style="grid-column:span 2;background:#1f8a62;border-radius:10px;padding:20px 10px;text-align:center">M01<br><small>J. Díaz · $320</small></div>
+        <div style="background:#ef9f27;border-radius:10px;padding:20px 8px;text-align:center">M02<br><small>por cerrar</small></div>
+        <div style="background:#2a3147;border-radius:10px;padding:20px 8px;text-align:center">M03<br><small>libre</small></div>
+        <div style="background:#2a3147;border-radius:10px;padding:20px 8px;text-align:center">M04<br><small>libre</small></div>
+        <div style="grid-column:span 2;background:#6d3c9c;border-radius:10px;padding:20px 10px;text-align:center">VIP A<br><small>botellas · 6 personas</small></div>
+        <div style="grid-column:span 2;background:#2a3147;border-radius:10px;padding:20px 10px;text-align:center">BARRA<br><small>tabs rápidas</small></div>
+      </div>
+    </div>
+    <div class="card-body"><h3>A · Plano vivo</h3><p>El mesero toca una mesa, asigna su código y abre/continúa la pestaña. Mejor para vender bottle service.</p></div>
+  </div>
+
+  <div class="card" data-choice="list" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0b1020;padding:18px;color:#eef2ff;min-height:250px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:14px"><strong>CUENTAS ABIERTAS</strong><span>3 activas</span></div>
+      <div style="background:#1f8a62;border-radius:9px;padding:13px;margin:8px 0;display:flex;justify-content:space-between"><span>M01 · J. Díaz</span><strong>$320</strong></div>
+      <div style="background:#ef9f27;border-radius:9px;padding:13px;margin:8px 0;display:flex;justify-content:space-between"><span>M02 · A. Pérez</span><strong>$180</strong></div>
+      <div style="background:#6d3c9c;border-radius:9px;padding:13px;margin:8px 0;display:flex;justify-content:space-between"><span>VIP A · K. Smith</span><strong>$1,250</strong></div>
+      <div style="background:#2a3147;border-radius:9px;padding:13px;margin:8px 0;color:#aab4d8">+ Abrir nueva cuenta</div>
+    </div>
+    <div class="card-body"><h3>B · Lista de cuentas</h3><p>Más simple y rápida de construir, pero comunica menos el valor de club/mesas.</p></div>
+  </div>
+</div>
+
+<div class="section"><p><strong>En ambos:</strong> cada cuenta guarda mesa, mesero, ítems, impuesto NYC, propina y auditoría. No hay pago real ni datos de clientes en el demo.</p></div>
