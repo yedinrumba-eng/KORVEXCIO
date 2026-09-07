@@ -568,6 +568,36 @@ class ThermalReceiptBuilder:
         return html
 
 
+def _get_ecf_data(invoice_name: str) -> dict[str, Any] | None:
+    """Obtiene datos del ECF vinculado a una Sales Invoice.
+
+    Helper centralizado para evitar duplicación entre
+    generate_thermal_receipt_html y generate_thermal_receipt_escpos (FASE 4.5).
+
+    Args:
+        invoice_name: Nombre del Sales Invoice
+
+    Returns:
+        Dict con encf, qr_url, track_id, codigo_seguridad, estado o None si no hay ECF
+    """
+    ecf_name = frappe.get_all(
+        "ECF",
+        filters={"reference_doctype": "Sales Invoice", "reference_name": invoice_name},
+        pluck="name",
+        limit=1,
+    )
+    if not ecf_name:
+        return None
+    ecf_doc = frappe.get_doc("ECF", ecf_name[0])
+    return {
+        "encf": ecf_doc.encf,
+        "qr_url": ecf_doc.qr_url,
+        "track_id": ecf_doc.track_id,
+        "codigo_seguridad": ecf_doc.codigo_seguridad,
+        "estado": ecf_doc.estado,
+    }
+
+
 def generate_thermal_receipt_html(invoice_name: str) -> str:
     """Generate HTML thermal receipt for a Sales Invoice.
 
@@ -581,24 +611,7 @@ def generate_thermal_receipt_html(invoice_name: str) -> str:
         HTML string ready for browser printing
     """
     invoice = frappe.get_doc("Sales Invoice", invoice_name).as_dict()
-
-    # Get linked ECF
-    ecf = None
-    ecf_name = frappe.get_all(
-        "ECF",
-        filters={"reference_doctype": "Sales Invoice", "reference_name": invoice_name},
-        pluck="name",
-        limit=1,
-    )
-    if ecf_name:
-        ecf_doc = frappe.get_doc("ECF", ecf_name[0])
-        ecf = {
-            "encf": ecf_doc.encf,
-            "qr_url": ecf_doc.qr_url,
-            "track_id": ecf_doc.track_id,
-            "codigo_seguridad": ecf_doc.codigo_seguridad,
-            "estado": ecf_doc.estado,
-        }
+    ecf = _get_ecf_data(invoice_name)
 
     builder = ThermalReceiptBuilder(invoice, ecf)
     return builder.build_html()
@@ -616,23 +629,7 @@ def generate_thermal_receipt_escpos(invoice_name: str) -> bytes:
         ESC/POS command bytes
     """
     invoice = frappe.get_doc("Sales Invoice", invoice_name).as_dict()
-
-    ecf = None
-    ecf_name = frappe.get_all(
-        "ECF",
-        filters={"reference_doctype": "Sales Invoice", "reference_name": invoice_name},
-        pluck="name",
-        limit=1,
-    )
-    if ecf_name:
-        ecf_doc = frappe.get_doc("ECF", ecf_name[0])
-        ecf = {
-            "encf": ecf_doc.encf,
-            "qr_url": ecf_doc.qr_url,
-            "track_id": ecf_doc.track_id,
-            "codigo_seguridad": ecf_doc.codigo_seguridad,
-            "estado": ecf_doc.estado,
-        }
+    ecf = _get_ecf_data(invoice_name)
 
     builder = ThermalReceiptBuilder(invoice, ecf)
     return builder.build_escpos()
