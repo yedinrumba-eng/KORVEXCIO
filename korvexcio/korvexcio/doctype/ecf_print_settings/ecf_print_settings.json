@@ -1,0 +1,131 @@
+{
+	"actions": [],
+	"allow_rename": 1,
+	"creation": "2026-09-06 12:00:00.000000",
+	"doctype": "DocType",
+	"editable_grid": 1,
+	"engine": "InnoDB",
+	"field_order": [
+		"printer_model",
+		"column_break_1",
+		"printer_width_dots",
+		"char_width_dots",
+		"char_height_dots",
+		"section_break_1",
+		"qr_module_size",
+		"qr_error_correction",
+		"cut_paper",
+		"header_text",
+		"footer_text"
+	],
+	"fields": [
+		{
+			"fieldname": "printer_model",
+			"fieldtype": "Select",
+			"in_list_view": 1,
+			"label": "Modelo de Impresora",
+			"options": "Epson TM-T20/T88\nStar TSP100/TSP650\nBixolon SRP-350/SRP-275\nCustom KUBE/SMART\nGenérico ESC/POS",
+			"reqd": 1,
+			"default": "Genérico ESC/POS"
+		},
+		{
+			"fieldname": "column_break_1",
+			"fieldtype": "Column Break"
+		},
+		{
+			"depends_on": "eval:doc.printer_model==\"Genérico ESC/POS\"",
+			"fieldname": "printer_width_dots",
+			"fieldtype": "Int",
+			"label": "Ancho en puntos (dots)",
+			"default": 576,
+			"description": "Ancho del papel en puntos. 80mm a 203 DPI ≈ 576 dots"
+		},
+		{
+			"depends_on": "eval:doc.printer_model==\"Genérico ESC/POS\"",
+			"fieldname": "char_width_dots",
+			"fieldtype": "Int",
+			"label": "Ancho de carácter (dots)",
+			"default": 12,
+			"description": "Ancho en puntos de un carácter de fuente monospace"
+		},
+		{
+			"depends_on": "eval:doc.printer_model==\"Genérico ESC/POS\"",
+			"fieldname": "char_height_dots",
+			"fieldtype": "Int",
+			"label": "Alto de carácter (dots)",
+			"default": 24,
+			"description": "Alto en puntos de un carácter de fuente monospace"
+		},
+		{
+			"fieldname": "section_break_1",
+			"fieldtype": "Section Break",
+			"label": "Configuración QR Code"
+		},
+		{
+			"fieldname": "qr_module_size",
+			"fieldtype": "Int",
+			"label": "Tamaño de módulo QR (dots)",
+			"default": 4,
+			"description": "Tamaño de cada módulo del QR code en puntos (1-8)"
+		},
+		{
+			"fieldname": "qr_error_correction",
+			"fieldtype": "Select",
+			"label": "Corrección de error QR",
+			"options": "L (7%)\nM (15%)\nQ (25%)\nH (30%)",
+			"default": "M (15%)"
+		},
+		{
+			"fieldname": "cut_paper",
+			"fieldtype": "Select",
+			"label": "Corte de papel",
+			"options": "Full cut (Guillotina)\nPartial cut (Corte parcial)\nSin corte",
+			"default": "Full cut (Guillotina)"
+		},
+		{
+			"fieldname": "header_text",
+			"fieldtype": "Small Text",
+			"label": "Texto header personalizado",
+			"description": "Texto opcional arriba del recibo (ej. eslogan, dirección web)"
+		},
+		{
+			"fieldname": "footer_text",
+			"fieldtype": "Small Text",
+			"label": "Texto footer personalizado",
+			"description": "Texto opcional abajo del recibo (ej. ¡Gracias por su compra!)"
+		}
+	],
+	"index_web_pages_for_search": 0,
+	"istable": 0,
+	"links": [],
+	"modified": "2026-09-06 12:00:00.000000",
+	"modified_by": "Administrator",
+	"module": "ECF",
+	"name": "ECF Print Settings",
+	"owner": "Administrator",
+	"permissions": [
+		{
+			"create": 1,
+			"delete": 1,
+			"email": 1,
+			"export": 1,
+			"print": 1,
+			"read": 1,
+			"report": 1,
+			"role": "System Manager",
+			"share": 1,
+			"write": 1
+		},
+		{
+			"read": 1,
+			"report": 1,
+			"role": "Dueño"
+		}
+	],
+	"sort_field": "modified",
+	"sort_order": "DESC",
+	"states": [],
+	"track_changes": 1,
+	"track_seen": 1,
+	"track_views": 1
+}

@@ -14,12 +14,33 @@ from typing import Any
 import frappe
 
 
-# 80mm thermal printer constants (at 203 DPI standard)
-PRINTER_WIDTH_MM = 80
-PRINTER_WIDTH_DOTS = 576  # 80mm * 203 DPI / 25.4 ≈ 640, but ESC/POS typically 576
-CHAR_WIDTH_DOTS = 12
-CHAR_HEIGHT_DOTS = 24
-MAX_CHARS_PER_LINE = PRINTER_WIDTH_DOTS // CHAR_WIDTH_DOTS  # 48 chars
+# Default constants (used when no ECF Print Settings exists for company)
+DEFAULT_PRINTER_WIDTH_DOTS = 576
+DEFAULT_CHAR_WIDTH_DOTS = 12
+DEFAULT_CHAR_HEIGHT_DOTS = 24
+DEFAULT_MAX_CHARS_PER_LINE = DEFAULT_PRINTER_WIDTH_DOTS // DEFAULT_CHAR_WIDTH_DOTS  # 48 chars
+
+
+def _get_printer_constants(company: str) -> dict:
+    """Obtiene constantes de impresora desde ECF Print Settings o defaults.
+
+    FASE 4.4: Constantes impresora en DocType ECF Print Settings / POS Profile.
+    """
+    if not company or not frappe.db.exists("ECF Print Settings", company):
+        return {
+            "width_dots": DEFAULT_PRINTER_WIDTH_DOTS,
+            "char_width": DEFAULT_CHAR_WIDTH_DOTS,
+            "char_height": DEFAULT_CHAR_HEIGHT_DOTS,
+            "max_chars_per_line": DEFAULT_MAX_CHARS_PER_LINE,
+            "qr_module_size": 4,
+            "qr_error_correction": "M",
+            "cut_paper": "Full cut (Guillotina)",
+            "header_text": "",
+            "footer_text": "¡Gracias por su compra!",
+        }
+
+    settings = frappe.get_doc("ECF Print Settings", company)
+    return settings.get_printer_constants()
 
 
 def _center_text(text: str, width: int = MAX_CHARS_PER_LINE) -> str:
@@ -67,6 +88,26 @@ class ThermalReceiptBuilder:
         self.invoice = invoice_data
         self.ecf = ecf_data
         self.company = frappe.get_doc("Company", invoice_data.get("company")) if invoice_data.get("company") else None
+        # FASE 4.4: Cargar constantes de impresora desde ECF Print Settings
+        company_name = invoice_data.get("company")
+        self.printer = _get_printer_constants(company_name)
+
+    def _center_text(self, text: str, width: int | None = None) -> str:
+        """Center text within printer width."""
+        w = width or self.printer["max_chars_per_line"]
+        if len(text) >= w:
+            return text[:w]
+        padding = (w - len(text)) // 2
+        return " " * padding + text
+
+    def _right_align(self, label: str, value: str, width: int | None = None) -> str:
+        """Right-align value with label on left."""
+        w = width or self.printer["max_chars_per_line"]
+        combined = f"{label}{value}"
+        if len(combined) >= w:
+            return combined[:w]
+        padding = w - len(combined)
+        return label + " " * padding + value
 
     def build_escpos(self) -> bytes:
         """Generate ESC/POS binary commands for thermal printer."""
@@ -97,9 +138,19 @@ class ThermalReceiptBuilder:
         commands.extend(self._escpos_footer())
 
         # Cut paper
-        commands.extend(b"\x1d\x56\x00")  # GS V m=0 - Full cut
+        cut_cmd = self._get_cut_command()
+        commands.extend(cut_cmd)
 
         return bytes(commands)
+
+    def _get_cut_command(self) -> bytes:
+        """Get cut paper command based on printer settings."""
+        cut_type = self.printer.get("cut_paper", "Full cut (Guillotina)")
+        if "Full" in cut_type:
+            return b"\x1d\x56\x00"  # GS V m=0 - Full cut
+        elif "Partial" in cut_type:
+            return b"\x1d\x56\x01"  # GS V m=1 - Partial cut
+        return b""  # Sin corte
 
     def _escpos_header(self) -> bytes:
         """Build header section."""
@@ -108,14 +159,14 @@ class ThermalReceiptBuilder:
         if self.company:
             # Company name - double height/width
             out.extend(b"\x1b\x21\x30")  # ESC ! n - Double height + double width
-            out.extend(_center_text(self.company.company_name).encode("utf-8"))
+            out.extend(self._center_text(self.company.company_name).encode("utf-8"))
             out.extend(b"\n")
 
             # RNC
             out.extend(b"\x1b\x21\x00")  # Normal size
             rnc = getattr(self.company, "tax_id", "") or ""
             if rnc:
-                out.extend(_center_text(f"RNC: {rnc}").encode("utf-8"))
+                out.extend(self._center_text(f"RNC: {rnc}").encode("utf-8"))
                 out.extend(b"\n")
 
             # Address
@@ -129,24 +180,24 @@ class ThermalReceiptBuilder:
                 address_parts.append(self.company.country)
 
             for line in address_parts:
-                out.extend(_center_text(line).encode("utf-8"))
+                out.extend(self._center_text(line).encode("utf-8"))
                 out.extend(b"\n")
 
         # Separator
         out.extend(b"\x1b\x21\x00")  # Normal
-        out.extend("-" * MAX_CHARS_PER_LINE .encode("utf-8"))
+        out.extend("-" * self.printer["max_chars_per_line"].encode("utf-8"))
         out.extend(b"\n")
 
         # Document type
         doc_type = "NOTA DE CREDITO" if self.invoice.get("is_return") else "FACTURA DE VENTA"
         out.extend(b"\x1b\x21\x20")  # Double height
-        out.extend(_center_text(doc_type).encode("utf-8"))
+        out.extend(self._center_text(doc_type).encode("utf-8"))
         out.extend(b"\n")
         out.extend(b"\x1b\x21\x00")  # Normal
 
         # e-NCF if available
         if self.ecf and self.ecf.get("encf"):
-            out.extend(_center_text(f"e-NCF: {self.ecf['encf']}").encode("utf-8"))
+            out.extend(self._center_text(f"e-NCF: {self.ecf['encf']}").encode("utf-8"))
             out.extend(b"\n")
 
         return out
@@ -166,7 +217,7 @@ class ThermalReceiptBuilder:
         if buyer_rnc:
             out.extend(f"RNC Cliente: {buyer_rnc}\n".encode("utf-8"))
 
-        out.extend("-" * MAX_CHARS_PER_LINE .encode("utf-8"))
+        out.extend("-" * self.printer["max_chars_per_line"].encode("utf-8"))
         out.extend(b"\n")
 
         return out
@@ -174,11 +225,13 @@ class ThermalReceiptBuilder:
     def _escpos_items(self) -> bytes:
         """Build items table."""
         out = bytearray()
+        max_chars = self.printer["max_chars_per_line"]
 
-        # Header
-        header = f"{'Item':<24}{'Cant':>6}{'Precio':>9}{'Monto':>9}\n"
+        # Header - adjust column widths based on max_chars
+        item_width = max(16, max_chars - 24)  # leave room for qty/price/amount
+        header = f"{'Item':<{item_width}}{'Cant':>6}{'Precio':>9}{'Monto':>9}\n"
         out.extend(header.encode("utf-8"))
-        out.extend("-" * MAX_CHARS_PER_LINE .encode("utf-8"))
+        out.extend("-" * max_chars .encode("utf-8"))
         out.extend(b"\n")
 
         items = self.invoice.get("items", [])
@@ -189,19 +242,19 @@ class ThermalReceiptBuilder:
             amount = _format_currency(item.get("amount"))
 
             # Truncate item name if too long
-            if len(item_name) > 24:
-                item_name = item_name[:21] + "..."
+            if len(item_name) > item_width:
+                item_name = item_name[:item_width - 3] + "..."
 
-            line = f"{item_name:<24}{qty:>6}{rate:>9}{amount:>9}\n"
+            line = f"{item_name:<{item_width}}{qty:>6}{rate:>9}{amount:>9}\n"
             out.extend(line.encode("utf-8"))
 
             # Discount line if applicable
             discount = item.get("discount_amount", 0)
             if discount and float(discount) > 0:
-                disc_line = f"{'  Desc.':<24}{'':>6}{'':>9}-{_format_currency(discount):>8}\n"
+                disc_line = f"{'  Desc.':<{item_width}}{'':>6}{'':>9}-{_format_currency(discount):>8}\n"
                 out.extend(disc_line.encode("utf-8"))
 
-        out.extend("-" * MAX_CHARS_PER_LINE .encode("utf-8"))
+        out.extend("-" * max_chars .encode("utf-8"))
         out.extend(b"\n")
 
         return out
@@ -236,36 +289,37 @@ class ThermalReceiptBuilder:
     def _escpos_payments(self) -> bytes:
         """Build payments section."""
         out = bytearray()
+        max_chars = self.printer["max_chars_per_line"]
 
         payments = self.invoice.get("payments", [])
         if not payments:
             return out
 
         out.extend("FORMAS DE PAGO:\n".encode("utf-8"))
-        out.extend("-" * MAX_CHARS_PER_LINE .encode("utf-8"))
+        out.extend("-" * max_chars .encode("utf-8"))
         out.extend(b"\n")
 
         for payment in payments:
             mode = payment.get("mode_of_payment", "EFECTIVO")
             amount = _format_currency(payment.get("amount", 0))
-            out.extend(_right_align(f"{mode}: ", amount).encode("utf-8"))
+            out.extend(self._right_align(f"{mode}: ", amount).encode("utf-8"))
             out.extend(b"\n")
 
         paid = _format_currency(self.invoice.get("paid_amount", 0))
-        out.extend(_right_align("Total Pagado: ", paid).encode("utf-8"))
+        out.extend(self._right_align("Total Pagado: ", paid).encode("utf-8"))
         out.extend(b"\n")
 
         change = self.invoice.get("change_amount", 0)
         if change and float(change) > 0:
-            out.extend(_right_align("Cambio: ", _format_currency(change)).encode("utf-8"))
+            out.extend(self._right_align("Cambio: ", _format_currency(change)).encode("utf-8"))
             out.extend(b"\n")
 
         outstanding = self.invoice.get("outstanding_amount", 0)
         if outstanding and float(outstanding) > 0:
-            out.extend(_right_align("PENDIENTE: ", _format_currency(outstanding)).encode("utf-8"))
+            out.extend(self._right_align("PENDIENTE: ", _format_currency(outstanding)).encode("utf-8"))
             out.extend(b"\n")
 
-        out.extend("-" * MAX_CHARS_PER_LINE .encode("utf-8"))
+        out.extend("-" * max_chars .encode("utf-8"))
         out.extend(b"\n")
 
         return out
@@ -275,9 +329,9 @@ class ThermalReceiptBuilder:
         out = bytearray()
 
         if not self.ecf or not self.ecf.get("qr_url"):
-            out.extend(_center_text("QR pendiente").encode("utf-8"))
+            out.extend(self._center_text("QR pendiente").encode("utf-8"))
             out.extend(b"\n")
-            out.extend(_center_text("Se genera al confirmar con DGII").encode("utf-8"))
+            out.extend(self._center_text("Se genera al confirmar con DGII").encode("utf-8"))
             out.extend(b"\n\n")
             return out
 
@@ -285,15 +339,15 @@ class ThermalReceiptBuilder:
         qr_url = self.ecf["qr_url"]
 
         out.extend(b"\x1b\x21\x00")  # Normal size
-        out.extend(_center_text("REPRESENTACION IMPRESA e-CF").encode("utf-8"))
+        out.extend(self._center_text("REPRESENTACION IMPRESA e-CF").encode("utf-8"))
         out.extend(b"\n")
-        out.extend(_center_text("Verifique en:").encode("utf-8"))
+        out.extend(self._center_text("Verifique en:").encode("utf-8"))
         out.extend(b"\n")
-        out.extend(_center_text(qr_url).encode("utf-8"))
+        out.extend(self._center_text(qr_url).encode("utf-8"))
         out.extend(b"\n\n")
 
         # QR Code: GS ( k pL pH cn fn n1 n2
-        # Model 2, size 3 (small), error correction 48 (M)
+        # Model 2, size from settings, error correction from settings
         qr_bytes = qr_url.encode("utf-8")
         qr_len = len(qr_bytes) + 3
         pL = qr_len & 0xFF
@@ -302,11 +356,14 @@ class ThermalReceiptBuilder:
         # GS ( k - Select QR code model
         out.extend(b"\x1d\x28\x6b\x04\x00\x31\x41\x32\x00")  # Model 2
 
-        # GS ( k - Set size (1-16, 3 is typical for 80mm)
-        out.extend(b"\x1d\x28\x6b\x03\x00\x31\x43\x03")
+        # GS ( k - Set size (1-16, from settings)
+        qr_size = self.printer.get("qr_module_size", 4)
+        out.extend(b"\x1d\x28\x6b\x03\x00\x31\x43" + bytes([qr_size]))
 
         # GS ( k - Set error correction (48=M, 49=L, 50=Q, 51=H)
-        out.extend(b"\x1d\x28\x6b\x03\x00\x31\x45\x30")
+        ec_map = {"L": 49, "M": 48, "Q": 50, "H": 51}
+        ec_level = ec_map.get(self.printer.get("qr_error_correction", "M"), 48)
+        out.extend(b"\x1d\x28\x6b\x03\x00\x31\x45" + bytes([ec_level]))
 
         # GS ( k - Store QR code data
         out.extend(b"\x1d\x28\x6b")
@@ -321,10 +378,10 @@ class ThermalReceiptBuilder:
 
         # TrackID and security code
         if self.ecf.get("track_id"):
-            out.extend(_center_text(f"TrackID: {self.ecf['track_id']}").encode("utf-8"))
+            out.extend(self._center_text(f"TrackID: {self.ecf['track_id']}").encode("utf-8"))
             out.extend(b"\n")
         if self.ecf.get("codigo_seguridad"):
-            out.extend(_center_text(f"Cod. Seguridad: {self.ecf['codigo_seguridad']}").encode("utf-8"))
+            out.extend(self._center_text(f"Cod. Seguridad: {self.ecf['codigo_seguridad']}").encode("utf-8"))
             out.extend(b"\n")
 
         return out
@@ -334,9 +391,10 @@ class ThermalReceiptBuilder:
         out = bytearray()
 
         out.extend(b"\n")
-        out.extend(_center_text("¡Gracias por su compra!").encode("utf-8"))
+        footer_text = self.printer.get("footer_text", "¡Gracias por su compra!")
+        out.extend(self._center_text(footer_text).encode("utf-8"))
         out.extend(b"\n")
-        out.extend(_center_text("Powered by Korvex").encode("utf-8"))
+        out.extend(self._center_text("Powered by Korvex").encode("utf-8"))
         out.extend(b"\n\n\n")
 
         return out
