@@ -13,7 +13,7 @@ from .thermal_print import (
     generate_thermal_receipt_html,
     generate_thermal_receipt_escpos,
     save_receipt_for_test,
-    test_thermal_print,
+    _dev_test_thermal_print,
 )
 from .print_queue import (
     queue_print_job,
@@ -31,7 +31,7 @@ __all__ = [
     "generate_thermal_receipt_html",
     "generate_thermal_receipt_escpos",
     "save_receipt_for_test",
-    "test_thermal_print",
+    "_dev_test_thermal_print",
     # Print queue
     "queue_print_job",
     "process_print_queue",

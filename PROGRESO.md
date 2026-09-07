@@ -3442,12 +3442,14 @@ Commit `dba0166` ya aplicado. Deuda legal raíz resuelta desde S0.1.
    - Nuevo `korvexcio/retail/company_scope.py` con decorator + helpers
    - `reports.py` + `dashboard.py` usan import centralizado
    - Elimina duplicación en 7 funciones, reduce riesgo fuga D19
-2. **4.2** Parametrizar ESC/POS por modelo impresora en `POS Profile` (Epson/Star/Bixolon/Custom) (~4h)
-3. **4.3** Preparar validación XSD: descargar XSD oficial DGII + script `validate_ecf_xsd.py` con `lxml.etree.XMLSchema` (~2h, cuando XSD disponible)
-4. **4.4** Constantes impresora en DocType `ECF Print Settings` o `POS Profile` (width_dots, char_width, char_height) (~1h)
-5. ✅ **4.5** Helper `_get_ecf_data(invoice_name)` elimina duplicación `thermal_print.py` — commit `3545737`
+2. ✅ **4.4** Constantes impresora en DocType `ECF Print Settings` — commit `4f5a769`
+   - Nuevo DocType configurable por Company (printer_model, width_dots, char_width, char_height, qr_module_size, qr_error_correction, cut_paper, header/footer)
+   - `thermal_print.py` usa `_get_printer_constants(company)` + settings en `ThermalReceiptBuilder`
+   - QR ESC/POS parametrizado, corte configurable, header/footer personalizables
+3. ✅ **4.5** Helper `_get_ecf_data(invoice_name)` elimina duplicación `thermal_print.py` — commit `3545737`
    - Centraliza obtención ECF en helper (~50 líneas menos duplicadas)
-   - `generate_thermal_receipt_html` + `generate_thermal_receipt_escpos` usan helper
+4. **4.2** Parametrizar ESC/POS por modelo impresora en `POS Profile` (Epson/Star/Bixolon/Custom) (~4h) — **absorbido en 4.4**
+5. **4.3** Preparar validación XSD: descargar XSD oficial DGII + script `validate_ecf_xsd.py` con `lxml.etree.XMLSchema` (~2h, cuando XSD disponible)
 6. **4.6** `pyserial` en `pyproject.toml` + `try/except ImportError` en `_send_to_printer()` (~15min) ✅ (`9c0f7eb`)
 7. **4.7** Log error en `resolve_provider()` si `provider_class is None` y `provider_name` configurado (~15min) ✅ (`8d8ebc4`)
 8. **4.8** Separar god modules (>400 líneas):
@@ -3464,8 +3466,6 @@ Commit `dba0166` ya aplicado. Deuda legal raíz resuelta desde S0.1.
 13. **5.5** Filtro `include_failed` en `get_pending_prints()` para UI requeue (~15min) ✅ (`7f49e60`)
 
 ---
-
-### Blockers externos (requieren Yedin/hardware):
 
 ### Blockers externos (requieren Yedin/hardware):
 - **S2.7/S5.4**: RNC + certificado digital cliente (3-10 días hábiles c/u)
