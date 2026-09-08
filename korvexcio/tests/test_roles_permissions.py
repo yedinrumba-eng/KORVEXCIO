@@ -28,9 +28,9 @@ COMPANY_A = VLJ
 COMPANY_B = ESE
 
 class TestRolesPermissions(IntegrationTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUp(self):
+        """Setup aislado por test - crea datos únicos con generate_hash."""
+        frappe.set_user("Administrator")
         if not frappe.local.lang:
             frappe.local.lang = "en"
 
@@ -38,48 +38,93 @@ class TestRolesPermissions(IntegrationTestCase):
         before_tests()
         sync_roles()
 
+        # Generar sufijo único para este test
+        self.test_hash = frappe.generate_hash(8)
+
+        # SEC-L05: Emails únicos con generate_hash para evitar colisiones en runs paralelos
+        self.cashier_a_email = f"_test.cashier.a.{self.test_hash}@korvexdev.cc"
+        self.cashier_b_email = f"_test.cashier.b.{self.test_hash}@korvexdev.cc"
+        self.owner_email = f"_test.owner.{self.test_hash}@korvexdev.cc"
+        self.accountant_email = f"_test.accountant.{self.test_hash}@korvexdev.cc"
+
         # Configurar password policy para tests
         set_password_policy(min_length=8, require_special=False, expire_days=90)
         configure_session_limits(cashier_hours=8, owner_hours=12, concurrent_sessions_cashier=1, concurrent_sessions_owner=3)
 
-        # SEC-L05: Emails únicos con generate_hash para evitar colisiones en runs paralelos
-        test_hash = frappe.generate_hash(8)
-        cls.cashier_a_email = f"_test.cashier.a.{test_hash}@korvexdev.cc"
-        cls.cashier_b_email = f"_test.cashier.b.{test_hash}@korvexdev.cc"
-        cls.owner_email = f"_test.owner.{test_hash}@korvexdev.cc"
-        cls.accountant_email = f"_test.accountant.{test_hash}@korvexdev.cc"
-
         # Limpiar usuarios de test previos
-        for email in [cls.cashier_a_email, cls.cashier_b_email, cls.owner_email, cls.accountant_email]:
+        for email in [self.cashier_a_email, self.cashier_b_email, self.owner_email, self.accountant_email]:
             if frappe.db.exists("User", email):
                 frappe.delete_doc("User", email, force=True)
 
         # Crear usuarios de test usando las funciones de provisión
-        cls.cashier_a = create_cashier_user(cls.cashier_a_email, "Cajero Test A", COMPANY_A, "TestPass123")
-        cls.cashier_b = create_cashier_user(cls.cashier_b_email, "Cajero Test B", COMPANY_B, "TestPass123")
-        cls.owner = create_owner_user(cls.owner_email, "Owner Test", [COMPANY_A, COMPANY_B], "TestPass123")
-        cls.accountant = create_accountant_user(cls.accountant_email, "Accountant Test", [COMPANY_A, COMPANY_B], "TestPass123")
+        self.cashier_a = create_cashier_user(self.cashier_a_email, "Cajero Test A", COMPANY_A, "TestPass123")
+        self.cashier_b = create_cashier_user(self.cashier_b_email, "Cajero Test B", COMPANY_B, "TestPass123")
+        self.owner = create_owner_user(self.owner_email, "Owner Test", [COMPANY_A, COMPANY_B], "TestPass123")
+        self.accountant = create_accountant_user(self.accountant_email, "Accountant Test", [COMPANY_A, COMPANY_B], "TestPass123")
 
         # Setup básico de datos
-        cls.warehouse_a = cls._ensure_warehouse("_Test WH Roles A", COMPANY_A)
-        cls.warehouse_b = cls._ensure_warehouse("_Test WH Roles B", COMPANY_B)
-        cls.customer_a = cls._ensure_customer("_Test Customer A", COMPANY_A)
-        cls.customer_b = cls._ensure_customer("_Test Customer B", COMPANY_B)
-        cls.item = cls._ensure_item("_Test Item Roles")
-
-    @classmethod
-    def tearDownClass(cls):
-        # Limpiar usuarios de test
-        for email in [cls.cashier_a_email, cls.cashier_b_email, cls.owner_email, cls.accountant_email]:
-            if frappe.db.exists("User", email):
-                frappe.delete_doc("User", email, force=True)
-        super().tearDownClass()
-
-    def setUp(self):
-        frappe.set_user("Administrator")
+        self.warehouse_a = self._ensure_warehouse("_Test WH Roles A", COMPANY_A)
+        self.warehouse_b = self._ensure_warehouse("_Test WH Roles B", COMPANY_B)
+        self.customer_a = self._ensure_customer("_Test Customer A", COMPANY_A)
+        self.customer_b = self._ensure_customer("_Test Customer B", COMPANY_B)
+        self.item = self._ensure_item("_Test Item Roles")
 
     def tearDown(self):
+        """Limpieza completa por test - elimina datos creados."""
         frappe.set_user("Administrator")
+        # Limpiar usuarios de test
+        for email in [self.cashier_a_email, self.cashier_b_email, self.owner_email, self.accountant_email]:
+            if frappe.db.exists("User", email):
+                frappe.delete_doc("User", email, force=True)
+
+        # Limpiar en orden inverso de dependencias
+        try:
+            # ECFs
+            for ecf_name in frappe.get_all("ECF", filters={"reference_doctype": "Sales Invoice"}, pluck="name"):
+                try:
+                    doc = frappe.get_doc("ECF", ecf_name)
+                    if doc.docstatus == 1:
+                        doc.cancel()
+                    frappe.delete_doc("ECF", ecf_name, force=True, ignore_permissions=True)
+                except (frappe.DoesNotExistError, frappe.ValidationError):
+                    pass
+
+            # Sales Invoices
+            for si_name in frappe.get_all("Sales Invoice", pluck="name"):
+                try:
+                    doc = frappe.get_doc("Sales Invoice", si_name)
+                    if doc.docstatus == 1:
+                        doc.cancel()
+                    frappe.delete_doc("Sales Invoice", si_name, force=True, ignore_permissions=True)
+                except (frappe.DoesNotExistError, frappe.ValidationError):
+                    pass
+
+            # Print Queue
+            for pq_name in frappe.get_all("ECF Print Queue", pluck="name"):
+                try:
+                    frappe.delete_doc("ECF Print Queue", pq_name, force=True, ignore_permissions=True)
+                except (frappe.DoesNotExistError, frappe.ValidationError):
+                    pass
+
+            # Customer
+            for customer_name in frappe.get_all("Customer", pluck="name"):
+                if customer_name.startswith("_Test Customer"):
+                    frappe.delete_doc("Customer", customer_name, force=True, ignore_permissions=True)
+
+            # Item
+            for item_code in frappe.get_all("Item", pluck="name"):
+                if item_code.startswith("_Test Item"):
+                    frappe.delete_doc("Item", item_code, force=True, ignore_permissions=True)
+
+            # Warehouse
+            for warehouse_name in frappe.get_all("Warehouse", pluck="name"):
+                if warehouse_name.startswith("_Test WH Roles"):
+                    frappe.delete_doc("Warehouse", warehouse_name, force=True, ignore_permissions=True)
+
+        except (frappe.DoesNotExistError, frappe.ValidationError):
+            pass
+
+        super().tearDown()
 
     @staticmethod
     def _ensure_warehouse(name: str, company: str):
