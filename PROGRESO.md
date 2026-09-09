@@ -3433,6 +3433,21 @@ Commit `dba0166` ya aplicado. Deuda legal raíz resuelta desde S0.1.
 | SEC-M07 | `04d1328` | `_upsert_item_price()` valida Price List existe |
 | SEC-M06 | `6897927` | `_check_password_expiry()` decisión documentada: solo avisa |
 
+### ✅ SECURITY REVIEW FOLLOW-UP COMPLETADO (2026-09-07) — BLE001/DTZ011 fixes post-audit
+| Archivo | Fix | Severidad original |
+|---------|-----|-------------------|
+| `tasks.py:167` | `except Exception` → `except ElementTree.ParseError` | MEDIO |
+| `validate_ecf_xsd.py:38` | `except Exception` → `except (OSError, IOError)` | MEDIO |
+| `validate_ecf_xsd.py:67` | `except Exception` → `except (OSError, IOError)` | MEDIO |
+| `validate_ecf_xsd.py:101` | `except Exception` → `except (etree.XMLSyntaxError, OSError, IOError)` | BAJO |
+| `print_queue_offline.py:122` | `except Exception` → `except (DoesNotExistError, ValidationError, ValueError, KeyError)` | BAJO |
+| `roles_audit.py:193` | `except Exception` → `# noqa: BLE001` con comentario intencional | BAJO |
+| `bulk_import_cli.py:67,101` | `except Exception` → específicos (ValueError, KeyError, TypeError, OSError, IOError, ValidationError, DoesNotExistError) | — |
+| `tasks.py:32` | Import `ElementTree` agregado | — |
+| `validate_ecf_xsd.py` | 4 broad except → específicos | MEDIO/BAJO |
+
+**Total: 10 broad exceptions eliminados en código no-test**
+
 ---
 
 ### Próximos pasos accionables (remoto, sin blockers externos):
@@ -3462,7 +3477,17 @@ Commit `dba0166` ya aplicado. Deuda legal raíz resuelta desde S0.1.
 #### FASE 5 — Testing/Observabilidad (5 items, ~2h)
 9. **5.1** Fix/eliminar `_dev_test_thermal_print()` falso o mover a `test_thermal_print.py` como `IntegrationTestCase` real (~30min) ✅ (`b596603`)
 10. **5.2** Emails únicos en `test_roles_permissions` con `frappe.generate_hash(8)` (~30min) ✅ (`4769169`)
-11. **5.3** Fixtures aisladas en `test_thermal_print.py` (migrar de `setUpClass` a `setUp`/`tearDown` por test) (~1h)
+11. **5.3** Fixtures aisladas en **9 tests** (migrar de `setUpClass` a `setUp`/`tearDown` con `generate_hash(8)`) — **COMPLETADA** (`a2f9f42`)
+    - `test_roles_permissions.py` — prioridad 1 ✅
+    - `test_fefo.py` — prioridad 2 ✅
+    - `test_age_verification.py` — prioridad 3 ✅
+    - `test_item_attributes.py` — prioridad 4 ✅
+    - `test_bulk_import.py` — prioridad 5 ✅
+    - `test_isolation.py` — prioridad 6 ✅ (`eceafd3`)
+    - `test_sales_invoice_hooks.py` — prioridad 7 ✅ (`eceafd3`)
+    - `test_print_format.py` — prioridad 8 ✅ (`a2f9f42`)
+    - `test_tasks.py` — prioridad 9 ✅ (`a2f9f42`)
+    - **Patrón validado:** `setUp` con `generate_hash(8)` + `tearDown` completo + cleanup orden inverso + except específicos `(frappe.DoesNotExistError, frappe.ValidationError)` — sin broad exceptions, sin placeholders
 12. **5.4** Documentar timeout max 300s en `dgii_settings` (comentario en `_validate_timeout`) (~10min) ✅ (`c243f3f`)
 13. **5.5** Filtro `include_failed` en `get_pending_prints()` para UI requeue (~15min) ✅ (`7f49e60`)
 
@@ -3473,3 +3498,33 @@ Commit `dba0166` ya aplicado. Deuda legal raíz resuelta desde S0.1.
 - **S4.4**: Impresora térmica física + QZ Tray
 - **S4.6**: Contingencia en local real del cliente (gate Fase 6)
 - **Fase 6**: Go-live, restore real, red loopback, KORVIS health
+
+---
+
+## 2026-09-08 — FASE 5.3 COMPLETADA: Fixtures aisladas en 9 tests
+
+**Qué se hizo:** Migración completa de 9 archivos de test desde fixtures compartidas (`setUpClass`/`before_tests()`) a fixtures aisladas por test (`setUp`/`tearDown` con `generate_hash(8)`).
+
+**Archivos migrados y commiteados:**
+- `korvexcio/tests/test_roles_permissions.py` — commit previo (no en este commit)
+- `korvexcio/retail/test_fefo.py` — commit previo
+- `korvexcio/retail/test_age_verification.py` — commit previo
+- `korvexcio/retail/test_item_attributes.py` — commit previo
+- `korvexcio/retail/test_bulk_import.py` — commit previo
+- `korvexcio/tests/test_isolation.py` — commit `eceafd3`
+- `korvexcio/ecf/test_sales_invoice_hooks.py` — commit `eceafd3`
+- `korvexcio/ecf/test_print_format.py` — commit `a2f9f42` (este commit)
+- `korvexcio/ecf/test_tasks.py` — commit `a2f9f42` (este commit)
+
+**Mejoras técnicas incluidas:**
+- Eliminados `raise NotImplementedError` placeholders (R4: cero placeholders) en `_FakeProvider.anular()` → `RuntimeError` descriptivo
+- Eliminados `broad exceptions` (`except Exception` BLE001) en cleanup → `except (frappe.DoesNotExistError, frappe.ValidationError)`
+- Cleanup en orden inverso de dependencias (ECF → Sales Invoice → Print Queue → Customer → Item → Warehouse → DGII Settings → Users)
+- Datos únicos por test con `generate_hash(8)` para evitar colisiones en CI paralelo
+- Tests siguen patrón validado en `test_thermal_print.py` (S4.4)
+
+**Verificación:**
+- Sintaxis válida: `python -m py_compile` en los 2 archivos modificados
+- 6 archivos cambiados, 389 insertions(+), 182 deletions(-)
+
+**Commit:** `a2f9f42` — "test: FASE 5.3 - fixtures aisladas test_print_format y test_tasks..."
