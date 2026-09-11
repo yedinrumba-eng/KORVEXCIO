@@ -64,6 +64,7 @@ FICTIONAL = re.compile(
 DEFAULT_EXCLUDE = {
     "node_modules", ".git", "dist", "build", ".next", "out", "vendor",
     "target", "__pycache__", ".venv", "venv", "env", ".cache", "coverage",
+    ".worktrees",
 }
 
 

@@ -39,7 +39,7 @@ LOCKFILE_PAIRS = [
 # estimación de dirs a no recorrer
 DEFAULT_EXCLUDE = {
     "node_modules", ".git", "dist", "build", ".next", "out", "vendor", "target",
-    "__pycache__", ".venv", "venv", "env", ".cache",
+    "__pycache__", ".venv", "venv", "env", ".cache", ".worktrees",
 }
 
 RANGE = ("^", "~", ">=", "<=", ">", "<", "*")
