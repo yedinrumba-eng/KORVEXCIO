@@ -252,3 +252,84 @@ pero el consumo fue mayor que el estimado de 5–8 GB.
 - Login, POS, ventas u operación offline: corresponde a S0.8.
 - Compatibilidad funcional de URY/POSNext juntos: S0.8 hace la prueba dura.
 - v15: no se ejecutó porque v16 no activó la condición de fallback.
+
+---
+
+## D23 — Parche de seguridad 22/10/2026 (excepción a la versión congelada por D2)
+
+> Aprobado por Yedin el 22/10/2026. D2 fijó la línea **v16** el 31/08 y desde
+> entonces no se movió la versión. D23 es una **excepción explícita por
+> seguridad**, no una reapertura de D2: seguimos en v16, solo se sube el parche.
+
+**Por qué:** la versión desplegada (Frappe 16.32.0 + ERPNext 16.33.0) estaba
+afectada por **GHSA-9pp9-wgp9-3p3j** (RCE en Frappe por path traversal, corregido
+en 16.34.0) y **GHSA-v38v-9h2p-hr8v** (SQL injection en ERPNext, corregido en
+16.34.0), más ~15 advisories más de Frappe/ERPNext. Que el stack no sea público
+reduce la exposición, no la elimina.
+
+**Decisión:** subir a los últimos parches v16 publicados el 22/10/2026:
+
+| Componente | Antes | Después | Referencia usada en el build |
+|---|---|---|---|
+| `frappe/frappe` | 16.32.0 | **16.53.0** | `version-16` = tag `v16.53.0` (`e8d41dd`, verificado igual antes del build) |
+| `frappe/erpnext` | 16.33.0 | **16.52.1** | tag `v16.52.1` (`ade850b`) |
+| `pos_next` | 1.12.0 (fork, `92b5c93`) | 1.12.0 (fork, `92b5c93`) | `yedinrumba-eng/posnext` rama `korvex` (HEAD = `92b5c93` al construir) |
+| `korvexcio` | 0.0.1 (`c0373b1`) | 0.0.1 (`c0373b1`) | tag `node-deploy-2026-10-22` → `c0373b1` |
+| `ury` (en la imagen, **no instalada en el site**) | 3.0.0-beta.1 | 3.0.0-beta.1 | tag `v3.0.0-beta.1` |
+
+`pos_next` y `korvexcio` se mantuvieron en los commits que estaban corriendo; se
+comprobó archivo por archivo (sha256 de todos los archivos versionados en git) que
+la imagen nueva trae exactamente esos commits.
+
+**Imagen:** `korvexcio:16.53.0-erpnext16.52.1`
+(`sha256:0edb0d4954ec211738f494f236a7850987109a2c164f17fcecc027781e5dd530`),
+construida con la misma receta de arriba (`images/layered/Containerfile`,
+`apps.json` como secreto de BuildKit, `FRAPPE_BRANCH=version-16`). El `apps.json`
+de este repo es el que se usó, ya con referencias fijas (tags) en vez de `develop`.
+`FRAPPE_BRANCH` sigue en `version-16` porque la imagen base `frappe/build` todavía
+no publica tag `v16.53.0`; la versión real se confirmó dentro de la imagen.
+
+### Lo que se encontró al prepararlo (lección pagada)
+
+El contenedor `backend` no corría lo mismo que la imagen: `apps/korvexcio` y
+`apps/pos_next` se habían re-clonado **a mano dentro del contenedor** (capa
+escribible), mientras los workers seguían con el código horneado en la imagen, y la
+imagen original (`596354fb51a1`) ya no existía en el almacén de Docker. Un
+`docker commit` falló por eso. **Recrear el contenedor habría borrado el estado
+real sin vuelta atrás.** Desde este parche todos los servicios corren el mismo
+código horneado en la imagen — se acabó el "arreglo en caliente" dentro del
+contenedor (regla 7 de `CLAUDE.md`).
+
+### Rollback
+
+- Imagen de rollback: `korvexcio:rollback-20261022`
+  (`sha256:75469083d5cffbdd196d991483f5c33a61328492ac8a0894db1e623ed9e8d565`),
+  snapshot exacto del filesystem del `backend` viejo (`docker export` →
+  `docker import`, con entrypoint/cmd/user/env restaurados). Contiene Frappe
+  16.32.0, ERPNext 16.33.0, `korvexcio` `c0373b1`, `pos_next` `92b5c93`.
+- Respaldo fresco tomado antes del cambio con `bench backup --with-files`
+  (BD 1.2 MiB gz con 765 tablas y `Dump completed`; públicos 4.3 MiB; privados
+  10 KiB), además del backup nocturno del nodo del 22/10 (KORVEXCIO DB OK + archivos OK).
+- Cómo volver: poner `FRAPPE_VERSION=rollback-20261022` en el `.env` del compose,
+  `up -d`, y **restaurar el respaldo** (la migración ya alteró el esquema).
+
+### Verificación (22/10/2026)
+
+```text
+bench migrate                       -> EXIT=0, 0 tracebacks
+bench version                       -> erpnext 16.52.1 · frappe 16.53.0 · korvexcio 0.0.1 · pos_next 1.12.0 · ury 3.0.0-beta.1
+compose ps                          -> 9 servicios Up, db (healthy), configurator Exited (0)
+GET /login · /pos · /api/method/ping -> 200 · 200 · 200 ({"message":"pong"})
+bench doctor                        -> Workers online: 2 (scheduler deshabilitado, igual que antes)
+logs backend/queue/scheduler        -> 0 tracebacks desde el cambio · Error Log nuevos: 0
+mem_limit                           -> sin cambios (768/512/768/384/256/256 MiB, db 1536)
+```
+
+`bench build` no hizo falta: la receta hornea los assets en la imagen y el
+entrypoint los enlaza al volumen al arrancar.
+
+### No verificado
+
+- Suite `bench run-tests --app korvexcio` sobre 16.53 (no se corrió en este parche).
+- Flujo de venta real en el POS (login de cajero + venta E32) sobre la versión nueva.
+- El scheduler del site estaba y sigue deshabilitado; no se probó con scheduler activo.

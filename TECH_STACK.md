@@ -97,6 +97,16 @@ Evidencia completa — build, servicios, memoria, puertos y KORVIS sano:
 > Frappe v15 o superior; no hay evidencia pública de terceros probados en v16."
 > Se resolvió levantando el bench, que era exactamente lo que pedía.
 
+## D23 — Parche de seguridad v16 · ✅ 22/10/2026 (excepción a D2, aprobada por Yedin)
+
+D2 congeló la versión el 31/08. El 22/10 se sube **solo el parche dentro de v16**
+por seguridad (GHSA-9pp9-wgp9-3p3j RCE en Frappe, GHSA-v38v-9h2p-hr8v SQLi en
+ERPNext, ambos corregidos en 16.34.0, más ~15 advisories): **Frappe 16.32.0 →
+16.53.0 · ERPNext 16.33.0 → 16.52.1**. `korvexcio` (`c0373b1`) y `pos_next`
+(fork `92b5c93`) quedan en los commits que ya corrían. `apps.json` pasa a
+referencias fijas (tags). Evidencia, rollback y lo no verificado:
+`docs/13-VERSION-FRAPPE.md` § D23.
+
 ## D3 — e-CF vía proveedor certificado, con adaptador · 🟡 REVISADA el 31/08
 
 **Decisión de Yedin, 2026-08-31.** La forma se mantiene; **el proveedor

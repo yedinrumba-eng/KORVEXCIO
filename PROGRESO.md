@@ -3528,3 +3528,50 @@ Commit `dba0166` ya aplicado. Deuda legal raíz resuelta desde S0.1.
 - 6 archivos cambiados, 389 insertions(+), 182 deletions(-)
 
 **Commit:** `a2f9f42` — "test: FASE 5.3 - fixtures aisladas test_print_format y test_tasks..."
+
+---
+
+## 2026-10-22 — D23: parche de seguridad Frappe 16.53.0 / ERPNext 16.52.1
+
+**Qué se decidió:** **D23** — excepción explícita a la versión congelada por D2
+(31/08), aprobada por Yedin el 22/10: subir el parche dentro de v16 por
+GHSA-9pp9-wgp9-3p3j (RCE Frappe, path traversal) y GHSA-v38v-9h2p-hr8v (SQLi
+ERPNext), ambos corregidos en 16.34.0, más ~15 advisories. Se tomaron los últimos
+parches v16 publicados ese día.
+
+**Qué se hizo:**
+- Backup nocturno del nodo del 22/10: KORVEXCIO DB OK (765 tablas) + archivos OK.
+  Respaldo fresco `bench backup --with-files` antes de tocar nada: BD 1.2 MiB gz
+  (765 `CREATE TABLE`, `Dump completed`), públicos 4.3 MiB, privados 10 KiB.
+- Imagen nueva `korvexcio:16.53.0-erpnext16.52.1` con la misma receta
+  (`images/layered/Containerfile` + `apps.json` como secreto). `apps.json` pasa a
+  tags fijos: ERPNext `v16.52.1`, fork POSNext `korvex` (= `92b5c93`), URY
+  `v3.0.0-beta.1`, `korvexcio` tag `node-deploy-2026-10-22` (= `c0373b1`).
+- Compose apuntado a la imagen nueva, `up -d`, `bench migrate`.
+
+**Resultado (R1):** `migrate` EXIT=0 sin tracebacks · `bench version` →
+`erpnext 16.52.1 · frappe 16.53.0 · korvexcio 0.0.1 · pos_next 1.12.0 · ury 3.0.0-beta.1`
+· 9 servicios Up, db healthy · `/login`, `/pos`, `/api/method/ping` → 200 ·
+`bench doctor` → 2 workers online · 0 tracebacks y 0 Error Log nuevos desde el
+cambio · `mem_limit` sin cambios.
+
+**Lección pagada:** el `backend` corría código re-clonado a mano dentro del
+contenedor (`korvexcio` `c0373b1`, fork `pos_next`) mientras los workers corrían
+lo horneado en la imagen, y la imagen original ya no existía (`docker commit`
+falló con `content digest not found`). Recrear sin snapshot = perder el estado real
+para siempre. Se resolvió con `docker export | docker import` →
+`korvexcio:rollback-20261022`. **Desde hoy todos los servicios corren lo mismo y
+sale de la imagen.** Regla 7 en serio: nada se arregla dentro del contenedor.
+
+**Rollback:** `FRAPPE_VERSION=rollback-20261022` en el `.env` del compose + `up -d`
++ restaurar el respaldo del 22/10 (el esquema ya migró).
+
+**No verificado:** `bench run-tests --app korvexcio` sobre 16.53; venta real en
+POS; scheduler activo (estaba y sigue deshabilitado en el site).
+
+**Deuda nueva:**
+- 🟡 El nodo corre `korvexcio` `c0373b1` (01/09), **29 commits detrás** de
+  `origin/feat/ecf` (Fase 5.3, S5.2, fixes del security review sin desplegar).
+  Cura: build nuevo con un tag del HEAD verificado + `run-tests` en el nodo (~1 h).
+- ⚪ El tag `korvexcio:16` del nodo apunta a una imagen que nunca se desplegó.
+  Cura: retirarlo cuando se confirme que el rollback no hace falta (5 min).

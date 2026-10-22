@@ -1,5 +1,15 @@
 # HANDOFF — KORVEXCIO (cliente 1: VAPELAND)
 
+> **Actualización 2026-10-22 — PARCHE DE SEGURIDAD D23 (excepción a D2, aprobado por Yedin):**
+> Frappe **16.32.0 → 16.53.0** · ERPNext **16.33.0 → 16.52.1** (cierra GHSA-9pp9-wgp9-3p3j RCE y
+> GHSA-v38v-9h2p-hr8v SQLi, más ~15 advisories). `korvexcio` sigue en `c0373b1` (tag
+> `node-deploy-2026-10-22`) y `pos_next` en el fork `92b5c93`. Imagen
+> `korvexcio:16.53.0-erpnext16.52.1`; rollback `korvexcio:rollback-20261022` + respaldo
+> `bench backup --with-files` del 22/10. `migrate` EXIT=0, 9 servicios Up, `/login` 200.
+> ⚠️ **Lo que el nodo corre es `c0373b1`, no el HEAD de `feat/ecf`** (Fase 5.3, S5.2 y los fixes
+> de security review siguen sin desplegar). **Sin verificar:** `bench run-tests` sobre 16.53 y una
+> venta real en POS. Detalle: `docs/13-VERSION-FRAPPE.md` § D23.
+
 > **Estado vigente — 2026-09-07 (actualizado post security-review follow-up):**
 >
 > ### ✅ FASES 1-4 COMPLETAS (excepto S4.4 hardware, S4.6 local real)
@@ -153,14 +163,14 @@ def setUp(self):
         frappe.local.lang = "en"
     from korvexcio.install import before_tests
     before_tests()
-    
+
     # Sufijo único por test
     self.test_hash = frappe.generate_hash(8)
     self.company = "_Test Company KORVEXCIO A"
     self.abbr = "_TCKA"
     self.customer_name = f"_Test Customer {self.test_hash}"
     self.item_code = f"_Test Item {self.test_hash}"
-    
+
     # Crear customer único
     self.customer = frappe.get_doc({
         "doctype": "Customer",

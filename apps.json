@@ -1,18 +1,18 @@
 [
   {
     "url": "https://github.com/frappe/erpnext.git",
-    "branch": "version-16"
+    "branch": "v16.52.1"
   },
   {
-    "url": "https://github.com/DeeloaSociety/posnext.git",
-    "branch": "develop"
+    "url": "https://github.com/yedinrumba-eng/posnext.git",
+    "branch": "korvex"
   },
   {
     "url": "https://github.com/ury-erp/ury.git",
-    "branch": "develop"
+    "branch": "v3.0.0-beta.1"
   },
   {
     "url": "https://github.com/yedinrumba-eng/KORVEXCIO.git",
-    "branch": "feat/ecf"
+    "branch": "node-deploy-2026-10-22"
   }
 ]
